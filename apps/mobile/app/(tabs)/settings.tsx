@@ -2,7 +2,6 @@ import type {
   PrivacySettingsSummary,
   ProfileVisibility,
   SessionSummary,
-  UserPreferences,
 } from '@cinewrapped/shared-types';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { randomUUID } from 'expo-crypto';
@@ -13,20 +12,18 @@ import { BrandHeader, Button, ErrorText, Screen, useColors } from '../../src/com
 import { api } from '../../src/lib/api';
 import { errorMessage } from '../../src/lib/error-message';
 import { useAuth } from '../../src/providers/auth-provider';
+import { useTheme } from '../../src/providers/theme-provider';
 
 export default function SettingsScreen() {
   const colors = useColors();
   const queryClient = useQueryClient();
   const { user, signOut } = useAuth();
+  const { preference: themePreference, setPreference: setThemePreference } = useTheme();
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const sessions = useQuery({
     queryKey: ['sessions'],
     queryFn: () => api.request<SessionSummary[]>('auth/sessions'),
-  });
-  const preferences = useQuery({
-    queryKey: ['preferences'],
-    queryFn: () => api.request<UserPreferences>('users/me/preferences'),
   });
   const privacy = useQuery({
     queryKey: ['privacy-settings'],
@@ -45,8 +42,7 @@ export default function SettingsScreen() {
       setBusy(false);
     }
   };
-  const setTheme = (theme: 'SYSTEM' | 'LIGHT' | 'DARK') =>
-    action(() => api.request('users/me/preferences', { method: 'PATCH', body: { theme } }));
+  const setTheme = (theme: 'SYSTEM' | 'LIGHT' | 'DARK') => action(() => setThemePreference(theme));
   const makePrivate = () =>
     action(() =>
       api.request('users/me/privacy', {
@@ -92,26 +88,24 @@ export default function SettingsScreen() {
       <BrandHeader title="Settings" body={`Signed in as @${user?.username ?? ''}`} />
       <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         <Text style={[styles.heading, { color: colors.textPrimary }]}>Appearance</Text>
-        <Text style={{ color: colors.textSecondary }}>
-          Current: {preferences.data?.theme ?? 'SYSTEM'}
-        </Text>
+        <Text style={{ color: colors.textSecondary }}>Current: {themePreference}</Text>
         <View style={styles.row}>
           <Button
             label="System"
-            variant="secondary"
-            disabled={busy}
+            variant={themePreference === 'SYSTEM' ? 'primary' : 'secondary'}
+            disabled={busy || themePreference === 'SYSTEM'}
             onPress={() => void setTheme('SYSTEM')}
           />
           <Button
             label="Light"
-            variant="secondary"
-            disabled={busy}
+            variant={themePreference === 'LIGHT' ? 'primary' : 'secondary'}
+            disabled={busy || themePreference === 'LIGHT'}
             onPress={() => void setTheme('LIGHT')}
           />
           <Button
             label="Dark"
-            variant="secondary"
-            disabled={busy}
+            variant={themePreference === 'DARK' ? 'primary' : 'secondary'}
+            disabled={busy || themePreference === 'DARK'}
             onPress={() => void setTheme('DARK')}
           />
         </View>

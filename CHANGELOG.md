@@ -23,3 +23,7 @@ All notable changes are documented here. The project follows semantic versioning
 ### Security
 
 - Updated `@fastify/static` to `10.1.2`; the high-severity production dependency audit passes.
+
+### Fixed
+
+- Apply the saved system, light, or dark appearance preference across mobile screens, navigation, and the status bar.

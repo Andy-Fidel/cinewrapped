@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider } from '../src/providers/auth-provider';
+import { ThemeProvider, useTheme } from '../src/providers/theme-provider';
 
 export default function RootLayout() {
   const [queryClient] = useState(() => new QueryClient());
@@ -12,10 +13,26 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <StatusBar style="auto" />
-          <Stack screenOptions={{ headerShown: false }} />
+          <ThemeProvider>
+            <ThemedNavigation />
+          </ThemeProvider>
         </AuthProvider>
       </QueryClientProvider>
     </SafeAreaProvider>
+  );
+}
+
+function ThemedNavigation() {
+  const { colors, resolvedTheme } = useTheme();
+  return (
+    <>
+      <StatusBar
+        backgroundColor={colors.background}
+        style={resolvedTheme === 'light' ? 'dark' : 'light'}
+      />
+      <Stack
+        screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}
+      />
+    </>
   );
 }

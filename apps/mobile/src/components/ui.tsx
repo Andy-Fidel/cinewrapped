@@ -1,4 +1,3 @@
-import { tokens } from '@cinewrapped/ui-tokens';
 import type { PropsWithChildren } from 'react';
 import {
   ActivityIndicator,
@@ -8,13 +7,14 @@ import {
   Text,
   TextInput,
   type TextInputProps,
-  useColorScheme,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useTheme } from '../providers/theme-provider';
+
 export function useColors() {
-  return useColorScheme() === 'light' ? tokens.color.semantic.light : tokens.color.semantic.dark;
+  return useTheme().colors;
 }
 
 export function Screen({ children, scroll = true }: PropsWithChildren<{ scroll?: boolean }>) {
