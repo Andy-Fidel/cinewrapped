@@ -4,7 +4,15 @@ import { Controller, useForm } from 'react-hook-form';
 import { Text } from 'react-native';
 import { z } from 'zod';
 
-import { BrandHeader, Button, ErrorText, Field, Screen, useColors } from '../../src/components/ui';
+import {
+  BrandHeader,
+  Button,
+  ErrorText,
+  Field,
+  PasswordField,
+  Screen,
+  useColors,
+} from '../../src/components/ui';
 import { supabase } from '../../src/lib/supabase';
 
 const schema = z.object({
@@ -81,10 +89,10 @@ export default function RegisterScreen() {
         control={control}
         name="password"
         render={({ field }) => (
-          <Field
+          <PasswordField
             label="Password"
             autoCapitalize="none"
-            secureTextEntry
+            autoComplete="new-password"
             value={field.value}
             onBlur={field.onBlur}
             onChangeText={field.onChange}

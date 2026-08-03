@@ -4,7 +4,15 @@ import { Controller, useForm } from 'react-hook-form';
 import { StyleSheet, Text, View } from 'react-native';
 import { z } from 'zod';
 
-import { BrandHeader, Button, ErrorText, Field, Screen, useColors } from '../../src/components/ui';
+import {
+  BrandHeader,
+  Button,
+  ErrorText,
+  Field,
+  PasswordField,
+  Screen,
+  useColors,
+} from '../../src/components/ui';
 import { errorMessage } from '../../src/lib/error-message';
 import { supabase } from '../../src/lib/supabase';
 import { useAuth } from '../../src/providers/auth-provider';
@@ -67,11 +75,10 @@ export default function LoginScreen() {
         control={control}
         name="password"
         render={({ field }) => (
-          <Field
+          <PasswordField
             label="Password"
             autoCapitalize="none"
             autoComplete="current-password"
-            secureTextEntry
             value={field.value}
             onBlur={field.onBlur}
             onChangeText={field.onChange}

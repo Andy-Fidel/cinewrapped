@@ -20,6 +20,7 @@ All notable changes are documented here. The project follows semantic versioning
 - Phase 7 achievements, opt-in challenges, timezone-aware streaks, privacy-filtered leaderboards, movie-passport stamps, and mobile privacy controls.
 - Phase 8 public/private clubs, membership approval and roles, discussions, polls, collaborative watchlists with voting, scheduled watch events, and mobile club experiences.
 - Filled and outlined icons for every mobile bottom-tab destination.
+- Accessible show/hide controls for sign-in, registration, and recovery password fields.
 
 ### Security
 

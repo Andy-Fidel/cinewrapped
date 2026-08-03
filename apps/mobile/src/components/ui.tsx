@@ -1,4 +1,5 @@
-import type { PropsWithChildren } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { type PropsWithChildren, type ReactNode, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -47,23 +48,83 @@ export function Field({
   error,
   ...props
 }: TextInputProps & { label: string; error?: string | undefined }) {
+  return <LabeledInput error={error} label={label} inputProps={props} />;
+}
+
+export function PasswordField({
+  label,
+  error,
+  ...props
+}: Omit<TextInputProps, 'secureTextEntry'> & { label: string; error?: string | undefined }) {
   const colors = useColors();
+  const [visible, setVisible] = useState(false);
+  return (
+    <LabeledInput
+      error={error}
+      label={label}
+      inputProps={{
+        autoCapitalize: props.autoCapitalize ?? 'none',
+        autoCorrect: props.autoCorrect ?? false,
+        ...props,
+        secureTextEntry: !visible,
+      }}
+      trailing={
+        <Pressable
+          accessibilityLabel={visible ? 'Hide password' : 'Show password'}
+          accessibilityRole="button"
+          hitSlop={8}
+          onPress={() => setVisible((current) => !current)}
+          style={styles.visibilityToggle}
+        >
+          <Ionicons
+            color={colors.textSecondary}
+            name={visible ? 'eye-off-outline' : 'eye-outline'}
+            size={22}
+          />
+        </Pressable>
+      }
+    />
+  );
+}
+
+function LabeledInput({
+  error,
+  inputProps,
+  label,
+  trailing,
+}: {
+  error?: string | undefined;
+  inputProps: TextInputProps;
+  label: string;
+  trailing?: ReactNode;
+}) {
+  const colors = useColors();
+  const { style, ...props } = inputProps;
   return (
     <View style={styles.fieldWrap}>
       <Text style={[styles.label, { color: colors.textPrimary }]}>{label}</Text>
-      <TextInput
-        accessibilityLabel={label}
-        placeholderTextColor={colors.textDisabled}
+      <View
         style={[
           styles.field,
           {
             backgroundColor: colors.surface,
             borderColor: error ? colors.danger : colors.border,
-            color: colors.textPrimary,
           },
         ]}
-        {...props}
-      />
+      >
+        <TextInput
+          accessibilityLabel={label}
+          placeholderTextColor={colors.textDisabled}
+          style={[
+            styles.fieldInput,
+            trailing === undefined ? null : styles.fieldInputWithTrailing,
+            { color: colors.textPrimary },
+            style,
+          ]}
+          {...props}
+        />
+        {trailing}
+      </View>
       {error === undefined ? null : (
         <Text style={[styles.error, { color: colors.danger }]}>{error}</Text>
       )}
@@ -132,10 +193,26 @@ const styles = StyleSheet.create({
   field: {
     borderRadius: 10,
     borderWidth: 1,
+    justifyContent: 'center',
+    minHeight: 52,
+    position: 'relative',
+  },
+  fieldInput: {
+    flex: 1,
     fontSize: 16,
     minHeight: 52,
     paddingHorizontal: 16,
     paddingVertical: 12,
+  },
+  fieldInputWithTrailing: { paddingRight: 52 },
+  visibilityToggle: {
+    alignItems: 'center',
+    bottom: 0,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    width: 52,
   },
   error: { fontSize: 13, lineHeight: 18 },
   button: {

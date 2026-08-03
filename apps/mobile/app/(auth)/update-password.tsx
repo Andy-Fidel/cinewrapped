@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { BrandHeader, Button, ErrorText, Field, Screen } from '../../src/components/ui';
+import { BrandHeader, Button, ErrorText, PasswordField, Screen } from '../../src/components/ui';
 import { supabase } from '../../src/lib/supabase';
 
 export default function UpdatePasswordScreen() {
@@ -19,7 +19,12 @@ export default function UpdatePasswordScreen() {
         title="Choose a new password"
         body="Use at least eight characters, including a number and uppercase letter."
       />
-      <Field label="New password" secureTextEntry value={password} onChangeText={setPassword} />
+      <PasswordField
+        autoComplete="new-password"
+        label="New password"
+        value={password}
+        onChangeText={setPassword}
+      />
       {message === null ? null : <ErrorText>{message}</ErrorText>}
       <Button
         label="Update password"
