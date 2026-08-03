@@ -9,7 +9,7 @@ import { useQuery } from '@tanstack/react-query';
 import { randomUUID } from 'expo-crypto';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { BrandHeader, Button, ErrorText, Field, Screen, useColors } from '../../src/components/ui';
@@ -80,7 +80,7 @@ export default function OnboardingScreen() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [profileAttempted, setProfileAttempted] = useState(false);
-  const hydratedUserId = useRef<string | null>(null);
+  const hydrateProfile = draft.hydrateProfile;
   const genres = useQuery({
     queryKey: ['genres'],
     queryFn: () => api.request<GenreSummary[]>('genres'),
@@ -91,15 +91,8 @@ export default function OnboardingScreen() {
   });
 
   useEffect(() => {
-    if (user === null || hydratedUserId.current === user.id) return;
-    hydratedUserId.current = user.id;
-    draft.patch({
-      username: user.username.startsWith('user_') ? '' : user.username,
-      displayName: user.displayName,
-      avatarUrl: user.avatarUrl,
-      profileVersion: user.version,
-    });
-  }, [draft, user]);
+    if (user !== null) hydrateProfile(user);
+  }, [hydrateProfile, user]);
 
   const mark = (step: string) =>
     api.request('users/me/onboarding', { method: 'PATCH', body: { step } });
@@ -335,7 +328,7 @@ export default function OnboardingScreen() {
             returnKeyType="search"
             onSubmitEditing={() => void searchMedia()}
           />
-          <Button label="Search" variant="secondary" onPress={() => void searchMedia()} />{' '}
+          <Button label="Search" variant="secondary" onPress={() => void searchMedia()} />
           <Text style={{ color: colors.textSecondary }}>
             {draft.favoriteMediaIds.length}/5 minimum selected
           </Text>

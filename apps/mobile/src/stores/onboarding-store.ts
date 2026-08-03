@@ -1,3 +1,4 @@
+import type { CurrentUser } from '@cinewrapped/shared-types';
 import { create } from 'zustand';
 
 interface OnboardingDraft {
@@ -11,6 +12,10 @@ interface OnboardingDraft {
   mainstreamPreferencePercent: number;
   notificationsEnabled: boolean;
   profileVersion: number;
+  hydratedUserId: string | null;
+  hydrateProfile: (
+    user: Pick<CurrentUser, 'id' | 'username' | 'displayName' | 'avatarUrl' | 'version'>,
+  ) => void;
   patch: (values: Partial<OnboardingDraft>) => void;
   reset: () => void;
 }
@@ -26,10 +31,23 @@ const initial = {
   mainstreamPreferencePercent: 50,
   notificationsEnabled: true,
   profileVersion: 1,
+  hydratedUserId: null,
 };
 
 export const useOnboardingStore = create<OnboardingDraft>((set) => ({
   ...initial,
+  hydrateProfile: (user) =>
+    set((state) =>
+      state.hydratedUserId === user.id
+        ? state
+        : {
+            hydratedUserId: user.id,
+            username: user.username.startsWith('user_') ? '' : user.username,
+            displayName: user.displayName,
+            avatarUrl: user.avatarUrl,
+            profileVersion: user.version,
+          },
+    ),
   patch: (values) => set(values),
   reset: () => set(initial),
 }));

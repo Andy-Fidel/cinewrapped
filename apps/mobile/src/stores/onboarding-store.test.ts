@@ -19,4 +19,25 @@ describe('onboarding store', () => {
       profileVersion: 1,
     });
   });
+
+  it('hydrates a profile only once even when the screen remounts', () => {
+    const user = {
+      id: 'user-1',
+      username: 'user_generated',
+      displayName: 'Andy',
+      avatarUrl: null,
+      version: 2,
+    };
+    useOnboardingStore.getState().hydrateProfile(user);
+    const hydrated = useOnboardingStore.getState();
+    expect(hydrated).toMatchObject({
+      hydratedUserId: 'user-1',
+      username: '',
+      displayName: 'Andy',
+      profileVersion: 2,
+    });
+
+    useOnboardingStore.getState().hydrateProfile({ ...user, displayName: 'Changed', version: 3 });
+    expect(useOnboardingStore.getState()).toBe(hydrated);
+  });
 });
