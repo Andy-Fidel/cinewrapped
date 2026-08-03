@@ -549,3 +549,23 @@ Generation policy:
 - [x] Cursor pagination format
 - [x] Object-level authorization matrix
 - [x] OpenAPI 3.1 configuration and machine-readable contract
+
+## 11. Phase 8 club routes
+
+All routes require a verified Supabase bearer session. Private club reads return `CLUB_NOT_FOUND` unless the viewer is an active member. Mutations derive the actor from the token and never accept a user ID.
+
+| Method | Route                                           | Authorization                   | Purpose                                                 |
+| ------ | ----------------------------------------------- | ------------------------------- | ------------------------------------------------------- |
+| GET    | `/clubs?scope=DISCOVER                          | MINE&q=&limit=`                 | Signed-in member                                        | Discover visible clubs or list memberships |
+| POST   | `/clubs`                                        | Signed-in member                | Create a club and atomic owner membership               |
+| GET    | `/clubs/{clubId}`                               | Public or active private member | Read members, discussions, polls, watchlist, and events |
+| POST   | `/clubs/{clubId}/join`                          | Policy-dependent                | Join immediately or create a pending request            |
+| PATCH  | `/clubs/{clubId}/members/{membershipId}`        | Owner/admin/moderator           | Approve or remove a non-owner membership                |
+| POST   | `/clubs/{clubId}/posts`                         | Active member                   | Create a discussion; announcements require a manager    |
+| POST   | `/clubs/{clubId}/polls`                         | Owner/admin/moderator           | Create a bounded poll                                   |
+| PUT    | `/clubs/{clubId}/polls/{pollId}/vote`           | Active member                   | Toggle a validated option vote                          |
+| POST   | `/clubs/{clubId}/watchlist/items`               | Active member                   | Suggest a normalized media title                        |
+| PUT    | `/clubs/{clubId}/watchlist/items/{itemId}/vote` | Active member                   | Set or remove an up/down vote                           |
+| POST   | `/clubs/{clubId}/events`                        | Owner/admin/moderator           | Schedule a timezone-labeled watch event                 |
+
+Important errors include `CLUB_NOT_FOUND`, `CLUB_MEMBERSHIP_REQUIRED`, `CLUB_MANAGER_REQUIRED`, `CLUB_INVITE_REQUIRED`, `CLUB_POLL_CLOSED`, `CLUB_POLL_OPTION_INVALID`, and `CLUB_WATCHLIST_DUPLICATE`.

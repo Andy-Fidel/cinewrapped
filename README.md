@@ -2,7 +2,7 @@
 
 CineWrapped is a cross-platform social movie and television tracker focused on personal history, explainable recommendations, friendships, statistics, and weekly/monthly/yearly wraps.
 
-The project is being built in the ordered phases defined by the master build prompt. Phases 1–3 provide identity, discovery, and tracking. Phase 4 adds explainable recommendations, Phase 5 adds privacy-aware social features, and Phase 6 adds deterministic statistics and wraps. Phase 7 adds achievements, challenges, streaks, privacy-safe leaderboards, and a movie passport.
+The project is being built in the ordered phases defined by the master build prompt. Phases 1–3 provide identity, discovery, and tracking. Phase 4 adds explainable recommendations, Phase 5 adds privacy-aware social features, and Phase 6 adds deterministic statistics and wraps. Phase 7 adds gamification. Phase 8 adds role-governed movie clubs, discussions, polls, group voting, collaborative watchlists, and watch events.
 
 ## Workspace
 
@@ -73,6 +73,7 @@ pnpm build
 - [Social features and privacy policy](docs/social/SOCIAL_FEATURES.md)
 - [Statistics and wraps](docs/insights/STATISTICS_AND_WRAPS.md)
 - [Gamification](docs/gamification/GAMIFICATION.md)
+- [Clubs and collaboration](docs/clubs/CLUBS_AND_COLLABORATION.md)
 - [Design system](docs/design/DESIGN_SYSTEM.md)
 - [Implementation checklist](docs/IMPLEMENTATION_CHECKLIST.md)
 - [Security policy](SECURITY.md)

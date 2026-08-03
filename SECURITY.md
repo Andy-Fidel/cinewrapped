@@ -21,6 +21,6 @@ Run the production audit with:
 pnpm audit --prod --audit-level high
 ```
 
-As of 2026-08-01, the high-severity production audit passes. One moderate `uuid` advisory remains through Expo's Node-based Apple project tooling (`xcode`). That tooling is used during native builds and is not bundled into the mobile runtime. Avoid passing attacker-controlled buffers to build tooling, and upgrade the Expo toolchain when it adopts `uuid >=11.1.1`.
+As of 2026-08-03, the high-severity production audit passes. The API pins `@fastify/static` to patched version `10.1.2`. One moderate `uuid` advisory remains through Expo's Node-based Apple project tooling (`xcode`). That tooling is used during native builds and is not bundled into the mobile runtime. Avoid passing attacker-controlled buffers to build tooling, and upgrade the Expo toolchain when it adopts `uuid >=11.1.1`.
 
 Security overrides must be removed once direct framework dependencies include the patched versions; do not let overrides become permanent invisible forks.

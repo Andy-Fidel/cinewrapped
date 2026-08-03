@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import {
   createCommentSchema,
+  createClubPollSchema,
+  createClubSchema,
   createFriendshipSchema,
   createWrapSchema,
   createWrapShareSchema,
@@ -90,5 +92,21 @@ describe('shared validation', () => {
       }),
     ).toEqual({ leaderboardVisibility: 'FRIENDS', passportVisibility: 'PRIVATE' });
     expect(() => updatePrivacySchema.parse({ leaderboardVisibility: 'FOLLOWERS' })).toThrow();
+  });
+
+  it('normalizes club slugs and requires unique poll options', () => {
+    expect(
+      createClubSchema.parse({
+        name: 'Accra Film Club',
+        slug: 'ACCRA-FILM-CLUB',
+        description: 'A club for local film fans.',
+      }).slug,
+    ).toBe('accra-film-club');
+    expect(() =>
+      createClubPollSchema.parse({
+        question: 'What should we watch?',
+        options: [{ label: 'Arrival' }, { label: 'arrival' }],
+      }),
+    ).toThrow(/unique/u);
   });
 });

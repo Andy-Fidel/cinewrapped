@@ -628,3 +628,94 @@ export interface GamificationDashboard {
   streak: StreakSummary;
   passport: MoviePassport;
 }
+
+export type ClubVisibility = 'PUBLIC' | 'PRIVATE';
+export type ClubMembershipType = 'OPEN' | 'APPROVAL' | 'INVITE_ONLY';
+export type ClubRole = 'OWNER' | 'ADMIN' | 'MODERATOR' | 'MEMBER';
+export type ClubMemberStatus = 'PENDING' | 'ACTIVE' | 'REMOVED';
+
+export interface ClubMembershipSummary {
+  id: string;
+  role: ClubRole;
+  status: ClubMemberStatus;
+  joinedAt: string | null;
+  user: UserSummary;
+}
+
+export interface ClubSummary {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  coverImageUrl: string | null;
+  visibility: ClubVisibility;
+  membershipType: ClubMembershipType;
+  category: string | null;
+  memberCount: number;
+  membership: Pick<ClubMembershipSummary, 'id' | 'role' | 'status'> | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ClubPostSummary {
+  id: string;
+  postType: 'DISCUSSION' | 'ANNOUNCEMENT';
+  title: string | null;
+  body: string;
+  containsSpoilers: boolean;
+  author: UserSummary;
+  commentCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ClubPollOptionSummary {
+  id: string;
+  label: string;
+  position: number;
+  media: MediaSummary | null;
+  voteCount: number;
+  selectedByViewer: boolean;
+}
+
+export interface ClubPollSummary {
+  id: string;
+  question: string;
+  allowMultiple: boolean;
+  status: 'OPEN' | 'CLOSED';
+  closesAt: string | null;
+  totalVotes: number;
+  options: ClubPollOptionSummary[];
+  createdAt: string;
+}
+
+export interface ClubWatchlistItemSummary {
+  id: string;
+  media: MediaSummary;
+  suggestedBy: UserSummary;
+  note: string | null;
+  score: number;
+  viewerVote: -1 | 0 | 1;
+  selectedAt: string | null;
+  createdAt: string;
+}
+
+export interface ClubWatchEventSummary {
+  id: string;
+  title: string;
+  description: string | null;
+  media: MediaSummary | null;
+  startsAt: string;
+  timezone: string;
+  locationUrl: string | null;
+  status: 'SCHEDULED' | 'CANCELLED' | 'COMPLETED';
+  createdBy: UserSummary;
+}
+
+export interface ClubDetails extends ClubSummary {
+  members: ClubMembershipSummary[];
+  posts: ClubPostSummary[];
+  polls: ClubPollSummary[];
+  watchlist: ClubWatchlistItemSummary[];
+  watchEvents: ClubWatchEventSummary[];
+}

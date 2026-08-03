@@ -48,6 +48,8 @@ This log records the architecture decisions established during Task 1. Detailed 
 | ADR-042 | Generate initial wraps synchronously behind an idempotent database key                       | Accepted | 2026-08-02 | Phase 6 works without worker coordination; high-volume scheduled generation must later move behind the outbox                                                        |
 | ADR-043 | Project initial gamification progress from authoritative viewing and interaction records     | Accepted | 2026-08-02 | Phase 7 remains transparent and backfillable; high-volume accounts will later need event-driven counters                                                             |
 | ADR-044 | Apply leaderboard eligibility before scoring and default ranking/passport sharing to private | Accepted | 2026-08-02 | Private or blocked members are excluded before behavioral aggregation; public participation requires an explicit settings change                                     |
+| ADR-045 | Authorize every club mutation through an active membership and explicit club role            | Accepted | 2026-08-03 | Membership cannot be inferred from discoverability; private clubs are concealed and owner membership cannot be removed                                               |
+| ADR-046 | Store collaborative watchlist and poll votes as normalized member records                    | Accepted | 2026-08-03 | Votes are auditable, reversible, uniquely constrained, and can be aggregated without trusting client totals                                                          |
 
 ## Decision change process
 

@@ -40,6 +40,7 @@ tags:
       name: Gamification,
       description: 'Achievements, challenges, streaks, privacy-safe leaderboards, and passports.',
     }
+  - { name: Clubs, description: 'Membership, discussions, polls, group lists, and watch events.' }
   - { name: Notifications, description: 'In-app notifications and push device registration.' }
 
 paths:
@@ -1268,6 +1269,148 @@ paths:
         {
           '204': { $ref: '#/components/responses/NoContent' },
           '404': { $ref: '#/components/responses/NotFound' },
+        }
+
+  /clubs:
+    get:
+      tags: [Clubs]
+      operationId: listClubs
+      parameters:
+        - { name: scope, in: query, schema: { type: string, enum: [DISCOVER, MINE] } }
+        - { name: q, in: query, schema: { type: string, maxLength: 120 } }
+        - { $ref: '#/components/parameters/Limit' }
+      x-response-dto: ClubSummaryList
+      responses: { '200': { $ref: '#/components/responses/Ok' } }
+    post:
+      tags: [Clubs]
+      operationId: createClub
+      x-request-dto: CreateClub
+      x-response-dto: ClubDetails
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Ok' },
+          '409': { $ref: '#/components/responses/Conflict' },
+          '422': { $ref: '#/components/responses/ValidationError' },
+        }
+  /clubs/{clubId}:
+    get:
+      tags: [Clubs]
+      operationId: getClub
+      parameters:
+        [{ name: clubId, in: path, required: true, schema: { type: string, format: uuid } }]
+      x-response-dto: ClubDetails
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Ok' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        }
+  /clubs/{clubId}/join:
+    post:
+      tags: [Clubs]
+      operationId: joinClub
+      parameters:
+        [{ name: clubId, in: path, required: true, schema: { type: string, format: uuid } }]
+      x-response-dto: ClubDetails
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Ok' },
+          '403': { $ref: '#/components/responses/Forbidden' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        }
+  /clubs/{clubId}/members/{membershipId}:
+    parameters:
+      - { name: clubId, in: path, required: true, schema: { type: string, format: uuid } }
+      - { name: membershipId, in: path, required: true, schema: { type: string, format: uuid } }
+    patch:
+      tags: [Clubs]
+      operationId: updateClubMembership
+      x-request-dto: UpdateClubMembership
+      x-response-dto: ClubDetails
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Ok' },
+          '403': { $ref: '#/components/responses/Forbidden' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        }
+  /clubs/{clubId}/posts:
+    parameters: [{ name: clubId, in: path, required: true, schema: { type: string, format: uuid } }]
+    post:
+      tags: [Clubs]
+      operationId: createClubPost
+      x-request-dto: CreateClubPost
+      x-response-dto: ClubPostSummary
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Ok' },
+          '403': { $ref: '#/components/responses/Forbidden' },
+        }
+  /clubs/{clubId}/polls:
+    parameters: [{ name: clubId, in: path, required: true, schema: { type: string, format: uuid } }]
+    post:
+      tags: [Clubs]
+      operationId: createClubPoll
+      x-request-dto: CreateClubPoll
+      x-response-dto: ClubPollSummary
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Ok' },
+          '403': { $ref: '#/components/responses/Forbidden' },
+          '422': { $ref: '#/components/responses/ValidationError' },
+        }
+  /clubs/{clubId}/polls/{pollId}/vote:
+    parameters:
+      - { name: clubId, in: path, required: true, schema: { type: string, format: uuid } }
+      - { name: pollId, in: path, required: true, schema: { type: string, format: uuid } }
+    put:
+      tags: [Clubs]
+      operationId: voteInClubPoll
+      x-request-dto: VoteClubPoll
+      x-response-dto: ClubPollSummary
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Ok' },
+          '403': { $ref: '#/components/responses/Forbidden' },
+          '409': { $ref: '#/components/responses/Conflict' },
+        }
+  /clubs/{clubId}/watchlist/items:
+    parameters: [{ name: clubId, in: path, required: true, schema: { type: string, format: uuid } }]
+    post:
+      tags: [Clubs]
+      operationId: addClubWatchlistItem
+      x-request-dto: AddClubWatchlistItem
+      x-response-dto: ClubWatchlistItemSummary
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Ok' },
+          '403': { $ref: '#/components/responses/Forbidden' },
+          '409': { $ref: '#/components/responses/Conflict' },
+        }
+  /clubs/{clubId}/watchlist/items/{itemId}/vote:
+    parameters:
+      - { name: clubId, in: path, required: true, schema: { type: string, format: uuid } }
+      - { name: itemId, in: path, required: true, schema: { type: string, format: uuid } }
+    put:
+      tags: [Clubs]
+      operationId: voteOnClubWatchlistItem
+      x-request-dto: VoteClubWatchlistItem
+      x-response-dto: ClubWatchlistItemSummary
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Ok' },
+          '403': { $ref: '#/components/responses/Forbidden' },
+        }
+  /clubs/{clubId}/events:
+    parameters: [{ name: clubId, in: path, required: true, schema: { type: string, format: uuid } }]
+    post:
+      tags: [Clubs]
+      operationId: createClubWatchEvent
+      x-request-dto: CreateClubWatchEvent
+      x-response-dto: ClubWatchEventSummary
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Ok' },
+          '403': { $ref: '#/components/responses/Forbidden' },
+          '422': { $ref: '#/components/responses/ValidationError' },
         }
 
 components:

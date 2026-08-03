@@ -285,3 +285,72 @@ export const createWrapShareSchema = z.object({
   slideIndex: z.number().int().min(0).max(30).default(0),
   privacyAcknowledged: z.literal(true),
 });
+
+export const createClubSchema = z.object({
+  name: z.string().trim().min(3).max(120),
+  slug: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/u)
+    .max(120)
+    .optional(),
+  description: z.string().trim().min(1).max(2_000),
+  visibility: z.enum(['PUBLIC', 'PRIVATE']).default('PUBLIC'),
+  membershipType: z.enum(['OPEN', 'APPROVAL', 'INVITE_ONLY']).default('OPEN'),
+  category: z.string().trim().min(1).max(80).nullable().optional(),
+});
+
+export const updateClubMembershipSchema = z.object({
+  action: z.enum(['APPROVE', 'REMOVE']),
+  role: z.enum(['ADMIN', 'MODERATOR', 'MEMBER']).optional(),
+});
+
+export const createClubPostSchema = z.object({
+  postType: z.enum(['DISCUSSION', 'ANNOUNCEMENT']).default('DISCUSSION'),
+  title: z.string().trim().min(1).max(160).nullable().optional(),
+  body: z.string().trim().min(1).max(10_000),
+  containsSpoilers: z.boolean().default(false),
+});
+
+export const createClubPollSchema = z
+  .object({
+    question: z.string().trim().min(1).max(500),
+    allowMultiple: z.boolean().default(false),
+    closesAt: z.iso.datetime({ offset: true }).nullable().optional(),
+    options: z
+      .array(
+        z.object({
+          label: z.string().trim().min(1).max(200),
+          mediaId: uuidSchema.nullable().optional(),
+        }),
+      )
+      .min(2)
+      .max(10),
+  })
+  .refine(
+    (value) =>
+      new Set(value.options.map((option) => option.label.toLocaleLowerCase())).size ===
+      value.options.length,
+    { message: 'Poll option labels must be unique.', path: ['options'] },
+  );
+
+export const voteClubPollSchema = z.object({ optionId: uuidSchema });
+
+export const addClubWatchlistItemSchema = z.object({
+  mediaId: uuidSchema,
+  note: z.string().trim().max(500).nullable().optional(),
+});
+
+export const voteClubWatchlistItemSchema = z.object({
+  value: z.union([z.literal(-1), z.literal(1)]),
+});
+
+export const createClubWatchEventSchema = z.object({
+  title: z.string().trim().min(1).max(160),
+  description: z.string().trim().max(2_000).nullable().optional(),
+  mediaId: uuidSchema.nullable().optional(),
+  startsAt: z.iso.datetime({ offset: true }),
+  timezone: z.string().trim().min(1).max(64),
+  locationUrl: z.url().max(2_048).nullable().optional(),
+});

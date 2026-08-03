@@ -221,6 +221,7 @@ export default function SocialScreen() {
             <Text style={{ color: colors.textSecondary }}>
               Find film friends and catch up on what they are watching.
             </Text>
+            <Button label="Explore movie clubs" onPress={() => router.push('/clubs')} />
           </View>
           <Field
             autoCapitalize="none"

@@ -138,6 +138,46 @@ enum FriendshipStatus {
   BLOCKED
 }
 
+enum ClubVisibility {
+  PUBLIC
+  PRIVATE
+}
+
+enum ClubMembershipType {
+  OPEN
+  APPROVAL
+  INVITE_ONLY
+}
+
+enum ClubRole {
+  OWNER
+  ADMIN
+  MODERATOR
+  MEMBER
+}
+
+enum ClubMemberStatus {
+  PENDING
+  ACTIVE
+  REMOVED
+}
+
+enum ClubPostType {
+  DISCUSSION
+  ANNOUNCEMENT
+}
+
+enum ClubPollStatus {
+  OPEN
+  CLOSED
+}
+
+enum ClubWatchEventStatus {
+  SCHEDULED
+  CANCELLED
+  COMPLETED
+}
+
 enum FeedActivityType {
   USER_WATCHED_MEDIA
   USER_RATED_MEDIA
@@ -368,6 +408,14 @@ model User {
   rolesGranted              UserRoleAssignment[]      @relation("RoleGrantor")
   auditLogs                 AuditLog[]                @relation("AuditUserActor")
   idempotencyRecords        IdempotencyRecord[]
+  clubsOwned                Club[]                    @relation("ClubOwner")
+  clubMemberships           ClubMember[]
+  clubPosts                 ClubPost[]
+  clubPollsCreated          ClubPoll[]
+  clubPollVotes             ClubPollVote[]
+  clubWatchlistSuggestions  ClubWatchlistItem[]
+  clubWatchlistVotes        ClubWatchlistVote[]
+  clubWatchEventsCreated    ClubWatchEvent[]
 
   @@index([deletedAt])
   @@index([createdAt, id])
@@ -528,6 +576,9 @@ model Media {
   reviews               Review[]
   feedActivities        FeedActivity[]
   recommendations       Recommendation[]
+  clubPollOptions       ClubPollOption[]
+  clubWatchlistItems    ClubWatchlistItem[]
+  clubWatchEvents       ClubWatchEvent[]
 
   @@unique([externalProvider, externalId, mediaType])
   @@index([mediaType, providerPopularity(sort: Desc)])
@@ -976,6 +1027,192 @@ model UserMute {
   @@id([muterId, mutedId])
   @@index([mutedId, muterId])
   @@map("user_mutes")
+}
+
+model Club {
+  id             String             @id @default(uuid()) @db.Uuid
+  ownerId        String             @db.Uuid
+  name           String             @db.VarChar(120)
+  slug           String             @unique @db.VarChar(120)
+  description    String             @db.VarChar(2000)
+  coverImageUrl  String?            @db.VarChar(2048)
+  visibility     ClubVisibility     @default(PUBLIC)
+  membershipType ClubMembershipType @default(OPEN)
+  category       String?            @db.VarChar(80)
+  memberCount    Int                @default(1)
+  version        Int                @default(1)
+  createdAt      DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime           @updatedAt @db.Timestamptz(3)
+  deletedAt      DateTime?          @db.Timestamptz(3)
+
+  owner          User                @relation("ClubOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  members        ClubMember[]
+  posts          ClubPost[]
+  polls          ClubPoll[]
+  watchlistItems ClubWatchlistItem[]
+  watchEvents    ClubWatchEvent[]
+
+  @@index([visibility, createdAt(sort: Desc), id])
+  @@index([ownerId, updatedAt(sort: Desc)])
+  @@index([deletedAt])
+  @@map("clubs")
+}
+
+model ClubMember {
+  id        String           @id @default(uuid()) @db.Uuid
+  clubId    String           @db.Uuid
+  userId    String           @db.Uuid
+  role      ClubRole         @default(MEMBER)
+  status    ClubMemberStatus @default(PENDING)
+  joinedAt  DateTime?        @db.Timestamptz(3)
+  createdAt DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime         @updatedAt @db.Timestamptz(3)
+
+  club Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([clubId, userId])
+  @@index([userId, status, updatedAt(sort: Desc)])
+  @@index([clubId, status, role])
+  @@map("club_members")
+}
+
+model ClubPost {
+  id               String       @id @default(uuid()) @db.Uuid
+  clubId           String       @db.Uuid
+  authorId         String       @db.Uuid
+  postType         ClubPostType @default(DISCUSSION)
+  title            String?      @db.VarChar(160)
+  body             String       @db.VarChar(10000)
+  containsSpoilers Boolean      @default(false)
+  version          Int          @default(1)
+  createdAt        DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime     @updatedAt @db.Timestamptz(3)
+  deletedAt        DateTime?    @db.Timestamptz(3)
+
+  club   Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  author User @relation(fields: [authorId], references: [id], onDelete: Restrict)
+
+  @@index([clubId, createdAt(sort: Desc), id])
+  @@index([authorId, createdAt(sort: Desc)])
+  @@index([deletedAt])
+  @@map("club_posts")
+}
+
+model ClubPoll {
+  id            String         @id @default(uuid()) @db.Uuid
+  clubId        String         @db.Uuid
+  createdById   String         @db.Uuid
+  question      String         @db.VarChar(500)
+  allowMultiple Boolean        @default(false)
+  status        ClubPollStatus @default(OPEN)
+  closesAt      DateTime?      @db.Timestamptz(3)
+  createdAt     DateTime       @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime       @updatedAt @db.Timestamptz(3)
+
+  club      Club             @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  createdBy User             @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  options   ClubPollOption[]
+  votes     ClubPollVote[]
+
+  @@index([clubId, status, createdAt(sort: Desc)])
+  @@map("club_polls")
+}
+
+model ClubPollOption {
+  id       String  @id @default(uuid()) @db.Uuid
+  pollId   String  @db.Uuid
+  label    String  @db.VarChar(200)
+  mediaId  String? @db.Uuid
+  position Int
+
+  poll  ClubPoll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  media Media?         @relation(fields: [mediaId], references: [id], onDelete: Restrict)
+  votes ClubPollVote[]
+
+  @@unique([pollId, position])
+  @@index([mediaId])
+  @@map("club_poll_options")
+}
+
+model ClubPollVote {
+  pollId    String   @db.Uuid
+  optionId  String   @db.Uuid
+  userId    String   @db.Uuid
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  poll   ClubPoll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  option ClubPollOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  user   User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([pollId, optionId, userId])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([optionId])
+  @@map("club_poll_votes")
+}
+
+model ClubWatchlistItem {
+  id            String    @id @default(uuid()) @db.Uuid
+  clubId        String    @db.Uuid
+  mediaId       String    @db.Uuid
+  suggestedById String    @db.Uuid
+  note          String?   @db.VarChar(500)
+  selectedAt    DateTime? @db.Timestamptz(3)
+  archivedAt    DateTime? @db.Timestamptz(3)
+  version       Int       @default(1)
+  createdAt     DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime  @updatedAt @db.Timestamptz(3)
+
+  club        Club                @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  media       Media               @relation(fields: [mediaId], references: [id], onDelete: Restrict)
+  suggestedBy User                @relation(fields: [suggestedById], references: [id], onDelete: Restrict)
+  votes       ClubWatchlistVote[]
+
+  @@unique([clubId, mediaId])
+  @@index([clubId, archivedAt, createdAt(sort: Desc)])
+  @@index([mediaId])
+  @@map("club_watchlist_items")
+}
+
+model ClubWatchlistVote {
+  itemId    String   @db.Uuid
+  userId    String   @db.Uuid
+  value     Int
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  item ClubWatchlistItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  user User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([itemId, userId])
+  @@index([userId, updatedAt(sort: Desc)])
+  @@map("club_watchlist_votes")
+}
+
+model ClubWatchEvent {
+  id          String               @id @default(uuid()) @db.Uuid
+  clubId      String               @db.Uuid
+  createdById String               @db.Uuid
+  mediaId     String?              @db.Uuid
+  title       String               @db.VarChar(160)
+  description String?              @db.VarChar(2000)
+  startsAt    DateTime             @db.Timestamptz(3)
+  timezone    String               @db.VarChar(64)
+  locationUrl String?              @db.VarChar(2048)
+  status      ClubWatchEventStatus @default(SCHEDULED)
+  version     Int                  @default(1)
+  createdAt   DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime             @updatedAt @db.Timestamptz(3)
+  deletedAt   DateTime?            @db.Timestamptz(3)
+
+  club      Club   @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  createdBy User   @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  media     Media? @relation(fields: [mediaId], references: [id], onDelete: Restrict)
+
+  @@index([clubId, startsAt, id])
+  @@index([createdById, startsAt])
+  @@index([deletedAt])
+  @@map("club_watch_events")
 }
 
 model FeedActivity {

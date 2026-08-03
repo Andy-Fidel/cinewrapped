@@ -18,3 +18,8 @@ All notable changes are documented here. The project follows semantic versioning
 - Phase 5 privacy-aware member profiles, follows, friend requests, activity feed projection, comments, reactions, blocks, mutes, share receipts, and the mobile Social experience.
 - Phase 6 timezone-aware statistics, monthly trends, taste distributions, versioned weekly/monthly/yearly wraps, factual story slides, share cards, and the mobile wrap archive/viewer.
 - Phase 7 achievements, opt-in challenges, timezone-aware streaks, privacy-filtered leaderboards, movie-passport stamps, and mobile privacy controls.
+- Phase 8 public/private clubs, membership approval and roles, discussions, polls, collaborative watchlists with voting, scheduled watch events, and mobile club experiences.
+
+### Security
+
+- Updated `@fastify/static` to `10.1.2`; the high-severity production dependency audit passes.

@@ -494,3 +494,7 @@ Analytics consent is checked before dispatch. Accessibility settings are used fo
 - [x] Accessibility requirements
 - [x] Responsive behavior
 - [x] Component and token references
+
+# Phase 8 club experience
+
+The Social tab links to club discovery without adding a sixth bottom tab. `/clubs` supports Discover/My Clubs search, empty/error/loading states, and public-club creation. `/clubs/[clubId]` adapts actions to membership and role: non-members join, pending members see a non-interactive status, active members discuss/suggest/vote, and managers additionally create polls, schedule watch events, and approve membership requests. Private-club not-found behavior deliberately avoids confirming the resource exists.

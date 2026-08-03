@@ -505,6 +505,8 @@ Later phases may add clearly labeled, deterministic development fixtures for the
 
 Production seeds contain configuration/reference data only. They never create test users or production-path mock provider responses.
 
+Phase 8 adds `clubs`, `club_members`, `club_posts`, `club_polls`, `club_poll_options`, `club_poll_votes`, `club_watchlist_items`, `club_watchlist_votes`, and `club_watch_events`. The migration enforces normalized unique slugs, non-negative member counts, one active owner per club, non-negative poll positions, and `-1`/`1` watchlist votes. Club content is user-generated, so no production club fixture is seeded.
+
 ## 11. Retention and partitioning outlook
 
 Partitioning is intentionally deferred until measured volume justifies it. Likely future candidates are `audit_logs`, `outbox_events`, `feed_activities`, and `notification_deliveries`, partitioned by occurrence/creation month. Partitioning is introduced only with retention automation, cross-partition index review, and tested Prisma query behavior.

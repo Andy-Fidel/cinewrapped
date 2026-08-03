@@ -160,3 +160,17 @@ This checklist follows the mandatory execution order in the master build prompt.
 - [x] Migration, seed definitions, shared types, validation, OpenAPI, and tests
 - [x] Full typecheck, lint, test, schema, build, and production-audit verification
 - [x] Documentation and phase handoff
+
+## Phase 8 — Clubs and Collaborative Features
+
+- [x] Public and private clubs with open, approval, and invite-only membership policies
+- [x] Owner, administrator, moderator, and member authorization boundaries
+- [x] Member discussions and manager announcements
+- [x] Single- and multi-select polls with bounded options and close times
+- [x] Collaborative watchlist suggestions with one vote per member
+- [x] Scheduled watch events with timezone and optional title/location metadata
+- [x] Membership approval and removal without owner lockout
+- [x] Mobile discovery, club creation, detail, discussion, poll, watchlist, and event flows
+- [x] Migration, shared contracts, validation, OpenAPI decorators, and tests
+- [x] Full typecheck, lint, test, schema, build, and production-audit verification
+- [x] Documentation and phase handoff

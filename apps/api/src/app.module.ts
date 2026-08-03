@@ -3,6 +3,7 @@ import { APP_FILTER } from '@nestjs/core';
 
 import { AppController } from './app.controller.js';
 import { AuthModule } from './auth/auth.module.js';
+import { ClubsModule } from './clubs/clubs.module.js';
 import { ApiExceptionFilter } from './common/api-exception.filter.js';
 import { EnvironmentModule } from './config/environment.module.js';
 import { DatabaseModule } from './database/database.module.js';
@@ -21,6 +22,7 @@ import { UsersModule } from './users/users.module.js';
     GamificationModule,
     InsightsModule,
     AuthModule,
+    ClubsModule,
     UsersModule,
     MediaProviderModule,
     LibraryModule,
