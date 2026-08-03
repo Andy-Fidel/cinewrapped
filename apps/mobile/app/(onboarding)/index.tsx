@@ -6,9 +6,10 @@ import type {
 } from '@cinewrapped/shared-types';
 import { usernameSchema } from '@cinewrapped/validation';
 import { useQuery } from '@tanstack/react-query';
+import { randomUUID } from 'expo-crypto';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Alert, Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { BrandHeader, Button, ErrorText, Field, Screen, useColors } from '../../src/components/ui';
@@ -79,6 +80,7 @@ export default function OnboardingScreen() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [profileAttempted, setProfileAttempted] = useState(false);
+  const hydratedUserId = useRef<string | null>(null);
   const genres = useQuery({
     queryKey: ['genres'],
     queryFn: () => api.request<GenreSummary[]>('genres'),
@@ -89,13 +91,14 @@ export default function OnboardingScreen() {
   });
 
   useEffect(() => {
-    if (user !== null && draft.username.length === 0)
-      draft.patch({
-        username: user.username.startsWith('user_') ? '' : user.username,
-        displayName: user.displayName,
-        avatarUrl: user.avatarUrl,
-        profileVersion: user.version,
-      });
+    if (user === null || hydratedUserId.current === user.id) return;
+    hydratedUserId.current = user.id;
+    draft.patch({
+      username: user.username.startsWith('user_') ? '' : user.username,
+      displayName: user.displayName,
+      avatarUrl: user.avatarUrl,
+      profileVersion: user.version,
+    });
   }, [draft, user]);
 
   const mark = (step: string) =>
@@ -172,7 +175,7 @@ export default function OnboardingScreen() {
         await mark('NOTIFICATIONS');
         await api.request('users/me/onboarding/complete', {
           method: 'POST',
-          idempotencyKey: `onboarding-${globalThis.crypto.randomUUID()}`,
+          idempotencyKey: `onboarding-${randomUUID()}`,
           body: {
             acceptedPrivacyVersion: '2026-08-01',
             acceptedTermsVersion: '2026-08-01',
@@ -225,7 +228,7 @@ export default function OnboardingScreen() {
       const body = decodeBase64(asset.base64);
       const identity = (await supabase.auth.getUser()).data.user;
       if (identity === null) throw new Error('Your identity session has expired.');
-      const path = `${identity.id}/${globalThis.crypto.randomUUID()}.jpg`;
+      const path = `${identity.id}/${randomUUID()}.jpg`;
       const { error } = await supabase.storage
         .from('avatars')
         .upload(path, body, { contentType: asset.mimeType ?? 'image/jpeg', upsert: false });

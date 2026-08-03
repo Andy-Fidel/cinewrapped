@@ -5,6 +5,7 @@ import type {
   UserPreferences,
 } from '@cinewrapped/shared-types';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { randomUUID } from 'expo-crypto';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -82,7 +83,7 @@ export default function SettingsScreen() {
     action(() =>
       api.request('auth/sessions/revoke-others', {
         method: 'POST',
-        idempotencyKey: `revoke-${globalThis.crypto.randomUUID()}`,
+        idempotencyKey: `revoke-${randomUUID()}`,
       }),
     );
 

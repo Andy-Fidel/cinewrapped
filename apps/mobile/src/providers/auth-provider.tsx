@@ -1,5 +1,6 @@
 import type { CurrentUser } from '@cinewrapped/shared-types';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
+import { randomUUID } from 'expo-crypto';
 import * as Linking from 'expo-linking';
 import * as SecureStore from 'expo-secure-store';
 import * as WebBrowser from 'expo-web-browser';
@@ -27,10 +28,10 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 const installationKey = 'cinewrapped.installation-id';
 
 async function installationId(): Promise<string> {
-  if (Platform.OS === 'web') return `web-${globalThis.crypto.randomUUID()}`;
+  if (Platform.OS === 'web') return `web-${randomUUID()}`;
   const current = await SecureStore.getItemAsync(installationKey);
   if (current !== null) return current;
-  const created = globalThis.crypto.randomUUID();
+  const created = randomUUID();
   await SecureStore.setItemAsync(installationKey, created);
   return created;
 }
@@ -61,7 +62,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
       const current = await api.request<CurrentUser>('auth/bootstrap', {
         method: 'POST',
-        idempotencyKey: `bootstrap-${globalThis.crypto.randomUUID()}`,
+        idempotencyKey: `bootstrap-${randomUUID()}`,
         body: { locale, timezone, platform: platform(), installationId: await installationId() },
       });
       setUser(current);
