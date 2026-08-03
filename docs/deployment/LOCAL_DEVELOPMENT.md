@@ -56,6 +56,10 @@ pnpm --filter @cinewrapped/admin dev
 pnpm --filter @cinewrapped/mobile dev
 ```
 
+The Expo app loads `EXPO_PUBLIC_*` values from the workspace-root `.env` through
+`apps/mobile/app.config.ts`. Keep the configured phone and development machine on the same network;
+the mobile API base URL must use the machine's LAN address rather than `localhost`.
+
 Default URLs:
 
 - API: `http://localhost:4000/api/v1`

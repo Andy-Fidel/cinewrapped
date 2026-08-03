@@ -30,3 +30,4 @@ All notable changes are documented here. The project follows semantic versioning
 
 - Apply the saved system, light, or dark appearance preference across mobile screens, navigation, and the status bar.
 - Retry one transient native network failure across Supabase authentication requests.
+- Load Expo public configuration from the monorepo-root environment instead of silently bundling invalid authentication and API fallbacks.

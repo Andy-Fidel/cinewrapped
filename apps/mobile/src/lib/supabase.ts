@@ -20,8 +20,14 @@ const storage: SupportedStorage = {
   },
 };
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? 'https://invalid.supabase.co';
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? 'missing-public-anon-key';
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+
+if (supabaseUrl === undefined || supabaseAnonKey === undefined) {
+  throw new Error(
+    'Supabase public configuration is missing. Start Expo from the CineWrapped workspace so app.config.ts can load the root .env file.',
+  );
+}
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   global: { fetch: withNetworkRetry(globalThis.fetch.bind(globalThis)) },
