@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Redirect, Tabs } from 'expo-router';
 
 import { useColors } from '../../src/components/ui';
@@ -18,11 +19,55 @@ export default function TabsLayout() {
         tabBarInactiveTintColor: colors.textSecondary,
       }}
     >
-      <Tabs.Screen name="index" options={{ title: 'Home', headerShown: false }} />
-      <Tabs.Screen name="discover" options={{ title: 'Discover', headerShown: false }} />
-      <Tabs.Screen name="social" options={{ title: 'Social', headerShown: false }} />
-      <Tabs.Screen name="library" options={{ title: 'Library', headerShown: false }} />
-      <Tabs.Screen name="settings" options={{ title: 'Settings' }} />
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Home',
+          headerShown: false,
+          tabBarIcon: ({ color, focused, size }) => (
+            <Ionicons color={color} name={focused ? 'home' : 'home-outline'} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="discover"
+        options={{
+          title: 'Discover',
+          headerShown: false,
+          tabBarIcon: ({ color, focused, size }) => (
+            <Ionicons color={color} name={focused ? 'compass' : 'compass-outline'} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="social"
+        options={{
+          title: 'Social',
+          headerShown: false,
+          tabBarIcon: ({ color, focused, size }) => (
+            <Ionicons color={color} name={focused ? 'people' : 'people-outline'} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="library"
+        options={{
+          title: 'Library',
+          headerShown: false,
+          tabBarIcon: ({ color, focused, size }) => (
+            <Ionicons color={color} name={focused ? 'bookmark' : 'bookmark-outline'} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: 'Settings',
+          tabBarIcon: ({ color, focused, size }) => (
+            <Ionicons color={color} name={focused ? 'settings' : 'settings-outline'} size={size} />
+          ),
+        }}
+      />
     </Tabs>
   );
 }

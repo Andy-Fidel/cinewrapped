@@ -19,6 +19,7 @@ All notable changes are documented here. The project follows semantic versioning
 - Phase 6 timezone-aware statistics, monthly trends, taste distributions, versioned weekly/monthly/yearly wraps, factual story slides, share cards, and the mobile wrap archive/viewer.
 - Phase 7 achievements, opt-in challenges, timezone-aware streaks, privacy-filtered leaderboards, movie-passport stamps, and mobile privacy controls.
 - Phase 8 public/private clubs, membership approval and roles, discussions, polls, collaborative watchlists with voting, scheduled watch events, and mobile club experiences.
+- Filled and outlined icons for every mobile bottom-tab destination.
 
 ### Security
 
