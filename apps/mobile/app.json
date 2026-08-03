@@ -6,8 +6,14 @@
     "orientation": "portrait",
     "scheme": "cinewrapped",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
-    "plugins": ["expo-router", "expo-secure-store", "expo-image-picker"],
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-image-picker",
+      "expo-status-bar",
+      "expo-web-browser",
+      "expo-font"
+    ],
     "experiments": {
       "typedRoutes": true
     },
