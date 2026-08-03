@@ -1,0 +1,37 @@
+{
+  "name": "@cinewrapped/database",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "pnpm db:generate && tsc -p tsconfig.json",
+    "lint": "eslint src",
+    "typecheck": "pnpm db:generate && tsc -p tsconfig.json --noEmit",
+    "test": "vitest run src --passWithNoTests",
+    "db:format": "prisma format --schema prisma/schema.prisma",
+    "db:generate": "prisma generate --schema prisma/schema.prisma",
+    "db:validate": "DATABASE_URL=postgresql://validation:validation@localhost:5432/validation prisma validate --schema prisma/schema.prisma",
+    "db:migrate": "prisma migrate deploy --schema prisma/schema.prisma",
+    "db:migrate:dev": "prisma migrate dev --schema prisma/schema.prisma",
+    "db:seed": "prisma db seed --schema prisma/schema.prisma"
+  },
+  "dependencies": {
+    "@prisma/client": "6.18.0"
+  },
+  "devDependencies": {
+    "@cinewrapped/typescript-config": "workspace:*",
+    "prisma": "6.18.0",
+    "tsx": "4.23.1"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  }
+}

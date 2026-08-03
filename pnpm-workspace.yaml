@@ -1,0 +1,34 @@
+packages:
+  - apps/*
+  - packages/*
+
+enableGlobalVirtualStore: false
+
+overrides:
+  effect: 3.21.4
+  find-my-way: 9.7.0
+  js-yaml: 5.2.2
+  postcss: 8.5.25
+
+ignoredOptionalDependencies:
+  - sharp
+
+allowBuilds:
+  '@nestjs/core': true
+  '@prisma/client': true
+  '@prisma/engines': true
+  '@scarf/scarf': false
+  esbuild: true
+  msgpackr-extract: true
+  prisma: true
+  sharp: false
+  unrs-resolver: true
+
+minimumReleaseAgeExclude:
+  - bullmq@6.0.5
+  - find-my-way@9.7.0
+  - js-yaml@5.2.2
+
+patchedDependencies:
+  expo-constants@57.0.8: patches/expo-constants@57.0.8.patch
+  expo-modules-jsi@57.0.4: patches/expo-modules-jsi@57.0.4.patch

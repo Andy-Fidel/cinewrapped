@@ -1,0 +1,7 @@
+extends:
+  - minimal
+
+rules:
+  operation-summary: off
+  no-server-example.com: off
+  no-unused-components: off

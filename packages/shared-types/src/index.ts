@@ -1,0 +1,630 @@
+export type RequestId = string;
+
+export interface RequestMeta {
+  requestId: RequestId;
+}
+
+export interface PageMeta {
+  nextCursor: string | null;
+  hasMore: boolean;
+  limit: number;
+}
+
+export interface SuccessResponse<TData> {
+  success: true;
+  data: TData;
+  meta: RequestMeta;
+}
+
+export interface CollectionResponse<TItem> {
+  success: true;
+  data: TItem[];
+  meta: RequestMeta & { page: PageMeta };
+}
+
+export interface ApiErrorBody {
+  code: string;
+  message: string;
+  details: Record<string, unknown> | null;
+  requestId: RequestId;
+}
+
+export interface ErrorResponse {
+  success: false;
+  error: ApiErrorBody;
+}
+
+export type ApiResponse<TData> = SuccessResponse<TData> | ErrorResponse;
+
+export type MediaType = 'MOVIE' | 'TV';
+export type WatchStatus =
+  'PLANNED' | 'WATCHING' | 'COMPLETED' | 'PAUSED' | 'DROPPED' | 'REWATCHING';
+
+export type ProfileVisibility = 'PUBLIC' | 'FRIENDS' | 'PRIVATE';
+export type ThemePreference = 'SYSTEM' | 'LIGHT' | 'DARK';
+export type SpoilerPreference = 'ALWAYS_HIDE' | 'HIDE_UNTIL_REVEALED' | 'SHOW';
+export type RatingSystem = 'FIVE_STAR' | 'TEN_POINT' | 'LIKE_DISLIKE';
+export type ContentType = 'MOVIE' | 'TV' | 'ANIME' | 'DOCUMENTARY' | 'SHORT_FILM';
+export type OnboardingStep =
+  | 'PROFILE'
+  | 'CONTENT_TYPES'
+  | 'GENRES'
+  | 'FAVORITES'
+  | 'DISLIKES'
+  | 'STREAMING'
+  | 'RECOMMENDATIONS'
+  | 'SOCIAL'
+  | 'NOTIFICATIONS';
+
+export interface CurrentUser {
+  id: string;
+  username: string;
+  displayName: string;
+  avatarUrl: string | null;
+  bio: string | null;
+  countryCode: string;
+  preferredLanguage: string;
+  timezone: string;
+  profileVisibility: ProfileVisibility;
+  onboardingCompleted: boolean;
+  recommendationOptIn: boolean;
+  analyticsOptIn: boolean;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UserPreferences {
+  preferredGenreIds: string[];
+  dislikedGenreIds: string[];
+  preferredLanguages: string[];
+  preferredCountries: string[];
+  preferredDecades: number[];
+  preferredRuntimeMin: number | null;
+  preferredRuntimeMax: number | null;
+  preferredRatingSystem: RatingSystem;
+  contentTypes: ContentType[];
+  spoilerPreference: SpoilerPreference;
+  adultContentEnabled: boolean;
+  notificationPreferences: Record<string, boolean>;
+  theme: ThemePreference;
+  defaultCountryForStreaming: string;
+  autoplayTrailers: boolean;
+  reduceMotion: boolean;
+  mainstreamPreferencePercent: number;
+  streamingProviderIds: string[];
+  favoriteMediaIds: string[];
+}
+
+export interface PrivacySettingsSummary {
+  watchHistoryVisibility: ProfileVisibility;
+  ratingsVisibility: ProfileVisibility;
+  reviewsVisibility: ProfileVisibility;
+  listsVisibility: ProfileVisibility;
+  friendListVisibility: ProfileVisibility;
+  wrapsVisibility: ProfileVisibility;
+  onlineStatusVisibility: ProfileVisibility;
+  leaderboardVisibility: ProfileVisibility;
+  passportVisibility: ProfileVisibility;
+  shareWatchActivity: boolean;
+  shareRatingActivity: boolean;
+  shareReviewActivity: boolean;
+  shareListActivity: boolean;
+  shareAchievementActivity: boolean;
+}
+
+export interface OnboardingState {
+  currentStep: OnboardingStep;
+  completedSteps: OnboardingStep[];
+  validationGaps: string[];
+  completed: boolean;
+}
+
+export interface SessionSummary {
+  id: string;
+  installationId: string | null;
+  platform: 'IOS' | 'ANDROID' | 'WEB' | 'UNKNOWN';
+  deviceName: string | null;
+  lastSeenAt: string;
+  expiresAt: string | null;
+  current: boolean;
+}
+
+export interface GenreSummary {
+  id: string;
+  name: string;
+  slug: string;
+}
+
+export interface StreamingProviderSummary {
+  id: string;
+  name: string;
+  slug: string;
+  logoUrl: string | null;
+}
+
+export interface MediaSummary {
+  id: string;
+  provider: 'TMDB';
+  externalId: string;
+  mediaType: MediaType;
+  title: string;
+  releaseYear: number | null;
+  runtimeMinutes: number | null;
+  posterUrl: string | null;
+  backdropUrl: string | null;
+  overview: string | null;
+  genreIds: string[];
+  averageProviderRating: number | null;
+}
+
+export interface CreditSummary {
+  id: string;
+  personId: string;
+  name: string;
+  profileUrl: string | null;
+  creditType: 'CAST' | 'CREW';
+  department: string | null;
+  job: string | null;
+  character: string | null;
+  position: number | null;
+}
+
+export interface SeasonSummary {
+  id: string;
+  seasonNumber: number;
+  name: string;
+  overview: string | null;
+  airDate: string | null;
+  episodeCount: number | null;
+  posterUrl: string | null;
+}
+
+export interface StreamingAvailabilityItem {
+  providerId: string;
+  providerName: string;
+  logoUrl: string | null;
+  monetizationType: 'FLATRATE' | 'FREE' | 'ADS' | 'RENT' | 'BUY';
+  providerUrl: string | null;
+  displayPriority: number | null;
+}
+
+export interface StreamingAvailability {
+  countryCode: string;
+  fetchedAt: string;
+  expiresAt: string;
+  items: StreamingAvailabilityItem[];
+}
+
+export interface MediaDetails extends MediaSummary {
+  originalTitle: string;
+  releaseDate: string | null;
+  originalLanguage: string | null;
+  countryCodes: string[];
+  trailerUrl: string | null;
+  status: string;
+  ageRating: string | null;
+  genres: GenreSummary[];
+  cast: CreditSummary[];
+  crew: CreditSummary[];
+  seasons: SeasonSummary[];
+  streamingAvailability: StreamingAvailability | null;
+  lastSyncedAt: string | null;
+}
+
+export interface RatingSummary {
+  id: string;
+  ratingValue: number | null;
+  ratingScale: number | null;
+  normalizedScore: number | null;
+  liked: boolean | null;
+  emotionalTags: string[];
+  version: number;
+  updatedAt: string;
+}
+
+export interface ReviewSummary {
+  id: string;
+  mediaId: string;
+  title: string | null;
+  body: string;
+  containsSpoilers: boolean;
+  visibility: 'PUBLIC' | 'FRIENDS' | 'PRIVATE' | 'CLUB_ONLY';
+  status: 'DRAFT' | 'PUBLISHED' | 'HIDDEN' | 'REMOVED';
+  publishedAt: string | null;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LibraryItem {
+  media: MediaSummary;
+  status: WatchStatus;
+  startedAt: string | null;
+  completedAt: string | null;
+  progressPercent: number;
+  progressSeconds: number | null;
+  watchCount: number;
+  lastWatchedAt: string | null;
+  version: number;
+  inDefaultWatchlist: boolean;
+  rating: RatingSummary | null;
+  latestReview: ReviewSummary | null;
+  updatedAt: string;
+}
+
+export interface ViewingSummary {
+  id: string;
+  mediaId: string;
+  watchedAt: string;
+  completedAt: string | null;
+  durationWatchedMin: number | null;
+  viewingPlatform: string | null;
+  notes: string | null;
+  isRewatch: boolean;
+  createdAt: string;
+}
+
+export interface EpisodeProgressSummary {
+  episodeId: string;
+  seasonId: string;
+  seasonNumber: number;
+  episodeNumber: number;
+  name: string;
+  overview: string | null;
+  airDate: string | null;
+  runtimeMinutes: number | null;
+  stillUrl: string | null;
+  completed: boolean;
+  progressSeconds: number | null;
+  watchedAt: string | null;
+  watchCount: number;
+  version: number | null;
+}
+
+export interface WatchlistSummary {
+  id: string;
+  name: string;
+  description: string | null;
+  visibility: 'PUBLIC' | 'FRIENDS' | 'PRIVATE' | 'CLUB_ONLY';
+  isDefault: boolean;
+  itemCount: number;
+  version: number;
+  updatedAt: string;
+}
+
+export interface WatchlistDetails extends WatchlistSummary {
+  items: Array<{
+    id: string;
+    position: number;
+    note: string | null;
+    createdAt: string;
+    media: MediaSummary;
+  }>;
+}
+
+export interface MediaTrackingState {
+  library: LibraryItem | null;
+  watchlists: Array<{ id: string; name: string; isDefault: boolean }>;
+  rating: RatingSummary | null;
+  latestReview: ReviewSummary | null;
+}
+
+export type RecommendationType =
+  | 'PERSONALIZED'
+  | 'TRENDING'
+  | 'FRIEND_BASED'
+  | 'MOOD_BASED'
+  | 'SIMILAR_MEDIA'
+  | 'HIDDEN_GEM'
+  | 'CONTINUE_WATCHING'
+  | 'BECAUSE_YOU_WATCHED';
+
+export type RecommendationFeedbackType = 'VIEWED' | 'SAVED' | 'DISMISSED' | 'SELECTED';
+
+export interface TasteGenreAffinity {
+  genreId: string;
+  name: string;
+  weight: number;
+  signalCount: number;
+}
+
+export interface TasteProfile {
+  topGenres: TasteGenreAffinity[];
+  dislikedGenreIds: string[];
+  preferredLanguages: string[];
+  preferredDecades: number[];
+  runtimeRange: { minimum: number | null; maximum: number | null };
+  mainstreamPreferencePercent: number;
+  signalCounts: {
+    favorites: number;
+    ratings: number;
+    completedTitles: number;
+    feedbackEvents: number;
+  };
+  confidence: 'LOW' | 'MEDIUM' | 'HIGH';
+  modelVersion: string;
+  generatedAt: string;
+}
+
+export interface RecommendationSummary {
+  id: string;
+  media: MediaSummary;
+  score: number;
+  recommendationType: RecommendationType;
+  explanation: string;
+  reasonCodes: string[];
+  modelVersion: string;
+  generatedAt: string;
+  expiresAt: string;
+  feedback: RecommendationFeedbackType[];
+}
+
+export interface UserSummary {
+  id: string;
+  username: string;
+  displayName: string;
+  avatarUrl: string | null;
+  bio: string | null;
+}
+
+export interface RelationshipState {
+  following: boolean;
+  followedBy: boolean;
+  friendshipId: string | null;
+  friendshipStatus: 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'BLOCKED' | null;
+  friendshipDirection: 'INCOMING' | 'OUTGOING' | null;
+  muted: boolean;
+}
+
+export interface PublicProfile extends UserSummary {
+  profileVisibility: ProfileVisibility;
+  createdAt: string;
+  counts: { followers: number; following: number; friends: number; reviews: number };
+  relationship: RelationshipState;
+}
+
+export interface FriendshipSummary {
+  id: string;
+  status: 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'BLOCKED';
+  direction: 'INCOMING' | 'OUTGOING';
+  otherUser: UserSummary;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReactionSummary {
+  counts: Partial<Record<'LIKE' | 'LOVE' | 'LAUGH' | 'WOW' | 'SAD', number>>;
+  mine: Array<'LIKE' | 'LOVE' | 'LAUGH' | 'WOW' | 'SAD'>;
+}
+
+export interface CommentSummary {
+  id: string;
+  author: UserSummary;
+  parentType: 'REVIEW' | 'FEED_ACTIVITY';
+  parentId: string;
+  parentCommentId: string | null;
+  body: string;
+  containsSpoilers: boolean;
+  createdAt: string;
+  updatedAt: string;
+  replyCount: number;
+  reactions: ReactionSummary;
+}
+
+export interface FeedActivitySummary {
+  id: string;
+  actor: UserSummary;
+  activityType:
+    | 'USER_WATCHED_MEDIA'
+    | 'USER_RATED_MEDIA'
+    | 'USER_REVIEWED_MEDIA'
+    | 'USER_CREATED_LIST'
+    | 'USER_UNLOCKED_ACHIEVEMENT'
+    | 'USER_JOINED_CLUB'
+    | 'USER_SHARED_WRAP';
+  media: MediaSummary | null;
+  visibility: 'PUBLIC' | 'FRIENDS' | 'PRIVATE' | 'CLUB_ONLY';
+  occurredAt: string;
+  commentCount: number;
+  reactions: ReactionSummary;
+}
+
+export interface ShareReceipt {
+  mediaId: string;
+  deepLink: string;
+  webUrl: string;
+  title: string;
+}
+
+export interface StatisticsPeriod {
+  periodStart: string;
+  periodEnd: string;
+  timezone: string;
+}
+
+export interface RankedStatistic {
+  id: string;
+  label: string;
+  count: number;
+}
+
+export interface TopTitleStatistic {
+  mediaId: string;
+  title: string;
+  posterUrl: string | null;
+  viewingCount: number;
+  minutesWatched: number;
+}
+
+export interface StatisticsSummary extends StatisticsPeriod {
+  uniqueTitles: number;
+  viewingCount: number;
+  totalMinutes: number;
+  totalHours: number;
+  rewatchCount: number;
+  averageRatingPercent: number | null;
+  ratedTitleCount: number;
+  activeDays: number;
+  longestStreakDays: number;
+  movieViewings: number;
+  tvViewings: number;
+  topGenres: RankedStatistic[];
+  topTitles: TopTitleStatistic[];
+}
+
+export interface MonthlyWatchCount {
+  month: number;
+  label: string;
+  viewingCount: number;
+  uniqueTitles: number;
+  minutesWatched: number;
+}
+
+export interface TasteStatistics extends StatisticsPeriod {
+  sampleSize: number;
+  genres: RankedStatistic[];
+  languages: RankedStatistic[];
+  decades: RankedStatistic[];
+  runtimeBuckets: RankedStatistic[];
+}
+
+export type WrapType = 'WEEKLY' | 'MONTHLY' | 'YEARLY' | 'CUSTOM';
+export type WrapStatus = 'PENDING' | 'GENERATING' | 'COMPLETED' | 'FAILED';
+
+export interface WrapStorySlide {
+  id: string;
+  kind: 'INTRO' | 'TOTALS' | 'FAVORITE_GENRE' | 'TOP_TITLE' | 'RATINGS' | 'OUTRO';
+  eyebrow: string;
+  title: string;
+  body: string;
+  statValue: string | null;
+  statLabel: string | null;
+  accent: 'VIOLET' | 'CORAL' | 'GOLD' | 'TEAL';
+  media: { id: string; title: string; posterUrl: string | null } | null;
+}
+
+export interface WrapHighlights {
+  headline: string;
+  topTitle: TopTitleStatistic | null;
+  favoriteGenre: RankedStatistic | null;
+  totalHours: number;
+}
+
+export interface WrapSummary {
+  id: string;
+  wrapType: WrapType;
+  periodStart: string;
+  periodEnd: string;
+  timezone: string;
+  status: WrapStatus;
+  inputVersion: number;
+  headline: string | null;
+  generatedAt: string | null;
+}
+
+export interface WrapDetail extends WrapSummary {
+  statistics: StatisticsSummary | null;
+  highlights: WrapHighlights | null;
+  storySlides: WrapStorySlide[] | null;
+  failureCode: string | null;
+}
+
+export interface WrapShareCard {
+  wrapId: string;
+  title: string;
+  subtitle: string;
+  statValue: string;
+  statLabel: string;
+  accent: WrapStorySlide['accent'];
+  deepLink: string;
+  webUrl: string;
+  expiresAt: string;
+}
+
+export type GamificationMetric =
+  | 'VIEWINGS'
+  | 'UNIQUE_TITLES'
+  | 'MINUTES_WATCHED'
+  | 'REWATCHES'
+  | 'RATINGS'
+  | 'REVIEWS'
+  | 'STREAK_DAYS'
+  | 'COUNTRIES';
+
+export interface AchievementSummary {
+  id: string;
+  code: string;
+  name: string;
+  description: string;
+  category: string;
+  tier: 'BRONZE' | 'SILVER' | 'GOLD' | 'PLATINUM';
+  points: number;
+  progress: number;
+  target: number;
+  unlockedAt: string | null;
+}
+
+export interface ChallengeSummary {
+  id: string;
+  code: string;
+  name: string;
+  description: string;
+  metric: GamificationMetric;
+  target: number;
+  points: number;
+  startsAt: string;
+  endsAt: string;
+  joined: boolean;
+  progress: number;
+  completedAt: string | null;
+}
+
+export interface StreakSummary {
+  currentDays: number;
+  longestDays: number;
+  lastActiveDate: string | null;
+  timezone: string;
+}
+
+export interface PassportStamp {
+  countryCode: string;
+  viewingCount: number;
+  uniqueTitles: number;
+  firstVisitedAt: string;
+  lastVisitedAt: string;
+}
+
+export interface MoviePassport {
+  countriesVisited: number;
+  languagesExplored: number;
+  decadesExplored: number;
+  totalStamps: number;
+  stamps: PassportStamp[];
+}
+
+export type LeaderboardMetric = 'POINTS' | 'VIEWINGS' | 'STREAK';
+
+export interface LeaderboardEntry {
+  rank: number;
+  user: UserSummary;
+  score: number;
+  isViewer: boolean;
+}
+
+export interface LeaderboardSummary {
+  metric: LeaderboardMetric;
+  visibilityNote: string;
+  entries: LeaderboardEntry[];
+  viewerEntry: LeaderboardEntry | null;
+}
+
+export interface GamificationDashboard {
+  totalPoints: number;
+  unlockedCount: number;
+  achievementCount: number;
+  achievements: AchievementSummary[];
+  challenges: ChallengeSummary[];
+  streak: StreakSummary;
+  passport: MoviePassport;
+}

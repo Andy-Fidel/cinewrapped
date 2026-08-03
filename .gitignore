@@ -1,0 +1,35 @@
+# Dependencies and package manager
+node_modules/
+.pnpm-store/
+
+# Build and test output
+dist/
+.next/
+.expo/
+coverage/
+*.tsbuildinfo
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Mobile/native output
+apps/mobile/android/
+apps/mobile/ios/
+apps/mobile/.expo/
+
+# Logs and local tools
+*.log
+.DS_Store
+.turbo/
+.idea/
+.vscode/
+
+# Generated Prisma and local data
+packages/database/node_modules/.prisma/
+*.db
+*.db-journal
+
+# Local object storage
+.minio/

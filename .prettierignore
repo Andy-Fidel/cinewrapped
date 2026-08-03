@@ -1,0 +1,10 @@
+node_modules
+dist
+.next
+.expo
+coverage
+pnpm-lock.yaml
+CineWrapped Master Build Prompt.docx
+packages/ui-tokens/src/generated
+apps/admin/next-env.d.ts
+apps/mobile/expo-env.d.ts

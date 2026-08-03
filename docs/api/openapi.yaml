@@ -1,0 +1,2778 @@
+openapi: 3.1.0
+info:
+  title: CineWrapped API
+  version: 1.0.0
+  summary: Versioned REST contract for the CineWrapped MVP
+  description: >-
+    Product API consumed by CineWrapped mobile and admin clients. Supabase Auth
+    issues identity sessions; this API owns application authorization and data.
+  contact:
+    name: CineWrapped Engineering
+servers:
+  - url: http://localhost:4000/api/v1
+    description: Local development
+  - url: https://api.staging.cinewrapped.example/api/v1
+    description: Staging
+  - url: https://api.cinewrapped.example/api/v1
+    description: Production
+security:
+  - bearerAuth: []
+tags:
+  - { name: System, description: 'Process health and readiness.' }
+  - { name: Auth, description: 'Identity bridge and session management.' }
+  - { name: Users, description: 'Profiles, preferences, privacy, export, and deletion.' }
+  - { name: Onboarding, description: 'Incremental onboarding state and completion.' }
+  - { name: Media, description: 'Discovery and normalized media metadata.' }
+  - { name: Tracking, description: 'Current watch state, viewings, and episode progress.' }
+  - { name: Watchlists, description: 'Member watchlists and items.' }
+  - { name: Ratings, description: 'Member title ratings.' }
+  - { name: Reviews, description: 'Review draft and publication lifecycle.' }
+  - { name: Recommendations, description: 'Explainable recommendations and feedback.' }
+  - {
+      name: Social,
+      description: 'Profiles, follows, friendships, feed, shares, and safety controls.',
+    }
+  - { name: Comments, description: 'Review and feed discussion threads.' }
+  - { name: Reactions, description: 'Idempotent social reactions.' }
+  - { name: Statistics, description: 'Data-driven member viewing statistics.' }
+  - { name: Wraps, description: 'Period wrap generation, retrieval, and sharing.' }
+  - {
+      name: Gamification,
+      description: 'Achievements, challenges, streaks, privacy-safe leaderboards, and passports.',
+    }
+  - { name: Notifications, description: 'In-app notifications and push device registration.' }
+
+paths:
+  /health/live:
+    get:
+      tags: [System]
+      operationId: getLiveness
+      security: []
+      responses:
+        '200': { $ref: '#/components/responses/Health' }
+  /health/ready:
+    get:
+      tags: [System]
+      operationId: getReadiness
+      security: []
+      responses:
+        '200': { $ref: '#/components/responses/Health' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /auth/bootstrap:
+    post:
+      tags: [Auth]
+      operationId: bootstrapCurrentUser
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody: { $ref: '#/components/requestBodies/Bootstrap' }
+      x-response-dto: BootstrapResponse
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '201': { $ref: '#/components/responses/Created' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /auth/sessions:
+    get:
+      tags: [Auth]
+      operationId: listSessions
+      parameters:
+        [{ $ref: '#/components/parameters/Cursor' }, { $ref: '#/components/parameters/Limit' }]
+      x-response-dto: SessionSummaryPage
+      responses:
+        '200': { $ref: '#/components/responses/Collection' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /auth/sessions/{sessionId}:
+    delete:
+      tags: [Auth]
+      operationId: revokeSession
+      parameters: [{ $ref: '#/components/parameters/SessionId' }]
+      responses:
+        '204': { $ref: '#/components/responses/NoContent' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /auth/sessions/revoke-others:
+    post:
+      tags: [Auth]
+      operationId: revokeOtherSessions
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody: { $ref: '#/components/requestBodies/RevokeOthers' }
+      x-response-dto: RevocationSummary
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /users/me:
+    get:
+      tags: [Users]
+      operationId: getCurrentUser
+      x-response-dto: CurrentUser
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    patch:
+      tags: [Users]
+      operationId: updateCurrentUser
+      requestBody: { $ref: '#/components/requestBodies/UpdateProfile' }
+      x-response-dto: CurrentUser
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Users]
+      operationId: requestAccountDeletion
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody: { $ref: '#/components/requestBodies/DeleteAccount' }
+      x-response-dto: DeletionRequest
+      responses:
+        '202': { $ref: '#/components/responses/Accepted' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /users/me/preferences:
+    get:
+      tags: [Users]
+      operationId: getPreferences
+      x-response-dto: UserPreferences
+      responses: { '200': { $ref: '#/components/responses/Ok' } }
+    patch:
+      tags: [Users]
+      operationId: updatePreferences
+      requestBody: { $ref: '#/components/requestBodies/UpdatePreferences' }
+      x-response-dto: UserPreferences
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /users/me/privacy:
+    get:
+      tags: [Users]
+      operationId: getPrivacySettings
+      x-response-dto: PrivacySettings
+      responses: { '200': { $ref: '#/components/responses/Ok' } }
+    patch:
+      tags: [Users]
+      operationId: updatePrivacySettings
+      requestBody: { $ref: '#/components/requestBodies/UpdatePrivacy' }
+      x-response-dto: PrivacySettings
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /users/me/onboarding:
+    get:
+      tags: [Onboarding]
+      operationId: getOnboardingState
+      x-response-dto: OnboardingState
+      responses: { '200': { $ref: '#/components/responses/Ok' } }
+    patch:
+      tags: [Onboarding]
+      operationId: updateOnboardingState
+      requestBody: { $ref: '#/components/requestBodies/UpdateOnboarding' }
+      x-response-dto: OnboardingState
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /users/me/onboarding/complete:
+    post:
+      tags: [Onboarding]
+      operationId: completeOnboarding
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody: { $ref: '#/components/requestBodies/CompleteOnboarding' }
+      x-response-dto: CurrentUser
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /users/me/avatar-upload:
+    post:
+      tags: [Users]
+      operationId: createAvatarUpload
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody: { $ref: '#/components/requestBodies/CreateUpload' }
+      x-response-dto: UploadIntent
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '413': { $ref: '#/components/responses/PayloadTooLarge' }
+        '415': { $ref: '#/components/responses/UnsupportedMediaType' }
+  /users/me/export:
+    post:
+      tags: [Users]
+      operationId: createAccountExport
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody: { $ref: '#/components/requestBodies/CreateExport' }
+      x-response-dto: ExportJob
+      responses:
+        '202': { $ref: '#/components/responses/Accepted' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /users/me/export/{exportId}:
+    get:
+      tags: [Users]
+      operationId: getAccountExport
+      parameters: [{ $ref: '#/components/parameters/ExportId' }]
+      x-response-dto: ExportJob
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '410': { $ref: '#/components/responses/Gone' }
+
+  /users:
+    get:
+      tags: [Users]
+      operationId: searchUsers
+      parameters:
+        - { $ref: '#/components/parameters/UserQuery' }
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+      x-response-dto: UserSummaryPage
+      responses:
+        '200': { $ref: '#/components/responses/Collection' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+  /users/{username}:
+    get:
+      tags: [Users]
+      operationId: getUserProfile
+      parameters: [{ $ref: '#/components/parameters/Username' }]
+      x-response-dto: PublicProfile
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /users/{username}/activity:
+    get:
+      tags: [Social]
+      operationId: getUserActivity
+      parameters:
+        [
+          { $ref: '#/components/parameters/Username' },
+          { $ref: '#/components/parameters/Cursor' },
+          { $ref: '#/components/parameters/Limit' },
+        ]
+      x-response-dto: FeedActivityPage
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Collection' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        }
+  /users/{username}/reviews:
+    get:
+      tags: [Reviews]
+      operationId: getUserReviews
+      parameters:
+        [
+          { $ref: '#/components/parameters/Username' },
+          { $ref: '#/components/parameters/Cursor' },
+          { $ref: '#/components/parameters/Limit' },
+        ]
+      x-response-dto: ReviewSummaryPage
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Collection' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        }
+  /users/{username}/followers:
+    get:
+      tags: [Social]
+      operationId: getUserFollowers
+      parameters:
+        [
+          { $ref: '#/components/parameters/Username' },
+          { $ref: '#/components/parameters/Cursor' },
+          { $ref: '#/components/parameters/Limit' },
+        ]
+      x-response-dto: UserSummaryPage
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Collection' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        }
+  /users/{username}/following:
+    get:
+      tags: [Social]
+      operationId: getUserFollowing
+      parameters:
+        [
+          { $ref: '#/components/parameters/Username' },
+          { $ref: '#/components/parameters/Cursor' },
+          { $ref: '#/components/parameters/Limit' },
+        ]
+      x-response-dto: UserSummaryPage
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Collection' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        }
+  /users/{username}/compatibility:
+    get:
+      tags: [Social]
+      operationId: getUserCompatibility
+      parameters: [{ $ref: '#/components/parameters/Username' }]
+      x-response-dto: CompatibilitySummary
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Ok' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        }
+
+  /genres:
+    get:
+      tags: [Media]
+      operationId: listGenres
+      parameters:
+        - { name: mediaType, in: query, schema: { $ref: '#/components/schemas/MediaType' } }
+        - { name: language, in: query, schema: { type: string, maxLength: 16 } }
+      x-response-dto: GenreList
+      responses: { '200': { $ref: '#/components/responses/Collection' } }
+  /streaming-providers:
+    get:
+      tags: [Media]
+      operationId: listStreamingProviders
+      parameters: [{ $ref: '#/components/parameters/CountryCode' }]
+      x-response-dto: StreamingProviderList
+      responses: { '200': { $ref: '#/components/responses/Collection' } }
+  /search/media:
+    get:
+      tags: [Media]
+      operationId: searchMedia
+      parameters:
+        - { $ref: '#/components/parameters/MediaQuery' }
+        - { name: mediaType, in: query, schema: { $ref: '#/components/schemas/MediaType' } }
+        - {
+            name: genreIds,
+            in: query,
+            schema: { type: array, items: { type: string, format: uuid }, maxItems: 20 },
+          }
+        - { name: releaseYear, in: query, schema: { type: integer, minimum: 1870, maximum: 2200 } }
+        - { name: runtimeMin, in: query, schema: { type: integer, minimum: 1, maximum: 1440 } }
+        - { name: runtimeMax, in: query, schema: { type: integer, minimum: 1, maximum: 1440 } }
+        - { name: unwatchedOnly, in: query, schema: { type: boolean, default: false } }
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+      x-response-dto: MediaSummaryPage
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Collection' },
+          '400': { $ref: '#/components/responses/BadRequest' },
+          '429': { $ref: '#/components/responses/RateLimited' },
+        }
+  /media/trending:
+    get:
+      tags: [Media]
+      operationId: getTrendingMedia
+      parameters:
+        - { name: mediaType, in: query, schema: { $ref: '#/components/schemas/MediaType' } }
+        - { name: window, in: query, required: true, schema: { type: string, enum: [DAY, WEEK] } }
+        - { $ref: '#/components/parameters/CountryCode' }
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+      x-response-dto: MediaSummaryPage
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Collection' },
+          '503': { $ref: '#/components/responses/ServiceUnavailable' },
+        }
+  /media/{mediaId}:
+    get:
+      tags: [Media]
+      operationId: getMediaDetails
+      parameters:
+        - { $ref: '#/components/parameters/MediaId' }
+        - {
+            name: include,
+            in: query,
+            schema:
+              {
+                type: array,
+                items: { type: string, enum: [credits, streamingAvailability] },
+                maxItems: 2,
+              },
+          }
+      x-response-dto: MediaDetails
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Ok' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        }
+  /media/{mediaId}/credits:
+    get:
+      tags: [Media]
+      operationId: getMediaCredits
+      parameters:
+        - { $ref: '#/components/parameters/MediaId' }
+        - { name: type, in: query, schema: { type: string, enum: [CAST, CREW] } }
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+      x-response-dto: CreditPage
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Collection' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        }
+  /media/{mediaId}/streaming-availability:
+    get:
+      tags: [Media]
+      operationId: getStreamingAvailability
+      parameters:
+        [
+          { $ref: '#/components/parameters/MediaId' },
+          { $ref: '#/components/parameters/RequiredCountryCode' },
+        ]
+      x-response-dto: StreamingAvailability
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Ok' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        }
+  /media/{mediaId}/similar:
+    get:
+      tags: [Media]
+      operationId: getSimilarMedia
+      parameters:
+        [
+          { $ref: '#/components/parameters/MediaId' },
+          { $ref: '#/components/parameters/Cursor' },
+          { $ref: '#/components/parameters/Limit' },
+        ]
+      x-response-dto: MediaSummaryPage
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Collection' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        }
+  /media/{mediaId}/seasons/{seasonNumber}:
+    get:
+      tags: [Media]
+      operationId: getSeasonDetails
+      parameters:
+        [
+          { $ref: '#/components/parameters/MediaId' },
+          { $ref: '#/components/parameters/SeasonNumber' },
+        ]
+      x-response-dto: SeasonDetails
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Ok' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        }
+  /media/{mediaId}/seasons/{seasonNumber}/episodes/{episodeNumber}:
+    get:
+      tags: [Media]
+      operationId: getEpisodeDetails
+      parameters:
+        [
+          { $ref: '#/components/parameters/MediaId' },
+          { $ref: '#/components/parameters/SeasonNumber' },
+          { $ref: '#/components/parameters/EpisodeNumber' },
+        ]
+      x-response-dto: EpisodeDetails
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Ok' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        }
+
+  /watch-history:
+    get:
+      tags: [Tracking]
+      operationId: listWatchHistory
+      parameters:
+        - { name: status, in: query, schema: { $ref: '#/components/schemas/WatchStatus' } }
+        - { name: mediaType, in: query, schema: { $ref: '#/components/schemas/MediaType' } }
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+      x-response-dto: WatchHistoryPage
+      responses: { '200': { $ref: '#/components/responses/Collection' } }
+  /watch-history/{mediaId}:
+    get:
+      tags: [Tracking]
+      operationId: getWatchHistoryEntry
+      parameters: [{ $ref: '#/components/parameters/MediaId' }]
+      x-response-dto: WatchHistoryEntry
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Ok' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        }
+    put:
+      tags: [Tracking]
+      operationId: upsertWatchHistoryEntry
+      parameters: [{ $ref: '#/components/parameters/MediaId' }]
+      requestBody: { $ref: '#/components/requestBodies/UpsertWatchHistory' }
+      x-response-dto: WatchHistoryEntry
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Ok' },
+          '201': { $ref: '#/components/responses/Created' },
+          '409': { $ref: '#/components/responses/Conflict' },
+          '422': { $ref: '#/components/responses/ValidationError' },
+        }
+    delete:
+      tags: [Tracking]
+      operationId: deleteWatchHistoryEntry
+      parameters:
+        [
+          { $ref: '#/components/parameters/MediaId' },
+          { $ref: '#/components/parameters/ExpectedVersionQuery' },
+        ]
+      responses:
+        {
+          '204': { $ref: '#/components/responses/NoContent' },
+          '404': { $ref: '#/components/responses/NotFound' },
+          '409': { $ref: '#/components/responses/Conflict' },
+        }
+  /watch-history/{mediaId}/viewings:
+    get:
+      tags: [Tracking]
+      operationId: listViewings
+      parameters:
+        [
+          { $ref: '#/components/parameters/MediaId' },
+          { $ref: '#/components/parameters/Cursor' },
+          { $ref: '#/components/parameters/Limit' },
+        ]
+      x-response-dto: ViewingPage
+      responses: { '200': { $ref: '#/components/responses/Collection' } }
+    post:
+      tags: [Tracking]
+      operationId: createViewing
+      parameters:
+        [
+          { $ref: '#/components/parameters/MediaId' },
+          { $ref: '#/components/parameters/IdempotencyKey' },
+        ]
+      requestBody: { $ref: '#/components/requestBodies/CreateViewing' }
+      x-response-dto: Viewing
+      responses:
+        {
+          '201': { $ref: '#/components/responses/Created' },
+          '409': { $ref: '#/components/responses/Conflict' },
+          '422': { $ref: '#/components/responses/ValidationError' },
+        }
+  /viewings/{viewingId}:
+    patch:
+      tags: [Tracking]
+      operationId: updateViewing
+      parameters: [{ $ref: '#/components/parameters/ViewingId' }]
+      requestBody: { $ref: '#/components/requestBodies/UpdateViewing' }
+      x-response-dto: Viewing
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Ok' },
+          '404': { $ref: '#/components/responses/NotFound' },
+          '409': { $ref: '#/components/responses/Conflict' },
+        }
+    delete:
+      tags: [Tracking]
+      operationId: deleteViewing
+      parameters:
+        [
+          { $ref: '#/components/parameters/ViewingId' },
+          { $ref: '#/components/parameters/ExpectedVersionQuery' },
+        ]
+      responses:
+        {
+          '204': { $ref: '#/components/responses/NoContent' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        }
+  /watch-history/{mediaId}/episodes:
+    get:
+      tags: [Tracking]
+      operationId: listEpisodeProgress
+      parameters:
+        - { $ref: '#/components/parameters/MediaId' }
+        - { name: seasonNumber, in: query, schema: { type: integer, minimum: 0 } }
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+      x-response-dto: EpisodeProgressPage
+      responses: { '200': { $ref: '#/components/responses/Collection' } }
+  /watch-history/{mediaId}/episodes/{episodeId}:
+    put:
+      tags: [Tracking]
+      operationId: upsertEpisodeProgress
+      parameters:
+        [{ $ref: '#/components/parameters/MediaId' }, { $ref: '#/components/parameters/EpisodeId' }]
+      requestBody: { $ref: '#/components/requestBodies/UpsertEpisodeProgress' }
+      x-response-dto: EpisodeProgress
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Ok' },
+          '201': { $ref: '#/components/responses/Created' },
+          '409': { $ref: '#/components/responses/Conflict' },
+        }
+
+  /watchlists:
+    get:
+      tags: [Watchlists]
+      operationId: listWatchlists
+      parameters:
+        [{ $ref: '#/components/parameters/Cursor' }, { $ref: '#/components/parameters/Limit' }]
+      x-response-dto: WatchlistSummaryPage
+      responses: { '200': { $ref: '#/components/responses/Collection' } }
+    post:
+      tags: [Watchlists]
+      operationId: createWatchlist
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody: { $ref: '#/components/requestBodies/CreateWatchlist' }
+      x-response-dto: Watchlist
+      responses:
+        {
+          '201': { $ref: '#/components/responses/Created' },
+          '422': { $ref: '#/components/responses/ValidationError' },
+        }
+  /watchlists/{watchlistId}:
+    get:
+      tags: [Watchlists]
+      operationId: getWatchlist
+      parameters:
+        [
+          { $ref: '#/components/parameters/WatchlistId' },
+          { $ref: '#/components/parameters/Cursor' },
+          { $ref: '#/components/parameters/Limit' },
+        ]
+      x-response-dto: Watchlist
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Ok' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        }
+    patch:
+      tags: [Watchlists]
+      operationId: updateWatchlist
+      parameters: [{ $ref: '#/components/parameters/WatchlistId' }]
+      requestBody: { $ref: '#/components/requestBodies/UpdateWatchlist' }
+      x-response-dto: Watchlist
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Ok' },
+          '409': { $ref: '#/components/responses/Conflict' },
+        }
+    delete:
+      tags: [Watchlists]
+      operationId: deleteWatchlist
+      parameters:
+        [
+          { $ref: '#/components/parameters/WatchlistId' },
+          { $ref: '#/components/parameters/ExpectedVersionQuery' },
+        ]
+      responses:
+        {
+          '204': { $ref: '#/components/responses/NoContent' },
+          '409': { $ref: '#/components/responses/Conflict' },
+        }
+  /watchlists/{watchlistId}/items:
+    post:
+      tags: [Watchlists]
+      operationId: addWatchlistItem
+      parameters:
+        [
+          { $ref: '#/components/parameters/WatchlistId' },
+          { $ref: '#/components/parameters/IdempotencyKey' },
+        ]
+      requestBody: { $ref: '#/components/requestBodies/AddWatchlistItem' }
+      x-response-dto: WatchlistItem
+      responses:
+        {
+          '201': { $ref: '#/components/responses/Created' },
+          '409': { $ref: '#/components/responses/Conflict' },
+        }
+  /watchlists/{watchlistId}/items/{itemId}:
+    patch:
+      tags: [Watchlists]
+      operationId: updateWatchlistItem
+      parameters:
+        [
+          { $ref: '#/components/parameters/WatchlistId' },
+          { $ref: '#/components/parameters/ItemId' },
+        ]
+      requestBody: { $ref: '#/components/requestBodies/UpdateWatchlistItem' }
+      x-response-dto: WatchlistItem
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Ok' },
+          '409': { $ref: '#/components/responses/Conflict' },
+        }
+    delete:
+      tags: [Watchlists]
+      operationId: deleteWatchlistItem
+      parameters:
+        [
+          { $ref: '#/components/parameters/WatchlistId' },
+          { $ref: '#/components/parameters/ItemId' },
+        ]
+      responses:
+        {
+          '204': { $ref: '#/components/responses/NoContent' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        }
+
+  /media/{mediaId}/rating:
+    get:
+      tags: [Ratings]
+      operationId: getRating
+      parameters: [{ $ref: '#/components/parameters/MediaId' }]
+      x-response-dto: Rating
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Ok' },
+          '204': { $ref: '#/components/responses/NoContent' },
+        }
+    put:
+      tags: [Ratings]
+      operationId: upsertRating
+      parameters: [{ $ref: '#/components/parameters/MediaId' }]
+      requestBody: { $ref: '#/components/requestBodies/UpsertRating' }
+      x-response-dto: Rating
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Ok' },
+          '201': { $ref: '#/components/responses/Created' },
+          '422': { $ref: '#/components/responses/ValidationError' },
+        }
+    delete:
+      tags: [Ratings]
+      operationId: deleteRating
+      parameters:
+        [
+          { $ref: '#/components/parameters/MediaId' },
+          { $ref: '#/components/parameters/ExpectedVersionQuery' },
+        ]
+      responses:
+        {
+          '204': { $ref: '#/components/responses/NoContent' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        }
+  /media/{mediaId}/reviews:
+    get:
+      tags: [Reviews]
+      operationId: listMediaReviews
+      parameters:
+        - { $ref: '#/components/parameters/MediaId' }
+        - { name: sort, in: query, schema: { type: string, enum: [RECENT, POPULAR, FRIENDS] } }
+        - {
+            name: spoilers,
+            in: query,
+            schema: { type: string, enum: [HIDE, REVEAL_ALLOWED], default: HIDE },
+          }
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+      x-response-dto: ReviewSummaryPage
+      responses: { '200': { $ref: '#/components/responses/Collection' } }
+    post:
+      tags: [Reviews]
+      operationId: createReview
+      parameters:
+        [
+          { $ref: '#/components/parameters/MediaId' },
+          { $ref: '#/components/parameters/IdempotencyKey' },
+        ]
+      requestBody: { $ref: '#/components/requestBodies/CreateReview' }
+      x-response-dto: Review
+      responses:
+        {
+          '201': { $ref: '#/components/responses/Created' },
+          '409': { $ref: '#/components/responses/Conflict' },
+          '422': { $ref: '#/components/responses/ValidationError' },
+        }
+  /reviews/{reviewId}:
+    get:
+      tags: [Reviews]
+      operationId: getReview
+      parameters: [{ $ref: '#/components/parameters/ReviewId' }]
+      x-response-dto: Review
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Ok' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        }
+    patch:
+      tags: [Reviews]
+      operationId: updateReview
+      parameters: [{ $ref: '#/components/parameters/ReviewId' }]
+      requestBody: { $ref: '#/components/requestBodies/UpdateReview' }
+      x-response-dto: Review
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Ok' },
+          '409': { $ref: '#/components/responses/Conflict' },
+        }
+    delete:
+      tags: [Reviews]
+      operationId: deleteReview
+      parameters:
+        [
+          { $ref: '#/components/parameters/ReviewId' },
+          { $ref: '#/components/parameters/ExpectedVersionQuery' },
+        ]
+      responses:
+        {
+          '204': { $ref: '#/components/responses/NoContent' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        }
+  /reviews/{reviewId}/publish:
+    post:
+      tags: [Reviews]
+      operationId: publishReview
+      parameters:
+        [
+          { $ref: '#/components/parameters/ReviewId' },
+          { $ref: '#/components/parameters/IdempotencyKey' },
+        ]
+      requestBody: { $ref: '#/components/requestBodies/PublishReview' }
+      x-response-dto: Review
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Ok' },
+          '409': { $ref: '#/components/responses/Conflict' },
+          '422': { $ref: '#/components/responses/ValidationError' },
+        }
+
+  /recommendations/taste-profile:
+    get:
+      tags: [Recommendations]
+      operationId: getTasteProfile
+      x-response-dto: TasteProfile
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /recommendations/refresh:
+    post:
+      tags: [Recommendations]
+      operationId: refreshRecommendations
+      x-response-dto: RecommendationRefreshSummary
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /recommendations:
+    get:
+      tags: [Recommendations]
+      operationId: listRecommendations
+      parameters:
+        - { name: type, in: query, schema: { $ref: '#/components/schemas/RecommendationType' } }
+        - { name: runtimeMax, in: query, schema: { type: integer, minimum: 1, maximum: 1440 } }
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+      x-response-dto: RecommendationPage
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Collection' },
+          '403': { $ref: '#/components/responses/Forbidden' },
+        }
+  /recommendations/{recommendationId}/feedback:
+    post:
+      tags: [Recommendations]
+      operationId: createRecommendationFeedback
+      parameters:
+        [
+          { $ref: '#/components/parameters/RecommendationId' },
+          { $ref: '#/components/parameters/IdempotencyKey' },
+        ]
+      requestBody: { $ref: '#/components/requestBodies/RecommendationFeedback' }
+      x-response-dto: Recommendation
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Ok' },
+          '404': { $ref: '#/components/responses/NotFound' },
+          '409': { $ref: '#/components/responses/Conflict' },
+        }
+
+  /follows/{userId}:
+    put:
+      tags: [Social]
+      operationId: followUser
+      parameters: [{ $ref: '#/components/parameters/UserId' }]
+      x-response-dto: FollowState
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Ok' },
+          '201': { $ref: '#/components/responses/Created' },
+          '409': { $ref: '#/components/responses/Conflict' },
+        }
+    delete:
+      tags: [Social]
+      operationId: unfollowUser
+      parameters: [{ $ref: '#/components/parameters/UserId' }]
+      responses: { '204': { $ref: '#/components/responses/NoContent' } }
+  /friendships:
+    get:
+      tags: [Social]
+      operationId: listFriendships
+      parameters:
+        - {
+            name: status,
+            in: query,
+            schema: { type: string, enum: [PENDING, ACCEPTED, DECLINED, BLOCKED] },
+          }
+      x-response-dto: FriendshipPage
+      responses: { '200': { $ref: '#/components/responses/Collection' } }
+    post:
+      tags: [Social]
+      operationId: createFriendship
+      requestBody: { $ref: '#/components/requestBodies/CreateFriendship' }
+      x-response-dto: Friendship
+      responses:
+        {
+          '201': { $ref: '#/components/responses/Created' },
+          '409': { $ref: '#/components/responses/Conflict' },
+        }
+  /friendships/{friendshipId}:
+    patch:
+      tags: [Social]
+      operationId: respondToFriendship
+      parameters: [{ $ref: '#/components/parameters/FriendshipId' }]
+      requestBody: { $ref: '#/components/requestBodies/RespondFriendship' }
+      x-response-dto: Friendship
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Ok' },
+          '403': { $ref: '#/components/responses/Forbidden' },
+          '409': { $ref: '#/components/responses/Conflict' },
+        }
+    delete:
+      tags: [Social]
+      operationId: deleteFriendship
+      parameters: [{ $ref: '#/components/parameters/FriendshipId' }]
+      responses:
+        {
+          '204': { $ref: '#/components/responses/NoContent' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        }
+  /feed:
+    get:
+      tags: [Social]
+      operationId: getFeed
+      parameters:
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+      x-response-dto: FeedActivityPage
+      responses: { '200': { $ref: '#/components/responses/Collection' } }
+  /media/{mediaId}/shares:
+    post:
+      tags: [Social]
+      operationId: shareMedia
+      parameters: [{ $ref: '#/components/parameters/MediaId' }]
+      x-response-dto: ShareReceipt
+      responses:
+        {
+          '201': { $ref: '#/components/responses/Created' },
+          '403': { $ref: '#/components/responses/Forbidden' },
+        }
+  /blocks/{userId}:
+    put:
+      tags: [Social]
+      operationId: blockUser
+      parameters: [{ $ref: '#/components/parameters/UserId' }]
+      requestBody:
+        {
+          required: false,
+          content:
+            { application/json: { schema: { $ref: '#/components/schemas/BlockUserRequest' } } },
+        }
+      x-response-dto: BlockState
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Ok' },
+          '201': { $ref: '#/components/responses/Created' },
+        }
+    delete:
+      tags: [Social]
+      operationId: unblockUser
+      parameters: [{ $ref: '#/components/parameters/UserId' }]
+      responses: { '204': { $ref: '#/components/responses/NoContent' } }
+  /mutes/{userId}:
+    put:
+      tags: [Social]
+      operationId: muteUser
+      parameters: [{ $ref: '#/components/parameters/UserId' }]
+      x-response-dto: MuteState
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Ok' },
+          '201': { $ref: '#/components/responses/Created' },
+        }
+    delete:
+      tags: [Social]
+      operationId: unmuteUser
+      parameters: [{ $ref: '#/components/parameters/UserId' }]
+      responses: { '204': { $ref: '#/components/responses/NoContent' } }
+
+  /social/comments/{parentType}/{parentId}:
+    get:
+      tags: [Comments]
+      operationId: listSocialComments
+      parameters:
+        [
+          { $ref: '#/components/parameters/CommentParentType' },
+          { $ref: '#/components/parameters/ParentId' },
+        ]
+      x-response-dto: CommentPage
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Collection' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        }
+    post:
+      tags: [Comments]
+      operationId: createSocialComment
+      parameters:
+        [
+          { $ref: '#/components/parameters/CommentParentType' },
+          { $ref: '#/components/parameters/ParentId' },
+        ]
+      requestBody: { $ref: '#/components/requestBodies/CreateComment' }
+      x-response-dto: Comment
+      responses:
+        {
+          '201': { $ref: '#/components/responses/Created' },
+          '403': { $ref: '#/components/responses/Forbidden' },
+        }
+  /social/comments/item/{commentId}:
+    delete:
+      tags: [Comments]
+      operationId: deleteComment
+      parameters: [{ $ref: '#/components/parameters/CommentId' }]
+      responses:
+        {
+          '204': { $ref: '#/components/responses/NoContent' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        }
+  /reactions/{targetType}/{targetId}/{reactionType}:
+    put:
+      tags: [Reactions]
+      operationId: putReaction
+      parameters:
+        [
+          { $ref: '#/components/parameters/ReactionTargetType' },
+          { $ref: '#/components/parameters/TargetId' },
+          { $ref: '#/components/parameters/ReactionType' },
+        ]
+      x-response-dto: ReactionSummary
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Ok' },
+          '201': { $ref: '#/components/responses/Created' },
+          '403': { $ref: '#/components/responses/Forbidden' },
+        }
+    delete:
+      tags: [Reactions]
+      operationId: deleteReaction
+      parameters:
+        [
+          { $ref: '#/components/parameters/ReactionTargetType' },
+          { $ref: '#/components/parameters/TargetId' },
+          { $ref: '#/components/parameters/ReactionType' },
+        ]
+      x-response-dto: ReactionSummary
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Ok' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        }
+
+  /statistics/summary:
+    get:
+      tags: [Statistics]
+      operationId: getStatisticsSummary
+      parameters:
+        [
+          { $ref: '#/components/parameters/PeriodStart' },
+          { $ref: '#/components/parameters/PeriodEnd' },
+          { $ref: '#/components/parameters/Timezone' },
+        ]
+      x-response-dto: StatisticsSummary
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Ok' },
+          '400': { $ref: '#/components/responses/BadRequest' },
+        }
+  /statistics/monthly:
+    get:
+      tags: [Statistics]
+      operationId: getMonthlyStatistics
+      parameters:
+        - {
+            name: year,
+            in: query,
+            required: true,
+            schema: { type: integer, minimum: 2000, maximum: 2200 },
+          }
+        - { $ref: '#/components/parameters/Timezone' }
+      x-response-dto: MonthlyWatchCountList
+      responses: { '200': { $ref: '#/components/responses/Ok' } }
+  /statistics/taste:
+    get:
+      tags: [Statistics]
+      operationId: getTasteStatistics
+      parameters:
+        [
+          { $ref: '#/components/parameters/PeriodStart' },
+          { $ref: '#/components/parameters/PeriodEnd' },
+          { $ref: '#/components/parameters/Timezone' },
+        ]
+      x-response-dto: TasteStatistics
+      responses: { '200': { $ref: '#/components/responses/Ok' } }
+  /wraps:
+    get:
+      tags: [Wraps]
+      operationId: listWraps
+      parameters:
+        - { name: type, in: query, schema: { $ref: '#/components/schemas/WrapType' } }
+        - { name: status, in: query, schema: { $ref: '#/components/schemas/WrapStatus' } }
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+      x-response-dto: WrapSummaryPage
+      responses: { '200': { $ref: '#/components/responses/Collection' } }
+    post:
+      tags: [Wraps]
+      operationId: createWrap
+      requestBody: { $ref: '#/components/requestBodies/CreateWrap' }
+      x-response-dto: Wrap
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Ok' },
+          '201': { $ref: '#/components/responses/Created' },
+          '409': { $ref: '#/components/responses/Conflict' },
+        }
+  /wraps/{wrapId}:
+    get:
+      tags: [Wraps]
+      operationId: getWrap
+      parameters: [{ $ref: '#/components/parameters/WrapId' }]
+      x-response-dto: Wrap
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Ok' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        }
+    delete:
+      tags: [Wraps]
+      operationId: deleteWrap
+      parameters: [{ $ref: '#/components/parameters/WrapId' }]
+      responses:
+        {
+          '204': { $ref: '#/components/responses/NoContent' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        }
+  /wraps/{wrapId}/share-link:
+    post:
+      tags: [Wraps]
+      operationId: createWrapShareLink
+      parameters: [{ $ref: '#/components/parameters/WrapId' }]
+      requestBody: { $ref: '#/components/requestBodies/CreateWrapShare' }
+      x-response-dto: WrapShareCard
+      responses:
+        {
+          '201': { $ref: '#/components/responses/Created' },
+          '403': { $ref: '#/components/responses/Forbidden' },
+          '409': { $ref: '#/components/responses/Conflict' },
+        }
+
+  /gamification:
+    get:
+      tags: [Gamification]
+      operationId: getGamificationDashboard
+      x-response-dto: GamificationDashboard
+      responses: { '200': { $ref: '#/components/responses/Ok' } }
+  /challenges/{challengeId}/join:
+    post:
+      tags: [Gamification]
+      operationId: joinChallenge
+      parameters:
+        - { name: challengeId, in: path, required: true, schema: { type: string, format: uuid } }
+      x-response-dto: ChallengeSummary
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Ok' },
+          '404': { $ref: '#/components/responses/NotFound' },
+          '422': { $ref: '#/components/responses/ValidationError' },
+        }
+  /leaderboards:
+    get:
+      tags: [Gamification]
+      operationId: getLeaderboard
+      parameters:
+        - {
+            name: metric,
+            in: query,
+            schema: { type: string, enum: [POINTS, VIEWINGS, STREAK], default: POINTS },
+          }
+        - {
+            name: limit,
+            in: query,
+            schema: { type: integer, minimum: 1, maximum: 100, default: 25 },
+          }
+      x-response-dto: LeaderboardSummary
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Ok' },
+          '422': { $ref: '#/components/responses/ValidationError' },
+        }
+  /passport:
+    get:
+      tags: [Gamification]
+      operationId: getMoviePassport
+      x-response-dto: MoviePassport
+      responses: { '200': { $ref: '#/components/responses/Ok' } }
+
+  /notifications:
+    get:
+      tags: [Notifications]
+      operationId: listNotifications
+      parameters:
+        - { name: unreadOnly, in: query, schema: { type: boolean, default: false } }
+        - { name: type, in: query, schema: { type: string } }
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+      x-response-dto: NotificationPage
+      responses: { '200': { $ref: '#/components/responses/Collection' } }
+  /notifications/unread-count:
+    get:
+      tags: [Notifications]
+      operationId: getUnreadNotificationCount
+      x-response-dto: UnreadCount
+      responses: { '200': { $ref: '#/components/responses/Ok' } }
+  /notifications/{notificationId}:
+    patch:
+      tags: [Notifications]
+      operationId: updateNotification
+      parameters: [{ $ref: '#/components/parameters/NotificationId' }]
+      requestBody: { $ref: '#/components/requestBodies/UpdateNotification' }
+      x-response-dto: Notification
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Ok' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        }
+  /notifications/read-all:
+    post:
+      tags: [Notifications]
+      operationId: readAllNotifications
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody: { $ref: '#/components/requestBodies/ReadAllNotifications' }
+      x-response-dto: UnreadCount
+      responses: { '200': { $ref: '#/components/responses/Ok' } }
+  /devices:
+    post:
+      tags: [Notifications]
+      operationId: registerDevice
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody: { $ref: '#/components/requestBodies/RegisterDevice' }
+      x-response-dto: Device
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Ok' },
+          '201': { $ref: '#/components/responses/Created' },
+          '422': { $ref: '#/components/responses/ValidationError' },
+        }
+  /devices/{deviceId}:
+    delete:
+      tags: [Notifications]
+      operationId: deleteDevice
+      parameters: [{ $ref: '#/components/parameters/DeviceId' }]
+      responses:
+        {
+          '204': { $ref: '#/components/responses/NoContent' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Supabase-issued access token verified by the CineWrapped API.
+
+  parameters:
+    Cursor:
+      {
+        name: cursor,
+        in: query,
+        schema: { type: string, minLength: 8, maxLength: 2048 },
+        description: Opaque cursor bound to route and filters.,
+      }
+    Limit:
+      { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 50, default: 20 } }
+    IdempotencyKey:
+      {
+        name: Idempotency-Key,
+        in: header,
+        required: true,
+        schema: { type: string, minLength: 16, maxLength: 128, pattern: '^[\x21-\x7E]+$' },
+      }
+    ExpectedVersionQuery:
+      { name: expectedVersion, in: query, required: true, schema: { type: integer, minimum: 1 } }
+    CountryCode: { name: countryCode, in: query, schema: { type: string, pattern: '^[A-Z]{2}$' } }
+    RequiredCountryCode:
+      {
+        name: countryCode,
+        in: query,
+        required: true,
+        schema: { type: string, pattern: '^[A-Z]{2}$' },
+      }
+    UserQuery:
+      { name: q, in: query, required: true, schema: { type: string, minLength: 2, maxLength: 80 } }
+    MediaQuery:
+      {
+        name: query,
+        in: query,
+        required: true,
+        schema: { type: string, minLength: 2, maxLength: 100 },
+      }
+    Username:
+      {
+        name: username,
+        in: path,
+        required: true,
+        schema: { type: string, minLength: 3, maxLength: 30, pattern: '^[A-Za-z0-9_]+$' },
+      }
+    UserId: { name: userId, in: path, required: true, schema: { type: string, format: uuid } }
+    MediaId: { name: mediaId, in: path, required: true, schema: { type: string, format: uuid } }
+    SeasonNumber:
+      { name: seasonNumber, in: path, required: true, schema: { type: integer, minimum: 0 } }
+    EpisodeNumber:
+      { name: episodeNumber, in: path, required: true, schema: { type: integer, minimum: 0 } }
+    EpisodeId: { name: episodeId, in: path, required: true, schema: { type: string, format: uuid } }
+    ViewingId: { name: viewingId, in: path, required: true, schema: { type: string, format: uuid } }
+    WatchlistId:
+      { name: watchlistId, in: path, required: true, schema: { type: string, format: uuid } }
+    ItemId: { name: itemId, in: path, required: true, schema: { type: string, format: uuid } }
+    ReviewId: { name: reviewId, in: path, required: true, schema: { type: string, format: uuid } }
+    RecommendationId:
+      { name: recommendationId, in: path, required: true, schema: { type: string, format: uuid } }
+    FriendshipId:
+      { name: friendshipId, in: path, required: true, schema: { type: string, format: uuid } }
+    ActivityId:
+      { name: activityId, in: path, required: true, schema: { type: string, format: uuid } }
+    CommentParentType:
+      {
+        name: parentType,
+        in: path,
+        required: true,
+        schema: { type: string, enum: [REVIEW, FEED_ACTIVITY] },
+      }
+    ParentId: { name: parentId, in: path, required: true, schema: { type: string, format: uuid } }
+    CommentId: { name: commentId, in: path, required: true, schema: { type: string, format: uuid } }
+    TargetId: { name: targetId, in: path, required: true, schema: { type: string, format: uuid } }
+    ReactionTargetType:
+      {
+        name: targetType,
+        in: path,
+        required: true,
+        schema: { type: string, enum: [REVIEW, COMMENT, FEED_ACTIVITY] },
+      }
+    ReactionType:
+      {
+        name: reactionType,
+        in: path,
+        required: true,
+        schema: { type: string, enum: [LIKE, LOVE, LAUGH, WOW, SAD] },
+      }
+    WrapId: { name: wrapId, in: path, required: true, schema: { type: string, format: uuid } }
+    NotificationId:
+      { name: notificationId, in: path, required: true, schema: { type: string, format: uuid } }
+    DeviceId: { name: deviceId, in: path, required: true, schema: { type: string, format: uuid } }
+    SessionId:
+      {
+        name: sessionId,
+        in: path,
+        required: true,
+        schema: { type: string, minLength: 1, maxLength: 255 },
+      }
+    ExportId: { name: exportId, in: path, required: true, schema: { type: string, format: uuid } }
+    PeriodStart: { name: periodStart, in: query, schema: { type: string, format: date-time } }
+    PeriodEnd: { name: periodEnd, in: query, schema: { type: string, format: date-time } }
+    Timezone:
+      {
+        name: timezone,
+        in: query,
+        required: true,
+        schema: { type: string, minLength: 1, maxLength: 64 },
+      }
+
+  requestBodies:
+    Bootstrap:
+      {
+        required: true,
+        content:
+          { application/json: { schema: { $ref: '#/components/schemas/BootstrapRequest' } } },
+      }
+    RevokeOthers:
+      {
+        required: true,
+        content:
+          {
+            application/json:
+              { schema: { $ref: '#/components/schemas/RevokeOtherSessionsRequest' } },
+          },
+      }
+    UpdateProfile:
+      {
+        required: true,
+        content:
+          { application/json: { schema: { $ref: '#/components/schemas/UpdateProfileRequest' } } },
+      }
+    UpdatePreferences:
+      {
+        required: true,
+        content:
+          {
+            application/json: { schema: { $ref: '#/components/schemas/UpdatePreferencesRequest' } },
+          },
+      }
+    UpdatePrivacy:
+      {
+        required: true,
+        content:
+          { application/json: { schema: { $ref: '#/components/schemas/UpdatePrivacyRequest' } } },
+      }
+    UpdateOnboarding:
+      {
+        required: true,
+        content:
+          {
+            application/json: { schema: { $ref: '#/components/schemas/UpdateOnboardingRequest' } },
+          },
+      }
+    CompleteOnboarding:
+      {
+        required: true,
+        content:
+          {
+            application/json:
+              { schema: { $ref: '#/components/schemas/CompleteOnboardingRequest' } },
+          },
+      }
+    CreateUpload:
+      {
+        required: true,
+        content:
+          { application/json: { schema: { $ref: '#/components/schemas/CreateUploadRequest' } } },
+      }
+    CreateExport:
+      {
+        required: true,
+        content:
+          { application/json: { schema: { $ref: '#/components/schemas/CreateExportRequest' } } },
+      }
+    DeleteAccount:
+      {
+        required: true,
+        content:
+          { application/json: { schema: { $ref: '#/components/schemas/DeleteAccountRequest' } } },
+      }
+    UpsertWatchHistory:
+      {
+        required: true,
+        content:
+          {
+            application/json:
+              { schema: { $ref: '#/components/schemas/UpsertWatchHistoryRequest' } },
+          },
+      }
+    CreateViewing:
+      {
+        required: true,
+        content:
+          { application/json: { schema: { $ref: '#/components/schemas/CreateViewingRequest' } } },
+      }
+    UpdateViewing:
+      {
+        required: true,
+        content:
+          { application/json: { schema: { $ref: '#/components/schemas/UpdateViewingRequest' } } },
+      }
+    UpsertEpisodeProgress:
+      {
+        required: true,
+        content:
+          {
+            application/json:
+              { schema: { $ref: '#/components/schemas/UpsertEpisodeProgressRequest' } },
+          },
+      }
+    CreateWatchlist:
+      {
+        required: true,
+        content:
+          { application/json: { schema: { $ref: '#/components/schemas/CreateWatchlistRequest' } } },
+      }
+    UpdateWatchlist:
+      {
+        required: true,
+        content:
+          { application/json: { schema: { $ref: '#/components/schemas/UpdateWatchlistRequest' } } },
+      }
+    AddWatchlistItem:
+      {
+        required: true,
+        content:
+          {
+            application/json: { schema: { $ref: '#/components/schemas/AddWatchlistItemRequest' } },
+          },
+      }
+    UpdateWatchlistItem:
+      {
+        required: true,
+        content:
+          {
+            application/json:
+              { schema: { $ref: '#/components/schemas/UpdateWatchlistItemRequest' } },
+          },
+      }
+    UpsertRating:
+      {
+        required: true,
+        content:
+          { application/json: { schema: { $ref: '#/components/schemas/UpsertRatingRequest' } } },
+      }
+    CreateReview:
+      {
+        required: true,
+        content:
+          { application/json: { schema: { $ref: '#/components/schemas/CreateReviewRequest' } } },
+      }
+    UpdateReview:
+      {
+        required: true,
+        content:
+          { application/json: { schema: { $ref: '#/components/schemas/UpdateReviewRequest' } } },
+      }
+    PublishReview:
+      {
+        required: true,
+        content:
+          { application/json: { schema: { $ref: '#/components/schemas/PublishReviewRequest' } } },
+      }
+    RecommendationFeedback:
+      {
+        required: true,
+        content:
+          {
+            application/json:
+              { schema: { $ref: '#/components/schemas/RecommendationFeedbackRequest' } },
+          },
+      }
+    CreateFriendship:
+      {
+        required: true,
+        content:
+          {
+            application/json: { schema: { $ref: '#/components/schemas/CreateFriendshipRequest' } },
+          },
+      }
+    RespondFriendship:
+      {
+        required: true,
+        content:
+          {
+            application/json: { schema: { $ref: '#/components/schemas/RespondFriendshipRequest' } },
+          },
+      }
+    ShareMedia:
+      {
+        required: true,
+        content:
+          { application/json: { schema: { $ref: '#/components/schemas/ShareMediaRequest' } } },
+      }
+    BlockUser:
+      {
+        required: true,
+        content:
+          { application/json: { schema: { $ref: '#/components/schemas/BlockUserRequest' } } },
+      }
+    CreateComment:
+      {
+        required: true,
+        content:
+          { application/json: { schema: { $ref: '#/components/schemas/CreateCommentRequest' } } },
+      }
+    UpdateComment:
+      {
+        required: true,
+        content:
+          { application/json: { schema: { $ref: '#/components/schemas/UpdateCommentRequest' } } },
+      }
+    CreateWrap:
+      {
+        required: true,
+        content:
+          { application/json: { schema: { $ref: '#/components/schemas/CreateWrapRequest' } } },
+      }
+    CreateWrapShare:
+      {
+        required: true,
+        content:
+          { application/json: { schema: { $ref: '#/components/schemas/CreateWrapShareRequest' } } },
+      }
+    UpdateNotification:
+      {
+        required: true,
+        content:
+          {
+            application/json:
+              { schema: { $ref: '#/components/schemas/UpdateNotificationRequest' } },
+          },
+      }
+    ReadAllNotifications:
+      {
+        required: true,
+        content:
+          {
+            application/json:
+              { schema: { $ref: '#/components/schemas/ReadAllNotificationsRequest' } },
+          },
+      }
+    RegisterDevice:
+      {
+        required: true,
+        content:
+          { application/json: { schema: { $ref: '#/components/schemas/RegisterDeviceRequest' } } },
+      }
+
+  responses:
+    Ok:
+      {
+        description: Successful response.,
+        headers: { X-Request-ID: { $ref: '#/components/headers/RequestId' } },
+        content: { application/json: { schema: { $ref: '#/components/schemas/SuccessEnvelope' } } },
+      }
+    Created:
+      {
+        description: Resource created.,
+        headers: { X-Request-ID: { $ref: '#/components/headers/RequestId' } },
+        content: { application/json: { schema: { $ref: '#/components/schemas/SuccessEnvelope' } } },
+      }
+    Accepted:
+      {
+        description: Request accepted for asynchronous processing.,
+        headers: { X-Request-ID: { $ref: '#/components/headers/RequestId' } },
+        content: { application/json: { schema: { $ref: '#/components/schemas/SuccessEnvelope' } } },
+      }
+    Collection:
+      {
+        description: Cursor-paginated collection.,
+        headers: { X-Request-ID: { $ref: '#/components/headers/RequestId' } },
+        content:
+          { application/json: { schema: { $ref: '#/components/schemas/CollectionEnvelope' } } },
+      }
+    Health:
+      {
+        description: Process health.,
+        content: { application/json: { schema: { $ref: '#/components/schemas/HealthResponse' } } },
+      }
+    NoContent: { description: Operation completed with no response body. }
+    BadRequest:
+      {
+        description: Invalid request.,
+        content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+      }
+    Unauthorized:
+      {
+        description: Authentication required or invalid.,
+        content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+      }
+    Forbidden:
+      {
+        description: Actor is not permitted.,
+        content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+      }
+    NotFound:
+      {
+        description: Resource absent or concealed.,
+        content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+      }
+    Conflict:
+      {
+        description: 'State, version, uniqueness, or idempotency conflict.',
+        content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+      }
+    Gone:
+      {
+        description: Resource expired or permanently erased.,
+        content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+      }
+    PayloadTooLarge:
+      {
+        description: Payload exceeds configured maximum.,
+        content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+      }
+    UnsupportedMediaType:
+      {
+        description: MIME type is not allowed.,
+        content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+      }
+    ValidationError:
+      {
+        description: Domain validation failed.,
+        content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+      }
+    RateLimited:
+      {
+        description: Rate limit exceeded.,
+        headers: { Retry-After: { schema: { type: integer } } },
+        content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+      }
+    ServiceUnavailable:
+      {
+        description: Required dependency unavailable.,
+        content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+      }
+
+  headers:
+    RequestId:
+      {
+        description: Correlation identifier.,
+        schema: { type: string, minLength: 8, maxLength: 100 },
+      }
+
+  schemas:
+    Uuid: { type: string, format: uuid }
+    Timestamp: { type: string, format: date-time }
+    MediaType: { type: string, enum: [MOVIE, TV] }
+    WatchStatus: { type: string, enum: [PLANNED, WATCHING, COMPLETED, PAUSED, DROPPED, REWATCHING] }
+    Visibility: { type: string, enum: [PUBLIC, FRIENDS, PRIVATE, CLUB_ONLY] }
+    WrapType: { type: string, enum: [WEEKLY, MONTHLY, YEARLY, CUSTOM] }
+    WrapStatus: { type: string, enum: [PENDING, GENERATING, COMPLETED, FAILED] }
+    RecommendationType:
+      {
+        type: string,
+        enum:
+          [
+            PERSONALIZED,
+            TRENDING,
+            FRIEND_BASED,
+            MOOD_BASED,
+            SIMILAR_MEDIA,
+            HIDDEN_GEM,
+            CONTINUE_WATCHING,
+            BECAUSE_YOU_WATCHED,
+          ],
+      }
+    RequestMeta:
+      type: object
+      additionalProperties: false
+      required: [requestId]
+      properties: { requestId: { type: string } }
+    PageMeta:
+      type: object
+      additionalProperties: false
+      required: [nextCursor, hasMore, limit]
+      properties:
+        nextCursor: { type: [string, 'null'] }
+        hasMore: { type: boolean }
+        limit: { type: integer, minimum: 1, maximum: 50 }
+    SuccessEnvelope:
+      type: object
+      additionalProperties: false
+      required: [success, data, meta]
+      properties:
+        success: { const: true }
+        data: { oneOf: [{ type: object }, { type: array, items: {} }, { type: 'null' }] }
+        meta: { $ref: '#/components/schemas/RequestMeta' }
+    CollectionEnvelope:
+      type: object
+      additionalProperties: false
+      required: [success, data, meta]
+      properties:
+        success: { const: true }
+        data: { type: array, items: { type: object } }
+        meta:
+          allOf:
+            - { $ref: '#/components/schemas/RequestMeta' }
+            - type: object
+              required: [page]
+              properties: { page: { $ref: '#/components/schemas/PageMeta' } }
+    ErrorObject:
+      type: object
+      additionalProperties: false
+      required: [code, message, details, requestId]
+      properties:
+        code: { type: string, pattern: '^[A-Z][A-Z0-9_]+$' }
+        message: { type: string, minLength: 1, maxLength: 500 }
+        details: { type: [object, 'null'], additionalProperties: true }
+        requestId: { type: string }
+    ErrorEnvelope:
+      type: object
+      additionalProperties: false
+      required: [success, error]
+      properties:
+        success: { const: false }
+        error: { $ref: '#/components/schemas/ErrorObject' }
+    HealthResponse:
+      type: object
+      additionalProperties: false
+      required: [status, service, version]
+      properties:
+        status: { type: string, enum: [ok, degraded] }
+        service: { type: string }
+        version: { type: string }
+
+    BootstrapRequest:
+      type: object
+      additionalProperties: false
+      required: [timezone, locale]
+      properties:
+        timezone: { type: string, minLength: 1, maxLength: 64 }
+        locale: { type: string, minLength: 2, maxLength: 16 }
+        installationId: { type: string, minLength: 1, maxLength: 255 }
+    RevokeOtherSessionsRequest:
+      type: object
+      additionalProperties: false
+      required: [keepCurrent]
+      properties: { keepCurrent: { type: boolean, const: true } }
+    UpdateProfileRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion]
+      minProperties: 2
+      properties:
+        expectedVersion: { type: integer, minimum: 1 }
+        username: { type: string, minLength: 3, maxLength: 30, pattern: '^[A-Za-z0-9_]+$' }
+        displayName: { type: string, minLength: 1, maxLength: 80 }
+        bio: { type: [string, 'null'], maxLength: 500 }
+        countryCode: { type: string, pattern: '^[A-Z]{2}$' }
+        preferredLanguage: { type: string, minLength: 2, maxLength: 16 }
+        timezone: { type: string, minLength: 1, maxLength: 64 }
+        dateOfBirth: { type: [string, 'null'], format: date }
+        profileVisibility: { type: string, enum: [PUBLIC, FRIENDS, PRIVATE] }
+    UpdatePreferencesRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        preferredGenreIds:
+          { type: array, uniqueItems: true, maxItems: 50, items: { type: string, format: uuid } }
+        dislikedGenreIds:
+          { type: array, uniqueItems: true, maxItems: 50, items: { type: string, format: uuid } }
+        preferredLanguages:
+          { type: array, uniqueItems: true, maxItems: 30, items: { type: string, maxLength: 16 } }
+        preferredCountries:
+          {
+            type: array,
+            uniqueItems: true,
+            maxItems: 30,
+            items: { type: string, pattern: '^[A-Z]{2}$' },
+          }
+        preferredDecades:
+          {
+            type: array,
+            uniqueItems: true,
+            maxItems: 20,
+            items: { type: integer, multipleOf: 10, minimum: 1880, maximum: 2200 },
+          }
+        preferredRuntimeMin: { type: [integer, 'null'], minimum: 1, maximum: 1440 }
+        preferredRuntimeMax: { type: [integer, 'null'], minimum: 1, maximum: 1440 }
+        preferredRatingSystem: { type: string, enum: [FIVE_STAR, TEN_POINT, LIKE_DISLIKE] }
+        contentTypes:
+          {
+            type: array,
+            uniqueItems: true,
+            minItems: 1,
+            items: { type: string, enum: [MOVIE, TV, ANIME, DOCUMENTARY, SHORT_FILM] },
+          }
+        spoilerPreference: { type: string, enum: [ALWAYS_HIDE, HIDE_UNTIL_REVEALED, SHOW] }
+        adultContentEnabled: { type: boolean }
+        theme: { type: string, enum: [SYSTEM, LIGHT, DARK] }
+        defaultCountryForStreaming: { type: string, pattern: '^[A-Z]{2}$' }
+        autoplayTrailers: { type: boolean }
+        reduceMotion: { type: boolean }
+        mainstreamPreferencePercent: { type: integer, minimum: 0, maximum: 100 }
+    UpdatePrivacyRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        watchHistoryVisibility: { $ref: '#/components/schemas/Visibility' }
+        ratingsVisibility: { $ref: '#/components/schemas/Visibility' }
+        reviewsVisibility: { $ref: '#/components/schemas/Visibility' }
+        listsVisibility: { $ref: '#/components/schemas/Visibility' }
+        friendListVisibility: { $ref: '#/components/schemas/Visibility' }
+        wrapsVisibility: { $ref: '#/components/schemas/Visibility' }
+        onlineStatusVisibility: { $ref: '#/components/schemas/Visibility' }
+        shareWatchActivity: { type: boolean }
+        shareRatingActivity: { type: boolean }
+        shareReviewActivity: { type: boolean }
+        shareListActivity: { type: boolean }
+        shareAchievementActivity: { type: boolean }
+        leaderboardVisibility: { $ref: '#/components/schemas/Visibility' }
+        passportVisibility: { $ref: '#/components/schemas/Visibility' }
+    UpdateOnboardingRequest:
+      type: object
+      additionalProperties: false
+      required: [step, data]
+      properties:
+        step:
+          {
+            type: string,
+            enum:
+              [
+                PROFILE,
+                CONTENT_TYPES,
+                GENRES,
+                FAVORITES,
+                DISLIKES,
+                STREAMING,
+                RECOMMENDATIONS,
+                SOCIAL,
+                NOTIFICATIONS,
+              ],
+          }
+        data: { type: object, additionalProperties: true }
+    CompleteOnboardingRequest:
+      type: object
+      additionalProperties: false
+      required: [acceptedPrivacyVersion, acceptedTermsVersion, expectedProfileVersion]
+      properties:
+        acceptedPrivacyVersion: { type: string, minLength: 1, maxLength: 40 }
+        acceptedTermsVersion: { type: string, minLength: 1, maxLength: 40 }
+        expectedProfileVersion: { type: integer, minimum: 1 }
+    CreateUploadRequest:
+      type: object
+      additionalProperties: false
+      required: [fileName, mimeType, sizeBytes, checksumSha256]
+      properties:
+        fileName: { type: string, minLength: 1, maxLength: 255 }
+        mimeType: { type: string, enum: [image/jpeg, image/png, image/webp] }
+        sizeBytes: { type: integer, minimum: 1, maximum: 10485760 }
+        checksumSha256: { type: string, pattern: '^[a-f0-9]{64}$' }
+    CreateExportRequest:
+      type: object
+      additionalProperties: false
+      required: [format, categories]
+      properties:
+        format: { type: string, enum: [JSON, CSV_ZIP] }
+        categories:
+          {
+            type: array,
+            uniqueItems: true,
+            minItems: 1,
+            items:
+              {
+                type: string,
+                enum:
+                  [
+                    PROFILE,
+                    PREFERENCES,
+                    WATCH_HISTORY,
+                    RATINGS,
+                    REVIEWS,
+                    WATCHLISTS,
+                    SOCIAL,
+                    WRAPS,
+                  ],
+              },
+          }
+    DeleteAccountRequest:
+      type: object
+      additionalProperties: false
+      required: [confirmation, revokeImmediately]
+      properties:
+        confirmation: { type: string, const: DELETE MY ACCOUNT }
+        revokeImmediately: { type: boolean, const: true }
+        reasonCode: { type: string, maxLength: 80 }
+
+    UpsertWatchHistoryRequest:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status: { $ref: '#/components/schemas/WatchStatus' }
+        progressPercent: { type: number, minimum: 0, maximum: 100 }
+        progressSeconds: { type: [integer, 'null'], minimum: 0 }
+        startedAt: { type: [string, 'null'], format: date-time }
+        completedAt: { type: [string, 'null'], format: date-time }
+        lastWatchedAt: { type: [string, 'null'], format: date-time }
+        expectedVersion: { type: integer, minimum: 1 }
+    CreateViewingRequest:
+      type: object
+      additionalProperties: false
+      required: [clientOperationId, watchedAt, isRewatch]
+      properties:
+        clientOperationId: { type: string, format: uuid }
+        watchedAt: { type: string, format: date-time }
+        completedAt: { type: [string, 'null'], format: date-time }
+        durationWatchedMin: { type: [integer, 'null'], minimum: 1, maximum: 1440 }
+        viewingPlatform: { type: [string, 'null'], maxLength: 120 }
+        viewingLocation: { type: [string, 'null'], maxLength: 200 }
+        notes: { type: [string, 'null'], maxLength: 5000 }
+        companionUserIds:
+          { type: array, uniqueItems: true, maxItems: 50, items: { type: string, format: uuid } }
+        isRewatch: { type: boolean }
+    UpdateViewingRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion]
+      minProperties: 2
+      properties:
+        expectedVersion: { type: integer, minimum: 1 }
+        watchedAt: { type: string, format: date-time }
+        completedAt: { type: [string, 'null'], format: date-time }
+        durationWatchedMin: { type: [integer, 'null'], minimum: 1, maximum: 1440 }
+        viewingPlatform: { type: [string, 'null'], maxLength: 120 }
+        viewingLocation: { type: [string, 'null'], maxLength: 200 }
+        notes: { type: [string, 'null'], maxLength: 5000 }
+        companionUserIds:
+          { type: array, uniqueItems: true, maxItems: 50, items: { type: string, format: uuid } }
+    UpsertEpisodeProgressRequest:
+      type: object
+      additionalProperties: false
+      required: [clientOperationId, completed]
+      properties:
+        clientOperationId: { type: string, format: uuid }
+        completed: { type: boolean }
+        progressSeconds: { type: [integer, 'null'], minimum: 0 }
+        watchedAt: { type: [string, 'null'], format: date-time }
+        expectedVersion: { type: integer, minimum: 1 }
+    CreateWatchlistRequest:
+      type: object
+      additionalProperties: false
+      required: [name, visibility]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 120 }
+        description: { type: [string, 'null'], maxLength: 1000 }
+        visibility: { $ref: '#/components/schemas/Visibility' }
+        isCollaborative: { type: boolean, default: false }
+        coverImageUrl: { type: [string, 'null'], format: uri, maxLength: 2048 }
+    UpdateWatchlistRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion]
+      minProperties: 2
+      properties:
+        expectedVersion: { type: integer, minimum: 1 }
+        name: { type: string, minLength: 1, maxLength: 120 }
+        description: { type: [string, 'null'], maxLength: 1000 }
+        visibility: { $ref: '#/components/schemas/Visibility' }
+        isCollaborative: { type: boolean }
+        coverImageUrl: { type: [string, 'null'], format: uri, maxLength: 2048 }
+    AddWatchlistItemRequest:
+      type: object
+      additionalProperties: false
+      required: [mediaId]
+      properties:
+        mediaId: { type: string, format: uuid }
+        position: { type: integer, minimum: 0 }
+        note: { type: [string, 'null'], maxLength: 500 }
+    UpdateWatchlistItemRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion]
+      minProperties: 2
+      properties:
+        expectedVersion: { type: integer, minimum: 1 }
+        position: { type: integer, minimum: 0 }
+        note: { type: [string, 'null'], maxLength: 500 }
+    UpsertRatingRequest:
+      type: object
+      additionalProperties: false
+      required: [mode]
+      properties:
+        mode: { type: string, enum: [FIVE_STAR, TEN_POINT, LIKE_DISLIKE] }
+        ratingValue: { type: number, minimum: 0, maximum: 10 }
+        ratingScale: { type: integer, enum: [5, 10] }
+        liked: { type: boolean }
+        emotionalTags:
+          {
+            type: array,
+            uniqueItems: true,
+            maxItems: 20,
+            items: { type: string, minLength: 1, maxLength: 40 },
+          }
+        expectedVersion: { type: integer, minimum: 1 }
+    CreateReviewRequest:
+      type: object
+      additionalProperties: false
+      required: [body, containsSpoilers, visibility]
+      properties:
+        title: { type: [string, 'null'], maxLength: 160 }
+        body: { type: string, minLength: 1, maxLength: 20000 }
+        containsSpoilers: { type: boolean }
+        visibility: { $ref: '#/components/schemas/Visibility' }
+    UpdateReviewRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion]
+      minProperties: 2
+      properties:
+        expectedVersion: { type: integer, minimum: 1 }
+        title: { type: [string, 'null'], maxLength: 160 }
+        body: { type: string, minLength: 1, maxLength: 20000 }
+        containsSpoilers: { type: boolean }
+        visibility: { $ref: '#/components/schemas/Visibility' }
+    PublishReviewRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion]
+      properties:
+        expectedVersion: { type: integer, minimum: 1 }
+        spoilerAcknowledged: { type: boolean, default: false }
+        publishedAt: { type: string, format: date-time }
+    RecommendationFeedbackRequest:
+      type: object
+      additionalProperties: false
+      required: [feedbackType]
+      properties:
+        feedbackType: { type: string, enum: [VIEWED, SAVED, DISMISSED, SELECTED] }
+    CreateFriendshipRequest:
+      type: object
+      additionalProperties: false
+      required: [addresseeUserId]
+      properties:
+        addresseeUserId: { type: string, format: uuid }
+        message: { type: string, maxLength: 280 }
+    RespondFriendshipRequest:
+      type: object
+      additionalProperties: false
+      required: [action]
+      properties: { action: { type: string, enum: [ACCEPT, DECLINE] } }
+    ShareMediaRequest:
+      type: object
+      additionalProperties: false
+      required: [recipientUserIds]
+      properties:
+        recipientUserIds:
+          {
+            type: array,
+            uniqueItems: true,
+            minItems: 1,
+            maxItems: 20,
+            items: { type: string, format: uuid },
+          }
+        message: { type: string, maxLength: 500 }
+    BlockUserRequest:
+      type: object
+      additionalProperties: false
+      properties: { reason: { type: [string, 'null'], maxLength: 500 } }
+    CreateCommentRequest:
+      type: object
+      additionalProperties: false
+      required: [body, containsSpoilers]
+      properties:
+        body: { type: string, minLength: 1, maxLength: 5000 }
+        containsSpoilers: { type: boolean }
+        parentCommentId: { type: string, format: uuid }
+    UpdateCommentRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        body: { type: string, minLength: 1, maxLength: 5000 }
+        containsSpoilers: { type: boolean }
+    CreateWrapRequest:
+      type: object
+      additionalProperties: false
+      required: [type, timezone]
+      properties:
+        type: { type: string, enum: [WEEKLY, MONTHLY, YEARLY] }
+        periodStart: { type: string, format: date-time }
+        periodEnd: { type: string, format: date-time }
+        timezone: { type: string, minLength: 1, maxLength: 64 }
+        inputVersion: { type: integer, minimum: 1, default: 1 }
+    CreateWrapShareRequest:
+      type: object
+      additionalProperties: false
+      required: [expiresInMinutes, privacyAcknowledged]
+      properties:
+        expiresInMinutes: { type: integer, enum: [15, 60, 1440, 10080] }
+        slideIndex: { type: integer, minimum: 0, maximum: 30 }
+        privacyAcknowledged: { type: boolean, const: true }
+    UpdateNotificationRequest:
+      type: object
+      additionalProperties: false
+      required: [read]
+      properties: { read: { type: boolean } }
+    ReadAllNotificationsRequest:
+      type: object
+      additionalProperties: false
+      properties: { through: { type: string, format: date-time } }
+    RegisterDeviceRequest:
+      type: object
+      additionalProperties: false
+      required: [installationId, platform, pushToken]
+      properties:
+        installationId: { type: string, minLength: 1, maxLength: 255 }
+        platform: { type: string, enum: [IOS, ANDROID] }
+        pushToken: { type: string, minLength: 10, maxLength: 4096 }
+        locale: { type: string, maxLength: 16 }
+        timezone: { type: string, maxLength: 64 }
+
+    UserSummary:
+      type: object
+      additionalProperties: false
+      required: [id, username, displayName, profileVisibility]
+      properties:
+        id: { type: string, format: uuid }
+        username: { type: string }
+        displayName: { type: string }
+        avatarUrl: { type: [string, 'null'], format: uri }
+        profileVisibility: { type: string, enum: [PUBLIC, FRIENDS, PRIVATE] }
+    CurrentUser:
+      allOf:
+        - { $ref: '#/components/schemas/UserSummary' }
+        - type: object
+          required: [countryCode, preferredLanguage, timezone, onboardingCompleted, version]
+          properties:
+            bio: { type: [string, 'null'] }
+            countryCode: { type: string }
+            preferredLanguage: { type: string }
+            timezone: { type: string }
+            onboardingCompleted: { type: boolean }
+            recommendationOptIn: { type: boolean }
+            analyticsOptIn: { type: boolean }
+            version: { type: integer }
+    GenreSummary:
+      type: object
+      additionalProperties: false
+      required: [id, name, slug]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        slug: { type: string }
+    MediaSummary:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          provider,
+          externalId,
+          mediaType,
+          title,
+          releaseYear,
+          runtimeMinutes,
+          posterUrl,
+          backdropUrl,
+          overview,
+          genreIds,
+          averageProviderRating,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        provider: { type: string, enum: [TMDB] }
+        externalId: { type: string }
+        mediaType: { $ref: '#/components/schemas/MediaType' }
+        title: { type: string }
+        releaseYear: { type: [integer, 'null'] }
+        runtimeMinutes: { type: [integer, 'null'] }
+        posterUrl: { type: [string, 'null'], format: uri }
+        backdropUrl: { type: [string, 'null'], format: uri }
+        overview: { type: [string, 'null'] }
+        genreIds: { type: array, items: { type: string, format: uuid } }
+        averageProviderRating: { type: [number, 'null'], minimum: 0, maximum: 10 }
+    CreditSummary:
+      type: object
+      additionalProperties: false
+      required: [id, personId, name, profileUrl, creditType, department, job, character, position]
+      properties:
+        id: { type: string, format: uuid }
+        personId: { type: string, format: uuid }
+        name: { type: string }
+        profileUrl: { type: [string, 'null'], format: uri }
+        creditType: { type: string, enum: [CAST, CREW] }
+        department: { type: [string, 'null'] }
+        job: { type: [string, 'null'] }
+        character: { type: [string, 'null'] }
+        position: { type: [integer, 'null'] }
+    SeasonSummary:
+      type: object
+      additionalProperties: false
+      required: [id, seasonNumber, name, overview, airDate, episodeCount, posterUrl]
+      properties:
+        id: { type: string, format: uuid }
+        seasonNumber: { type: integer, minimum: 0 }
+        name: { type: string }
+        overview: { type: [string, 'null'] }
+        airDate: { type: [string, 'null'], format: date }
+        episodeCount: { type: [integer, 'null'], minimum: 0 }
+        posterUrl: { type: [string, 'null'], format: uri }
+    StreamingAvailabilityItem:
+      type: object
+      additionalProperties: false
+      required: [providerId, providerName, logoUrl, monetizationType, providerUrl, displayPriority]
+      properties:
+        providerId: { type: string, format: uuid }
+        providerName: { type: string }
+        logoUrl: { type: [string, 'null'], format: uri }
+        monetizationType: { type: string, enum: [FLATRATE, FREE, ADS, RENT, BUY] }
+        providerUrl: { type: [string, 'null'], format: uri }
+        displayPriority: { type: [integer, 'null'] }
+    StreamingAvailability:
+      type: object
+      additionalProperties: false
+      required: [countryCode, fetchedAt, expiresAt, items]
+      properties:
+        countryCode: { type: string, pattern: '^[A-Z]{2}$' }
+        fetchedAt: { type: string, format: date-time }
+        expiresAt: { type: string, format: date-time }
+        items: { type: array, items: { $ref: '#/components/schemas/StreamingAvailabilityItem' } }
+    MediaDetails:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          provider,
+          externalId,
+          mediaType,
+          title,
+          releaseYear,
+          runtimeMinutes,
+          posterUrl,
+          backdropUrl,
+          overview,
+          genreIds,
+          averageProviderRating,
+          originalTitle,
+          releaseDate,
+          originalLanguage,
+          countryCodes,
+          trailerUrl,
+          status,
+          ageRating,
+          genres,
+          cast,
+          crew,
+          seasons,
+          streamingAvailability,
+          lastSyncedAt,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        provider: { type: string, enum: [TMDB] }
+        externalId: { type: string }
+        mediaType: { $ref: '#/components/schemas/MediaType' }
+        title: { type: string }
+        releaseYear: { type: [integer, 'null'] }
+        runtimeMinutes: { type: [integer, 'null'] }
+        posterUrl: { type: [string, 'null'], format: uri }
+        backdropUrl: { type: [string, 'null'], format: uri }
+        overview: { type: [string, 'null'] }
+        genreIds: { type: array, items: { type: string, format: uuid } }
+        averageProviderRating: { type: [number, 'null'], minimum: 0, maximum: 10 }
+        originalTitle: { type: string }
+        releaseDate: { type: [string, 'null'], format: date }
+        originalLanguage: { type: [string, 'null'] }
+        countryCodes: { type: array, items: { type: string } }
+        trailerUrl: { type: [string, 'null'], format: uri }
+        status: { type: string }
+        ageRating: { type: [string, 'null'] }
+        genres: { type: array, items: { $ref: '#/components/schemas/GenreSummary' } }
+        cast: { type: array, items: { $ref: '#/components/schemas/CreditSummary' } }
+        crew: { type: array, items: { $ref: '#/components/schemas/CreditSummary' } }
+        seasons: { type: array, items: { $ref: '#/components/schemas/SeasonSummary' } }
+        streamingAvailability:
+          { anyOf: [{ $ref: '#/components/schemas/StreamingAvailability' }, { type: 'null' }] }
+        lastSyncedAt: { type: [string, 'null'], format: date-time }
+    WatchHistoryEntry:
+      type: object
+      additionalProperties: false
+      required: [id, media, status, progressPercent, watchCount, version, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        media: { $ref: '#/components/schemas/MediaSummary' }
+        status: { $ref: '#/components/schemas/WatchStatus' }
+        progressPercent: { type: number, minimum: 0, maximum: 100 }
+        progressSeconds: { type: [integer, 'null'], minimum: 0 }
+        watchCount: { type: integer, minimum: 0 }
+        lastWatchedAt: { type: [string, 'null'], format: date-time }
+        version: { type: integer, minimum: 1 }
+        updatedAt: { type: string, format: date-time }
+    ReviewSummary:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          author,
+          media,
+          containsSpoilers,
+          bodyHidden,
+          visibility,
+          status,
+          likeCount,
+          commentCount,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        author: { $ref: '#/components/schemas/UserSummary' }
+        media: { $ref: '#/components/schemas/MediaSummary' }
+        title: { type: [string, 'null'] }
+        excerpt: { type: [string, 'null'] }
+        containsSpoilers: { type: boolean }
+        bodyHidden: { type: boolean }
+        visibility: { $ref: '#/components/schemas/Visibility' }
+        status: { type: string, enum: [DRAFT, PUBLISHED, HIDDEN, REMOVED] }
+        likeCount: { type: integer, minimum: 0 }
+        commentCount: { type: integer, minimum: 0 }
+    Recommendation:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          media,
+          score,
+          recommendationType,
+          explanation,
+          reasonCodes,
+          modelVersion,
+          generatedAt,
+          expiresAt,
+          feedback,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        media: { $ref: '#/components/schemas/MediaSummary' }
+        score: { type: number, minimum: 0, maximum: 1 }
+        recommendationType: { $ref: '#/components/schemas/RecommendationType' }
+        explanation: { type: string }
+        reasonCodes: { type: array, items: { type: string } }
+        modelVersion: { type: string }
+        generatedAt: { type: string, format: date-time }
+        expiresAt: { type: string, format: date-time }
+        feedback:
+          { type: array, items: { type: string, enum: [VIEWED, SAVED, DISMISSED, SELECTED] } }
+    TasteProfile:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          topGenres,
+          dislikedGenreIds,
+          preferredLanguages,
+          preferredDecades,
+          runtimeRange,
+          mainstreamPreferencePercent,
+          signalCounts,
+          confidence,
+          modelVersion,
+          generatedAt,
+        ]
+      properties:
+        topGenres:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [genreId, name, weight, signalCount]
+            properties:
+              genreId: { type: string, format: uuid }
+              name: { type: string }
+              weight: { type: number, minimum: 0, maximum: 1 }
+              signalCount: { type: integer, minimum: 1 }
+        dislikedGenreIds: { type: array, items: { type: string, format: uuid } }
+        preferredLanguages: { type: array, items: { type: string } }
+        preferredDecades: { type: array, items: { type: integer } }
+        runtimeRange:
+          type: object
+          additionalProperties: false
+          required: [minimum, maximum]
+          properties:
+            minimum: { type: [integer, 'null'] }
+            maximum: { type: [integer, 'null'] }
+        mainstreamPreferencePercent: { type: integer, minimum: 0, maximum: 100 }
+        signalCounts:
+          type: object
+          additionalProperties: false
+          required: [favorites, ratings, completedTitles, feedbackEvents]
+          properties:
+            favorites: { type: integer, minimum: 0 }
+            ratings: { type: integer, minimum: 0 }
+            completedTitles: { type: integer, minimum: 0 }
+            feedbackEvents: { type: integer, minimum: 0 }
+        confidence: { type: string, enum: [LOW, MEDIUM, HIGH] }
+        modelVersion: { type: string }
+        generatedAt: { type: string, format: date-time }
+    RankedStatistic:
+      type: object
+      additionalProperties: false
+      required: [id, label, count]
+      properties:
+        id: { type: string }
+        label: { type: string }
+        count: { type: integer, minimum: 0 }
+    TopTitleStatistic:
+      type: object
+      additionalProperties: false
+      required: [mediaId, title, posterUrl, viewingCount, minutesWatched]
+      properties:
+        mediaId: { type: string, format: uuid }
+        title: { type: string }
+        posterUrl: { type: [string, 'null'], format: uri }
+        viewingCount: { type: integer, minimum: 0 }
+        minutesWatched: { type: integer, minimum: 0 }
+    StatisticsSummary:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          periodStart,
+          periodEnd,
+          timezone,
+          uniqueTitles,
+          viewingCount,
+          totalMinutes,
+          totalHours,
+          rewatchCount,
+          averageRatingPercent,
+          ratedTitleCount,
+          activeDays,
+          longestStreakDays,
+          movieViewings,
+          tvViewings,
+          topGenres,
+          topTitles,
+        ]
+      properties:
+        periodStart: { type: string, format: date-time }
+        periodEnd: { type: string, format: date-time }
+        timezone: { type: string }
+        uniqueTitles: { type: integer, minimum: 0 }
+        viewingCount: { type: integer, minimum: 0 }
+        totalMinutes: { type: integer, minimum: 0 }
+        totalHours: { type: number, minimum: 0 }
+        rewatchCount: { type: integer, minimum: 0 }
+        averageRatingPercent: { type: [number, 'null'], minimum: 0, maximum: 100 }
+        ratedTitleCount: { type: integer, minimum: 0 }
+        activeDays: { type: integer, minimum: 0 }
+        longestStreakDays: { type: integer, minimum: 0 }
+        movieViewings: { type: integer, minimum: 0 }
+        tvViewings: { type: integer, minimum: 0 }
+        topGenres: { type: array, items: { $ref: '#/components/schemas/RankedStatistic' } }
+        topTitles: { type: array, items: { $ref: '#/components/schemas/TopTitleStatistic' } }
+    MonthlyWatchCount:
+      type: object
+      additionalProperties: false
+      required: [month, label, viewingCount, uniqueTitles, minutesWatched]
+      properties:
+        month: { type: integer, minimum: 1, maximum: 12 }
+        label: { type: string }
+        viewingCount: { type: integer, minimum: 0 }
+        uniqueTitles: { type: integer, minimum: 0 }
+        minutesWatched: { type: integer, minimum: 0 }
+    TasteStatistics:
+      type: object
+      additionalProperties: false
+      required:
+        [periodStart, periodEnd, timezone, sampleSize, genres, languages, decades, runtimeBuckets]
+      properties:
+        periodStart: { type: string, format: date-time }
+        periodEnd: { type: string, format: date-time }
+        timezone: { type: string }
+        sampleSize: { type: integer, minimum: 0 }
+        genres: { type: array, items: { $ref: '#/components/schemas/RankedStatistic' } }
+        languages: { type: array, items: { $ref: '#/components/schemas/RankedStatistic' } }
+        decades: { type: array, items: { $ref: '#/components/schemas/RankedStatistic' } }
+        runtimeBuckets: { type: array, items: { $ref: '#/components/schemas/RankedStatistic' } }
+    WrapStorySlide:
+      type: object
+      additionalProperties: false
+      required: [id, kind, eyebrow, title, body, statValue, statLabel, accent, media]
+      properties:
+        id: { type: string }
+        kind: { type: string, enum: [INTRO, TOTALS, FAVORITE_GENRE, TOP_TITLE, RATINGS, OUTRO] }
+        eyebrow: { type: string }
+        title: { type: string }
+        body: { type: string }
+        statValue: { type: [string, 'null'] }
+        statLabel: { type: [string, 'null'] }
+        accent: { type: string, enum: [VIOLET, CORAL, GOLD, TEAL] }
+        media:
+          oneOf:
+            - { type: 'null' }
+            - type: object
+              additionalProperties: false
+              required: [id, title, posterUrl]
+              properties:
+                id: { type: string, format: uuid }
+                title: { type: string }
+                posterUrl: { type: [string, 'null'], format: uri }
+    WrapHighlights:
+      type: object
+      additionalProperties: false
+      required: [headline, topTitle, favoriteGenre, totalHours]
+      properties:
+        headline: { type: string }
+        topTitle:
+          oneOf:
+            - { type: 'null' }
+            - { $ref: '#/components/schemas/TopTitleStatistic' }
+        favoriteGenre:
+          oneOf:
+            - { type: 'null' }
+            - { $ref: '#/components/schemas/RankedStatistic' }
+        totalHours: { type: number, minimum: 0 }
+    Wrap:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          wrapType,
+          periodStart,
+          periodEnd,
+          timezone,
+          status,
+          inputVersion,
+          headline,
+          generatedAt,
+          statistics,
+          highlights,
+          storySlides,
+          failureCode,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        wrapType: { $ref: '#/components/schemas/WrapType' }
+        periodStart: { type: string, format: date-time }
+        periodEnd: { type: string, format: date-time }
+        timezone: { type: string }
+        status: { $ref: '#/components/schemas/WrapStatus' }
+        inputVersion: { type: integer, minimum: 1 }
+        headline: { type: [string, 'null'] }
+        generatedAt: { type: [string, 'null'], format: date-time }
+        statistics:
+          oneOf:
+            - { type: 'null' }
+            - { $ref: '#/components/schemas/StatisticsSummary' }
+        highlights:
+          oneOf:
+            - { type: 'null' }
+            - { $ref: '#/components/schemas/WrapHighlights' }
+        storySlides:
+          oneOf:
+            - { type: 'null' }
+            - { type: array, items: { $ref: '#/components/schemas/WrapStorySlide' } }
+        failureCode: { type: [string, 'null'] }
+    WrapShareCard:
+      type: object
+      additionalProperties: false
+      required: [wrapId, title, subtitle, statValue, statLabel, accent, deepLink, webUrl, expiresAt]
+      properties:
+        wrapId: { type: string, format: uuid }
+        title: { type: string }
+        subtitle: { type: string }
+        statValue: { type: string }
+        statLabel: { type: string }
+        accent: { type: string, enum: [VIOLET, CORAL, GOLD, TEAL] }
+        deepLink: { type: string, format: uri }
+        webUrl: { type: string, format: uri }
+        expiresAt: { type: string, format: date-time }
+    GamificationMetric:
+      type: string
+      enum:
+        [
+          VIEWINGS,
+          UNIQUE_TITLES,
+          MINUTES_WATCHED,
+          REWATCHES,
+          RATINGS,
+          REVIEWS,
+          STREAK_DAYS,
+          COUNTRIES,
+        ]
+    AchievementSummary:
+      type: object
+      additionalProperties: false
+      required: [id, code, name, description, category, tier, points, progress, target, unlockedAt]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        name: { type: string }
+        description: { type: string }
+        category: { type: string }
+        tier: { type: string }
+        points: { type: integer, minimum: 0 }
+        progress: { type: integer, minimum: 0 }
+        target: { type: integer, minimum: 1 }
+        unlockedAt: { type: [string, 'null'], format: date-time }
+    ChallengeSummary:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          code,
+          name,
+          description,
+          metric,
+          target,
+          points,
+          startsAt,
+          endsAt,
+          joined,
+          progress,
+          completedAt,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        name: { type: string }
+        description: { type: string }
+        metric: { $ref: '#/components/schemas/GamificationMetric' }
+        target: { type: integer, minimum: 1 }
+        points: { type: integer, minimum: 0 }
+        startsAt: { type: string, format: date-time }
+        endsAt: { type: string, format: date-time }
+        joined: { type: boolean }
+        progress: { type: integer, minimum: 0 }
+        completedAt: { type: [string, 'null'], format: date-time }
+    StreakSummary:
+      type: object
+      additionalProperties: false
+      required: [currentDays, longestDays, lastActiveDate, timezone]
+      properties:
+        currentDays: { type: integer, minimum: 0 }
+        longestDays: { type: integer, minimum: 0 }
+        lastActiveDate: { type: [string, 'null'], format: date }
+        timezone: { type: string }
+    PassportStamp:
+      type: object
+      additionalProperties: false
+      required: [countryCode, viewingCount, uniqueTitles, firstVisitedAt, lastVisitedAt]
+      properties:
+        countryCode: { type: string, pattern: '^[A-Z]{2}$' }
+        viewingCount: { type: integer, minimum: 1 }
+        uniqueTitles: { type: integer, minimum: 1 }
+        firstVisitedAt: { type: string, format: date-time }
+        lastVisitedAt: { type: string, format: date-time }
+    MoviePassport:
+      type: object
+      additionalProperties: false
+      required: [countriesVisited, languagesExplored, decadesExplored, totalStamps, stamps]
+      properties:
+        countriesVisited: { type: integer, minimum: 0 }
+        languagesExplored: { type: integer, minimum: 0 }
+        decadesExplored: { type: integer, minimum: 0 }
+        totalStamps: { type: integer, minimum: 0 }
+        stamps: { type: array, items: { $ref: '#/components/schemas/PassportStamp' } }
+    LeaderboardEntry:
+      type: object
+      additionalProperties: false
+      required: [rank, user, score, isViewer]
+      properties:
+        rank: { type: integer, minimum: 1 }
+        user: { $ref: '#/components/schemas/UserSummary' }
+        score: { type: integer, minimum: 0 }
+        isViewer: { type: boolean }
+    LeaderboardSummary:
+      type: object
+      additionalProperties: false
+      required: [metric, visibilityNote, entries, viewerEntry]
+      properties:
+        metric: { type: string, enum: [POINTS, VIEWINGS, STREAK] }
+        visibilityNote: { type: string }
+        entries: { type: array, items: { $ref: '#/components/schemas/LeaderboardEntry' } }
+        viewerEntry:
+          oneOf:
+            - { type: 'null' }
+            - { $ref: '#/components/schemas/LeaderboardEntry' }
+    GamificationDashboard:
+      type: object
+      additionalProperties: false
+      required:
+        [totalPoints, unlockedCount, achievementCount, achievements, challenges, streak, passport]
+      properties:
+        totalPoints: { type: integer, minimum: 0 }
+        unlockedCount: { type: integer, minimum: 0 }
+        achievementCount: { type: integer, minimum: 0 }
+        achievements: { type: array, items: { $ref: '#/components/schemas/AchievementSummary' } }
+        challenges: { type: array, items: { $ref: '#/components/schemas/ChallengeSummary' } }
+        streak: { $ref: '#/components/schemas/StreakSummary' }
+        passport: { $ref: '#/components/schemas/MoviePassport' }

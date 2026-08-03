@@ -1,0 +1,13 @@
+.git
+.github
+.turbo
+.next
+.expo
+dist
+coverage
+node_modules
+*.log
+.env
+.env.*
+!.env.example
+CineWrapped Master Build Prompt.docx
