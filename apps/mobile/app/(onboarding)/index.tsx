@@ -9,7 +9,7 @@ import { useQuery } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { BrandHeader, Button, ErrorText, Field, Screen, useColors } from '../../src/components/ui';
 import { api } from '../../src/lib/api';
@@ -61,6 +61,15 @@ function toggle(items: string[], id: string): string[] {
   return items.includes(id) ? items.filter((item) => item !== id) : [...items, id];
 }
 
+function decodeBase64(base64: string): ArrayBuffer {
+  const binary = globalThis.atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return bytes.buffer;
+}
+
 export default function OnboardingScreen() {
   const colors = useColors();
   const { user, refreshUser } = useAuth();
@@ -69,6 +78,7 @@ export default function OnboardingScreen() {
   const [results, setResults] = useState<MediaSummary[]>([]);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [profileAttempted, setProfileAttempted] = useState(false);
   const genres = useQuery({
     queryKey: ['genres'],
     queryFn: () => api.request<GenreSummary[]>('genres'),
@@ -96,7 +106,13 @@ export default function OnboardingScreen() {
     setMessage(null);
     try {
       if (draft.step === 0) {
-        const username = usernameSchema.parse(draft.username);
+        setProfileAttempted(true);
+        const parsedUsername = usernameSchema.safeParse(draft.username);
+        if (!parsedUsername.success) {
+          throw new Error('Enter a username with 3–30 lowercase letters, numbers, or underscores.');
+        }
+        if (draft.displayName.trim().length === 0) throw new Error('Enter your display name.');
+        const username = parsedUsername.data;
         const updated = await api.request<CurrentUser>('users/me', {
           method: 'PATCH',
           body: {
@@ -170,7 +186,9 @@ export default function OnboardingScreen() {
       }
       draft.patch({ step: draft.step + 1 });
     } catch (error) {
-      setMessage(errorMessage(error));
+      const detail = errorMessage(error);
+      setMessage(detail);
+      Alert.alert('Could not continue', detail);
     } finally {
       setBusy(false);
     }
@@ -180,21 +198,31 @@ export default function OnboardingScreen() {
     if (user === null) return;
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      setMessage('Photo library permission is required to choose an avatar.');
+      const detail =
+        'Allow photo access in Settings to choose an avatar. You can also continue without one.';
+      setMessage(detail);
+      Alert.alert('Photo access is off', detail, [
+        { text: 'Not now', style: 'cancel' },
+        { text: 'Open Settings', onPress: () => void Linking.openSettings() },
+      ]);
       return;
     }
+    setMessage(null);
     const picked = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
+      base64: true,
     });
     if (picked.canceled) return;
     setBusy(true);
     try {
       const asset = picked.assets[0];
       if (asset === undefined) return;
-      const body = await (await fetch(asset.uri)).arrayBuffer();
+      if (asset.base64 == null)
+        throw new Error('The selected photo could not be read. Try another photo.');
+      const body = decodeBase64(asset.base64);
       const identity = (await supabase.auth.getUser()).data.user;
       if (identity === null) throw new Error('Your identity session has expired.');
       const path = `${identity.id}/${globalThis.crypto.randomUUID()}.jpg`;
@@ -206,7 +234,9 @@ export default function OnboardingScreen() {
         avatarUrl: supabase.storage.from('avatars').getPublicUrl(path).data.publicUrl,
       });
     } catch (error) {
-      setMessage(errorMessage(error));
+      const detail = errorMessage(error);
+      setMessage(detail);
+      Alert.alert('Avatar upload failed', `${detail}\n\nYou can continue without an avatar.`);
     } finally {
       setBusy(false);
     }
@@ -244,18 +274,41 @@ export default function OnboardingScreen() {
             label="Username"
             autoCapitalize="none"
             value={draft.username}
-            onChangeText={(username) => draft.patch({ username })}
+            error={
+              profileAttempted && !usernameSchema.safeParse(draft.username).success
+                ? 'Use 3–30 lowercase letters, numbers, or underscores.'
+                : undefined
+            }
+            onChangeText={(username) => {
+              setMessage(null);
+              draft.patch({ username });
+            }}
           />
           <Field
             label="Display name"
             value={draft.displayName}
-            onChangeText={(displayName) => draft.patch({ displayName })}
+            error={
+              profileAttempted && draft.displayName.trim().length === 0
+                ? 'Display name is required.'
+                : undefined
+            }
+            onChangeText={(displayName) => {
+              setMessage(null);
+              draft.patch({ displayName });
+            }}
           />
+          {draft.avatarUrl === null ? null : (
+            <Image source={{ uri: draft.avatarUrl }} style={styles.avatar} />
+          )}
           <Button
             label={draft.avatarUrl === null ? 'Choose avatar' : 'Change avatar'}
             variant="secondary"
+            disabled={busy}
             onPress={() => void uploadAvatar()}
           />
+          <Text style={{ color: colors.textSecondary }}>
+            Avatar is optional—you can add it later.
+          </Text>
         </>
       )}
       {draft.step === 1 && (
@@ -373,6 +426,7 @@ export default function OnboardingScreen() {
 }
 
 const styles = StyleSheet.create({
+  avatar: { alignSelf: 'center', borderRadius: 56, height: 112, width: 112 },
   progress: { fontSize: 12, fontWeight: '700', letterSpacing: 1, marginTop: 12 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   chip: {

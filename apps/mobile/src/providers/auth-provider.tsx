@@ -17,6 +17,7 @@ interface AuthContextValue {
   user: CurrentUser | null;
   loading: boolean;
   error: string | null;
+  retry: () => Promise<void>;
   refreshUser: () => Promise<void>;
   signOut: () => Promise<void>;
   oauth: (provider: 'google' | 'apple') => Promise<void>;
@@ -87,6 +88,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(await api.request<CurrentUser>('users/me'));
   }, []);
 
+  const retry = useCallback(async () => {
+    await bootstrap(session);
+  }, [bootstrap, session]);
+
   const signOut = useCallback(async () => {
     try {
       const sessions = await api.request<Array<{ id: string; current: boolean }>>('auth/sessions');
@@ -120,8 +125,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ session, user, loading, error, refreshUser, signOut, oauth }),
-    [session, user, loading, error, refreshUser, signOut, oauth],
+    () => ({ session, user, loading, error, retry, refreshUser, signOut, oauth }),
+    [session, user, loading, error, retry, refreshUser, signOut, oauth],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
