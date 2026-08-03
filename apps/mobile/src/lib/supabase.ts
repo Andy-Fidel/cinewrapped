@@ -4,6 +4,8 @@ import { createClient, type SupportedStorage } from '@supabase/supabase-js';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
+import { withNetworkRetry } from './network-fetch';
+
 const memory = new Map<string, string>();
 const storage: SupportedStorage = {
   getItem: async (key) =>
@@ -22,6 +24,7 @@ const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? 'https://invalid.sup
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? 'missing-public-anon-key';
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  global: { fetch: withNetworkRetry(globalThis.fetch.bind(globalThis)) },
   auth: {
     storage,
     autoRefreshToken: true,

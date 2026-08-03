@@ -28,3 +28,4 @@ All notable changes are documented here. The project follows semantic versioning
 ### Fixed
 
 - Apply the saved system, light, or dark appearance preference across mobile screens, navigation, and the status bar.
+- Retry one transient native network failure across Supabase authentication requests.

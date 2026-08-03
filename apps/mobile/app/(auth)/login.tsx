@@ -26,8 +26,12 @@ export default function LoginScreen() {
   });
 
   const submit = handleSubmit(async (values) => {
-    const { error } = await supabase.auth.signInWithPassword(values);
-    if (error !== null) setError('root', { message: error.message });
+    try {
+      const { error } = await supabase.auth.signInWithPassword(values);
+      if (error !== null) setError('root', { message: error.message });
+    } catch (error) {
+      setError('root', { message: errorMessage(error) });
+    }
   });
   const social = async (provider: 'google' | 'apple') => {
     try {
