@@ -5,6 +5,7 @@ import type {
   StreamingProviderSummary,
 } from '@cinewrapped/shared-types';
 import { usernameSchema } from '@cinewrapped/validation';
+import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { randomUUID } from 'expo-crypto';
 import * as ImagePicker from 'expo-image-picker';
@@ -20,13 +21,45 @@ import { useAuth } from '../../src/providers/auth-provider';
 import { useOnboardingStore } from '../../src/stores/onboarding-store';
 
 const steps = [
-  'Your profile',
-  'Pick your genres',
-  'Choose five favorites',
-  'Your services',
-  'Tune recommendations',
-  'Stay in the loop',
+  'Your Profile',
+  'Pick Your Genres',
+  'Choose Five Favorites',
+  'Your Services',
+  'Tune Recommendations',
+  'Stay in the Loop',
 ];
+
+function StepProgressBar({ currentStep, totalSteps }: { currentStep: number; totalSteps: number }) {
+  const colors = useColors();
+  return (
+    <View style={styles.stepProgressContainer}>
+      <View style={styles.stepSegmentsRow}>
+        {Array.from({ length: totalSteps }).map((_, index) => {
+          const isCompleted = index <= currentStep;
+          return (
+            <View
+              key={index}
+              style={[
+                styles.stepSegment,
+                {
+                  backgroundColor: isCompleted ? colors.brand : colors.surfaceRaised,
+                },
+              ]}
+            />
+          );
+        })}
+      </View>
+      <View style={styles.stepTextRow}>
+        <Text style={[styles.stepEyebrow, { color: colors.brand }]}>
+          STEP {currentStep + 1} OF {totalSteps}
+        </Text>
+        <Text style={[styles.stepTitleLabel, { color: colors.textSecondary }]}>
+          {steps[currentStep]}
+        </Text>
+      </View>
+    </View>
+  );
+}
 
 function Chip({
   label,
@@ -43,15 +76,19 @@ function Chip({
       accessibilityRole="checkbox"
       accessibilityState={{ checked: selected }}
       onPress={onPress}
-      style={[
+      style={({ pressed }) => [
         styles.chip,
         {
           backgroundColor: selected ? colors.brand : colors.surfaceRaised,
           borderColor: selected ? colors.brand : colors.border,
+          transform: [{ scale: pressed ? 0.94 : 1 }],
         },
       ]}
     >
-      <Text style={{ color: selected ? colors.onBrand : colors.textPrimary, fontWeight: '600' }}>
+      {selected ? (
+        <Ionicons name="checkmark-circle" size={16} color={colors.onBrand} style={{ marginRight: 4 }} />
+      ) : null}
+      <Text style={{ color: selected ? colors.onBrand : colors.textPrimary, fontWeight: '600', fontSize: 13 }}>
         {label}
       </Text>
     </Pressable>
@@ -81,10 +118,12 @@ export default function OnboardingScreen() {
   const [message, setMessage] = useState<string | null>(null);
   const [profileAttempted, setProfileAttempted] = useState(false);
   const hydrateProfile = draft.hydrateProfile;
+
   const genres = useQuery({
     queryKey: ['genres'],
     queryFn: () => api.request<GenreSummary[]>('genres'),
   });
+
   const providers = useQuery({
     queryKey: ['providers'],
     queryFn: () => api.request<StreamingProviderSummary[]>('streaming-providers'),
@@ -96,6 +135,7 @@ export default function OnboardingScreen() {
 
   const mark = (step: string) =>
     api.request('users/me/onboarding', { method: 'PATCH', body: { step } });
+
   const next = async () => {
     if (user === null) return;
     setBusy(true);
@@ -257,15 +297,42 @@ export default function OnboardingScreen() {
 
   return (
     <Screen>
-      <Text style={[styles.progress, { color: colors.textSecondary }]}>
-        STEP {draft.step + 1} OF {steps.length}
-      </Text>
+      {/* Step Progress Bar Header */}
+      <StepProgressBar currentStep={draft.step} totalSteps={steps.length} />
+
       <BrandHeader
         title={steps[draft.step] ?? 'Make it yours'}
         body="You can change these choices later in Settings."
       />
+
+      {/* Step 0: Profile Setup */}
       {draft.step === 0 && (
-        <>
+        <View style={styles.stepContentWrap}>
+          {/* Avatar Upload Container */}
+          <Pressable
+            accessibilityRole="button"
+            disabled={busy}
+            onPress={() => void uploadAvatar()}
+            style={({ pressed }) => [
+              styles.avatarContainer,
+              { opacity: pressed || busy ? 0.8 : 1 },
+            ]}
+          >
+            {draft.avatarUrl ? (
+              <Image source={{ uri: draft.avatarUrl }} style={styles.avatarImage} />
+            ) : (
+              <View style={[styles.avatarFallback, { backgroundColor: colors.surfaceRaised }]}>
+                <Ionicons name="person-outline" size={40} color={colors.brand} />
+              </View>
+            )}
+            <View style={[styles.cameraBadge, { backgroundColor: colors.brand }]}>
+              <Ionicons name="camera-outline" size={16} color={colors.onBrand} />
+            </View>
+          </Pressable>
+          <Text style={[styles.avatarHint, { color: colors.textSecondary }]}>
+            Tap to choose avatar photo (optional)
+          </Text>
+
           <Field
             label="Username"
             autoCapitalize="none"
@@ -293,34 +360,31 @@ export default function OnboardingScreen() {
               draft.patch({ displayName });
             }}
           />
-          {draft.avatarUrl === null ? null : (
-            <Image source={{ uri: draft.avatarUrl }} style={styles.avatar} />
-          )}
-          <Button
-            label={draft.avatarUrl === null ? 'Choose avatar' : 'Change avatar'}
-            variant="secondary"
-            disabled={busy}
-            onPress={() => void uploadAvatar()}
-          />
-          <Text style={{ color: colors.textSecondary }}>
-            Avatar is optional—you can add it later.
-          </Text>
-        </>
-      )}
-      {draft.step === 1 && (
-        <View style={styles.chips}>
-          {genres.data?.map((genre) => (
-            <Chip
-              key={genre.id}
-              label={genre.name}
-              selected={draft.genreIds.includes(genre.id)}
-              onPress={() => draft.patch({ genreIds: toggle(draft.genreIds, genre.id) })}
-            />
-          ))}
         </View>
       )}
+
+      {/* Step 1: Genres */}
+      {draft.step === 1 && (
+        <View style={styles.stepContentWrap}>
+          <Text style={{ color: colors.textSecondary, fontSize: 14 }}>
+            Select at least 5 genres to help us personalize your recommendations ({draft.genreIds.length}/5).
+          </Text>
+          <View style={styles.chips}>
+            {genres.data?.map((genre) => (
+              <Chip
+                key={genre.id}
+                label={genre.name}
+                selected={draft.genreIds.includes(genre.id)}
+                onPress={() => draft.patch({ genreIds: toggle(draft.genreIds, genre.id) })}
+              />
+            ))}
+          </View>
+        </View>
+      )}
+
+      {/* Step 2: Favorites */}
       {draft.step === 2 && (
-        <>
+        <View style={styles.stepContentWrap}>
           <Field
             label="Search movies and shows"
             value={search}
@@ -328,9 +392,9 @@ export default function OnboardingScreen() {
             returnKeyType="search"
             onSubmitEditing={() => void searchMedia()}
           />
-          <Button label="Search" variant="secondary" onPress={() => void searchMedia()} />
-          <Text style={{ color: colors.textSecondary }}>
-            {draft.favoriteMediaIds.length}/5 minimum selected
+          <Button label="Search Titles" variant="secondary" onPress={() => void searchMedia()} />
+          <Text style={{ color: colors.textSecondary, fontSize: 14 }}>
+            Selected: {draft.favoriteMediaIds.length}/5 minimum titles
           </Text>
           <View style={styles.chips}>
             {results.map((media) => (
@@ -344,11 +408,13 @@ export default function OnboardingScreen() {
               />
             ))}
           </View>
-        </>
+        </View>
       )}
+
+      {/* Step 3: Streaming Services */}
       {draft.step === 3 && (
-        <>
-          <Text style={{ color: colors.textSecondary }}>
+        <View style={styles.stepContentWrap}>
+          <Text style={{ color: colors.textSecondary, fontSize: 14 }}>
             Select any services you use—or continue with none.
           </Text>
           <View style={styles.chips}>
@@ -365,41 +431,117 @@ export default function OnboardingScreen() {
               />
             ))}
           </View>
-        </>
+        </View>
       )}
+
+      {/* Step 4: Discovery Balance */}
       {draft.step === 4 && (
-        <>
-          <Text style={[styles.choiceTitle, { color: colors.textPrimary }]}>Discovery balance</Text>
-          <Chip
-            label="Hidden gems"
-            selected={draft.mainstreamPreferencePercent === 25}
-            onPress={() => draft.patch({ mainstreamPreferencePercent: 25 })}
-          />
-          <Chip
-            label="A balanced mix"
-            selected={draft.mainstreamPreferencePercent === 50}
-            onPress={() => draft.patch({ mainstreamPreferencePercent: 50 })}
-          />
-          <Chip
-            label="Popular picks"
-            selected={draft.mainstreamPreferencePercent === 75}
-            onPress={() => draft.patch({ mainstreamPreferencePercent: 75 })}
-          />
-        </>
+        <View style={styles.stepContentWrap}>
+          <Text style={[styles.choiceTitle, { color: colors.textPrimary }]}>Discovery Balance</Text>
+          {[
+            {
+              percent: 25,
+              title: 'Hidden Gems',
+              desc: 'Prioritize indie, cult classic, and rare titles.',
+              icon: 'sparkles-outline',
+            },
+            {
+              percent: 50,
+              title: 'Balanced Mix',
+              desc: 'An equal blend of mainstream hits and hidden gems.',
+              icon: 'git-compare-outline',
+            },
+            {
+              percent: 75,
+              title: 'Popular Picks',
+              desc: 'Focus on trending blockbusters and award winners.',
+              icon: 'flame-outline',
+            },
+          ].map((option) => {
+            const selected = draft.mainstreamPreferencePercent === option.percent;
+            return (
+              <Pressable
+                key={option.percent}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: selected }}
+                onPress={() => draft.patch({ mainstreamPreferencePercent: option.percent })}
+                style={({ pressed }) => [
+                  styles.optionCard,
+                  {
+                    backgroundColor: selected ? colors.surfaceRaised : colors.surface,
+                    borderColor: selected ? colors.brand : colors.border,
+                    transform: [{ scale: pressed ? 0.98 : 1 }],
+                  },
+                ]}
+              >
+                <View style={[styles.optionIconBox, { backgroundColor: selected ? colors.brand : colors.surfaceRaised }]}>
+                  <Ionicons
+                    name={option.icon as keyof typeof Ionicons.glyphMap}
+                    size={20}
+                    color={selected ? colors.onBrand : colors.textPrimary}
+                  />
+                </View>
+                <View style={styles.optionTextWrap}>
+                  <Text style={[styles.optionTitle, { color: colors.textPrimary }]}>{option.title}</Text>
+                  <Text style={[styles.optionDesc, { color: colors.textSecondary }]}>{option.desc}</Text>
+                </View>
+                {selected ? (
+                  <Ionicons name="checkmark-circle" size={22} color={colors.brand} />
+                ) : null}
+              </Pressable>
+            );
+          })}
+        </View>
       )}
+
+      {/* Step 5: Notifications */}
       {draft.step === 5 && (
-        <>
-          <Text style={{ color: colors.textSecondary }}>
-            Get recommendation and social updates. Marketing stays off by default.
-          </Text>
-          <Chip
-            label={draft.notificationsEnabled ? 'Notifications enabled' : 'Notifications paused'}
-            selected={draft.notificationsEnabled}
+        <View style={styles.stepContentWrap}>
+          <Pressable
+            accessibilityRole="switch"
+            accessibilityState={{ checked: draft.notificationsEnabled }}
             onPress={() => draft.patch({ notificationsEnabled: !draft.notificationsEnabled })}
-          />
-        </>
+            style={({ pressed }) => [
+              styles.optionCard,
+              {
+                backgroundColor: draft.notificationsEnabled ? colors.surfaceRaised : colors.surface,
+                borderColor: draft.notificationsEnabled ? colors.brand : colors.border,
+                transform: [{ scale: pressed ? 0.98 : 1 }],
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.optionIconBox,
+                { backgroundColor: draft.notificationsEnabled ? colors.brand : colors.surfaceRaised },
+              ]}
+            >
+              <Ionicons
+                name={draft.notificationsEnabled ? 'notifications' : 'notifications-off-outline'}
+                size={22}
+                color={draft.notificationsEnabled ? colors.onBrand : colors.textPrimary}
+              />
+            </View>
+            <View style={styles.optionTextWrap}>
+              <Text style={[styles.optionTitle, { color: colors.textPrimary }]}>
+                {draft.notificationsEnabled ? 'Notifications Enabled' : 'Notifications Paused'}
+              </Text>
+              <Text style={[styles.optionDesc, { color: colors.textSecondary }]}>
+                Get personalized recommendation updates and friend activity alerts.
+              </Text>
+            </View>
+            <Ionicons
+              name={draft.notificationsEnabled ? 'checkmark-circle' : 'ellipse-outline'}
+              size={22}
+              color={draft.notificationsEnabled ? colors.brand : colors.textDisabled}
+            />
+          </Pressable>
+        </View>
       )}
+
       {message === null ? null : <ErrorText>{message}</ErrorText>}
+
+      {/* Action Buttons */}
       <View style={styles.actions}>
         {draft.step === 0 ? null : (
           <Button
@@ -422,18 +564,63 @@ export default function OnboardingScreen() {
 }
 
 const styles = StyleSheet.create({
-  avatar: { alignSelf: 'center', borderRadius: 56, height: 112, width: 112 },
-  progress: { fontSize: 12, fontWeight: '700', letterSpacing: 1, marginTop: 12 },
+  stepProgressContainer: { gap: 8, marginTop: 10, width: '100%' },
+  stepSegmentsRow: { flexDirection: 'row', gap: 6, width: '100%' },
+  stepSegment: { borderRadius: 999, flex: 1, height: 4 },
+  stepTextRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
+  stepEyebrow: { fontSize: 11, fontWeight: '800', letterSpacing: 1.2 },
+  stepTitleLabel: { fontSize: 12, fontWeight: '600' },
+  stepContentWrap: { gap: 14 },
+  avatarContainer: { alignSelf: 'center', position: 'relative' },
+  avatarImage: { borderRadius: 56, height: 112, width: 112 },
+  avatarFallback: {
+    alignItems: 'center',
+    borderRadius: 56,
+    height: 112,
+    justifyContent: 'center',
+    width: 112,
+  },
+  cameraBadge: {
+    alignItems: 'center',
+    borderRadius: 16,
+    bottom: 2,
+    height: 32,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: 2,
+    width: 32,
+  },
+  avatarHint: { fontSize: 13, textAlign: 'center' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   chip: {
+    alignItems: 'center',
     borderRadius: 999,
     borderWidth: 1,
-    minHeight: 44,
+    flexDirection: 'row',
     justifyContent: 'center',
+    minHeight: 42,
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 9,
   },
-  choiceTitle: { fontSize: 18, fontWeight: '700' },
-  actions: { flexDirection: 'row', gap: 12, marginTop: 12 },
+  choiceTitle: { fontSize: 18, fontWeight: '800' },
+  optionCard: {
+    alignItems: 'center',
+    borderRadius: 14,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 14,
+    padding: 16,
+  },
+  optionIconBox: {
+    alignItems: 'center',
+    borderRadius: 12,
+    height: 44,
+    justifyContent: 'center',
+    width: 44,
+  },
+  optionTextWrap: { flex: 1, gap: 2 },
+  optionTitle: { fontSize: 16, fontWeight: '800' },
+  optionDesc: { fontSize: 13, lineHeight: 18 },
+  actions: { flexDirection: 'row', gap: 12, marginTop: 14 },
   grow: { flex: 1 },
 });

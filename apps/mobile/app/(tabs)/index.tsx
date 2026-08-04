@@ -3,14 +3,15 @@ import type {
   RecommendationSummary,
   TasteProfile,
 } from '@cinewrapped/shared-types';
+import { Ionicons } from '@expo/vector-icons';
 import { FlashList } from '@shopify/flash-list';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { MediaCard } from '../../src/components/media-card';
-import { Button, useColors } from '../../src/components/ui';
+import { useColors } from '../../src/components/ui';
 import { api } from '../../src/lib/api';
 import { useAuth } from '../../src/providers/auth-provider';
 
@@ -68,14 +69,29 @@ export default function HomeScreen() {
         contentContainerStyle={styles.list}
         ListHeaderComponent={
           <View style={styles.header}>
-            <Text style={[styles.eyebrow, { color: colors.brand }]}>FOR YOU</Text>
-            <Text accessibilityRole="header" style={[styles.title, { color: colors.textPrimary }]}>
-              Picks for {user?.displayName ?? 'you'}
-            </Text>
+            {/* Header Title with User Greeting & Avatar */}
+            <View style={styles.greetingRow}>
+              <View style={styles.greetingTextWrap}>
+                <Text style={[styles.eyebrow, { color: colors.brand }]}>FOR YOU</Text>
+                <Text accessibilityRole="header" style={[styles.title, { color: colors.textPrimary }]}>
+                  Picks for {user?.displayName ?? 'you'}
+                </Text>
+              </View>
+              {user?.avatarUrl ? (
+                <Image source={{ uri: user.avatarUrl }} style={styles.userAvatar} />
+              ) : (
+                <View style={[styles.userAvatarFallback, { backgroundColor: colors.surfaceRaised }]}>
+                  <Ionicons name="person" size={20} color={colors.brand} />
+                </View>
+              )}
+            </View>
+
             <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
               Deterministic recommendations built from your choices and activity—not generated
               opinions.
             </Text>
+
+            {/* Taste Profile Card */}
             {taste.data === undefined ? null : (
               <View
                 style={[
@@ -84,50 +100,112 @@ export default function HomeScreen() {
                 ]}
               >
                 <View style={styles.tasteHeader}>
-                  <Text style={[styles.tasteTitle, { color: colors.textPrimary }]}>
-                    Your taste profile
-                  </Text>
-                  <Text style={{ color: colors.brand, fontWeight: '700' }}>
-                    {taste.data.confidence}
-                  </Text>
+                  <View style={styles.tasteHeaderTitleRow}>
+                    <Ionicons name="sparkles" size={18} color={colors.brand} />
+                    <Text style={[styles.tasteTitle, { color: colors.textPrimary }]}>
+                      Your Taste Profile
+                    </Text>
+                  </View>
+                  <View style={[styles.confidenceBadge, { backgroundColor: colors.surfaceRaised }]}>
+                    <Text style={[styles.confidenceText, { color: colors.brand }]}>
+                      🎯 {taste.data.confidence}
+                    </Text>
+                  </View>
                 </View>
+
                 <View style={styles.genres}>
                   {taste.data.topGenres.slice(0, 5).map((genre) => (
                     <View
                       key={genre.genreId}
                       style={[styles.genre, { backgroundColor: colors.surfaceRaised }]}
                     >
-                      <Text style={{ color: colors.textPrimary }}>{genre.name}</Text>
+                      <Text style={{ color: colors.textPrimary, fontSize: 12, fontWeight: '600' }}>
+                        {genre.name}
+                      </Text>
                     </View>
                   ))}
                 </View>
-                <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
-                  {taste.data.signalCounts.favorites} favorites · {taste.data.signalCounts.ratings}{' '}
-                  ratings · {taste.data.signalCounts.completedTitles} completed
-                </Text>
+
+                <View style={styles.statsSummaryRow}>
+                  <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
+                    ⭐ {taste.data.signalCounts.favorites} favorites · 💬 {taste.data.signalCounts.ratings} ratings · 🍿 {taste.data.signalCounts.completedTitles} completed
+                  </Text>
+                </View>
               </View>
             )}
-            <Button
-              label="Refresh recommendations"
-              variant="secondary"
-              loading={refresh.isPending}
-              onPress={() => refresh.mutate()}
-            />
-            <Button
-              label="Ask the discovery assistant"
-              onPress={() => router.push('/ai')}
-              variant="secondary"
-            />
-            <Button
-              label="View statistics & wraps"
-              onPress={() => router.push('/insights')}
-              variant="secondary"
-            />
-            <Button
-              label="Achievements & movie passport"
-              onPress={() => router.push('/gamification')}
-              variant="secondary"
-            />
+
+            {/* Quick Action Grid */}
+            <View style={styles.quickGrid}>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => router.push('/ai')}
+                style={({ pressed }) => [
+                  styles.gridItem,
+                  {
+                    backgroundColor: colors.surface,
+                    borderColor: colors.border,
+                    opacity: pressed ? 0.8 : 1,
+                  },
+                ]}
+              >
+                <Ionicons name="sparkles-outline" size={20} color={colors.brand} />
+                <Text style={[styles.gridItemText, { color: colors.textPrimary }]}>AI Assistant</Text>
+              </Pressable>
+
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => router.push('/insights')}
+                style={({ pressed }) => [
+                  styles.gridItem,
+                  {
+                    backgroundColor: colors.surface,
+                    borderColor: colors.border,
+                    opacity: pressed ? 0.8 : 1,
+                  },
+                ]}
+              >
+                <Ionicons name="analytics-outline" size={20} color={colors.brand} />
+                <Text style={[styles.gridItemText, { color: colors.textPrimary }]}>Stats & Wraps</Text>
+              </Pressable>
+
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => router.push('/gamification')}
+                style={({ pressed }) => [
+                  styles.gridItem,
+                  {
+                    backgroundColor: colors.surface,
+                    borderColor: colors.border,
+                    opacity: pressed ? 0.8 : 1,
+                  },
+                ]}
+              >
+                <Ionicons name="ribbon-outline" size={20} color={colors.brand} />
+                <Text style={[styles.gridItemText, { color: colors.textPrimary }]}>Passport</Text>
+              </Pressable>
+
+              <Pressable
+                accessibilityRole="button"
+                disabled={refresh.isPending}
+                onPress={() => refresh.mutate()}
+                style={({ pressed }) => [
+                  styles.gridItem,
+                  {
+                    backgroundColor: colors.surface,
+                    borderColor: colors.border,
+                    opacity: pressed || refresh.isPending ? 0.8 : 1,
+                  },
+                ]}
+              >
+                {refresh.isPending ? (
+                  <ActivityIndicator size="small" color={colors.brand} />
+                ) : (
+                  <Ionicons name="refresh-outline" size={20} color={colors.brand} />
+                )}
+                <Text style={[styles.gridItemText, { color: colors.textPrimary }]}>Refresh Picks</Text>
+              </Pressable>
+            </View>
+
             {refresh.isError ? (
               <Text accessibilityRole="alert" style={{ color: colors.danger }}>
                 Recommendations could not be refreshed yet.
@@ -158,13 +236,29 @@ export default function HomeScreen() {
           >
             <MediaCard media={item.media} />
             <View style={styles.cardCopy}>
-              <Text style={[styles.kind, { color: colors.brand }]}>
-                {item.recommendationType === 'HIDDEN_GEM' ? 'HIDDEN GEM' : 'MATCH FOR YOU'} ·{' '}
-                {Math.round(item.score * 100)}%
-              </Text>
+              <View style={styles.kindRow}>
+                <View
+                  style={[
+                    styles.matchBadge,
+                    {
+                      backgroundColor:
+                        item.recommendationType === 'HIDDEN_GEM'
+                          ? 'rgba(255, 215, 0, 0.15)'
+                          : colors.surfaceRaised,
+                    },
+                  ]}
+                >
+                  <Text style={[styles.kind, { color: colors.brand }]}>
+                    {item.recommendationType === 'HIDDEN_GEM' ? '💎 HIDDEN GEM' : '🎯 MATCH'} ·{' '}
+                    {Math.round(item.score * 100)}%
+                  </Text>
+                </View>
+              </View>
+
               <Text style={[styles.explanation, { color: colors.textSecondary }]}>
                 {item.explanation}
               </Text>
+
               <View style={styles.actions}>
                 <Pressable
                   accessibilityRole="button"
@@ -172,18 +266,33 @@ export default function HomeScreen() {
                   onPress={() =>
                     feedback.mutate({ recommendationId: item.id, feedbackType: 'SAVED' })
                   }
-                  style={[styles.action, { backgroundColor: colors.brand }]}
+                  style={({ pressed }) => [
+                    styles.action,
+                    {
+                      backgroundColor: colors.brand,
+                      opacity: pressed ? 0.85 : 1,
+                    },
+                  ]}
                 >
+                  <Ionicons name="bookmark-outline" size={16} color={colors.onBrand} />
                   <Text style={{ color: colors.onBrand, fontWeight: '700' }}>Save</Text>
                 </Pressable>
+
                 <Pressable
                   accessibilityRole="button"
                   disabled={feedback.isPending}
                   onPress={() =>
                     feedback.mutate({ recommendationId: item.id, feedbackType: 'DISMISSED' })
                   }
-                  style={[styles.action, { backgroundColor: colors.surfaceRaised }]}
+                  style={({ pressed }) => [
+                    styles.action,
+                    {
+                      backgroundColor: colors.surfaceRaised,
+                      opacity: pressed ? 0.85 : 1,
+                    },
+                  ]}
                 >
+                  <Ionicons name="close-circle-outline" size={16} color={colors.textPrimary} />
                   <Text style={{ color: colors.textPrimary, fontWeight: '700' }}>Not for me</Text>
                 </Pressable>
               </View>
@@ -199,20 +308,60 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   list: { padding: 16 },
   header: { gap: 14, marginBottom: 18 },
+  greetingRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  greetingTextWrap: { flex: 1, gap: 4 },
+  userAvatar: { borderRadius: 22, height: 44, width: 44 },
+  userAvatarFallback: {
+    alignItems: 'center',
+    borderRadius: 22,
+    height: 44,
+    justifyContent: 'center',
+    width: 44,
+  },
   eyebrow: { fontSize: 12, fontWeight: '700', letterSpacing: 1.4 },
-  title: { fontSize: 32, fontWeight: '700', letterSpacing: -0.4 },
-  subtitle: { fontSize: 16, lineHeight: 23 },
+  title: { fontSize: 28, fontWeight: '800', letterSpacing: -0.4 },
+  subtitle: { fontSize: 14, lineHeight: 21 },
   taste: { borderRadius: 16, borderWidth: 1, gap: 12, padding: 16 },
-  tasteHeader: { flexDirection: 'row', justifyContent: 'space-between' },
-  tasteTitle: { fontSize: 18, fontWeight: '700' },
+  tasteHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
+  tasteHeaderTitleRow: { alignItems: 'center', flexDirection: 'row', gap: 8 },
+  tasteTitle: { fontSize: 17, fontWeight: '700' },
+  confidenceBadge: { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
+  confidenceText: { fontSize: 12, fontWeight: '700' },
   genres: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  genre: { borderRadius: 999, paddingHorizontal: 11, paddingVertical: 7 },
+  genre: { borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6 },
+  statsSummaryRow: { marginTop: 2 },
+  quickGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  gridItem: {
+    alignItems: 'center',
+    borderRadius: 14,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 8,
+    height: 48,
+    justifyContent: 'center',
+    width: '48%',
+  },
+  gridItemText: { fontSize: 13, fontWeight: '700' },
   card: { borderRadius: 18, borderWidth: 1, marginBottom: 18, overflow: 'hidden', padding: 12 },
   cardCopy: { gap: 10, paddingHorizontal: 6, paddingBottom: 4 },
-  kind: { fontSize: 12, fontWeight: '800', letterSpacing: 0.5 },
+  kindRow: { flexDirection: 'row' },
+  matchBadge: { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
+  kind: { fontSize: 11, fontWeight: '800', letterSpacing: 0.5 },
   explanation: { fontSize: 14, lineHeight: 20 },
   actions: { flexDirection: 'row', gap: 10 },
-  action: { alignItems: 'center', borderRadius: 10, flex: 1, padding: 12 },
+  action: {
+    alignItems: 'center',
+    borderRadius: 10,
+    flex: 1,
+    flexDirection: 'row',
+    gap: 6,
+    height: 44,
+    justifyContent: 'center',
+  },
   empty: { alignItems: 'center', gap: 9, padding: 40 },
   emptyTitle: { fontSize: 20, fontWeight: '700' },
 });
