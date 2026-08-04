@@ -8,6 +8,7 @@ import { API_ENVIRONMENT } from '../config/environment.module.js';
 import type {
   MediaProvider,
   ProviderCreditSummary,
+  ProviderDiscoveryFilters,
   ProviderMediaDetails,
   ProviderMediaSummary,
   ProviderEpisodeSummary,
@@ -273,6 +274,65 @@ export class TmdbMediaProvider implements MediaProvider {
           (item): item is ProviderMediaSummary =>
             item !== null && (mediaType === undefined || item.mediaType === mediaType),
         )
+        .slice(0, 20);
+    });
+  }
+
+  public async discoverMedia(
+    filters: ProviderDiscoveryFilters,
+    language: string,
+    page = 1,
+  ): Promise<ProviderMediaSummary[]> {
+    const parameters: Record<string, string> = {
+      language,
+      include_adult: 'false',
+      include_video: 'false',
+      page: String(page),
+      sort_by: filters.maximumPopularity === undefined ? 'popularity.desc' : 'vote_average.desc',
+      'vote_count.gte': '25',
+    };
+    if (filters.genreExternalIds.length > 0) {
+      parameters.with_genres = filters.genreExternalIds.join(',');
+    }
+    if (filters.originalLanguage !== undefined) {
+      parameters.with_original_language = filters.originalLanguage;
+    }
+    if (filters.releaseYearMinimum !== undefined) {
+      parameters[
+        filters.mediaType === 'MOVIE' ? 'primary_release_date.gte' : 'first_air_date.gte'
+      ] = `${filters.releaseYearMinimum}-01-01`;
+    }
+    if (filters.releaseYearMaximum !== undefined) {
+      parameters[
+        filters.mediaType === 'MOVIE' ? 'primary_release_date.lte' : 'first_air_date.lte'
+      ] = `${filters.releaseYearMaximum}-12-31`;
+    }
+    if (filters.runtimeMaximum !== undefined) {
+      parameters['with_runtime.lte'] = String(filters.runtimeMaximum);
+    }
+    if (filters.minimumRating !== undefined) {
+      parameters['vote_average.gte'] = String(filters.minimumRating);
+    }
+    if (filters.maximumPopularity !== undefined) {
+      parameters['popularity.lte'] = String(filters.maximumPopularity);
+    }
+    if (filters.watchRegion !== undefined) parameters.watch_region = filters.watchRegion;
+    if (filters.watchProviderExternalIds?.length) {
+      parameters.with_watch_providers = filters.watchProviderExternalIds.join('|');
+      parameters.with_watch_monetization_types = 'flatrate|free|ads';
+    }
+    const cacheKey = `tmdb:discover:${filters.mediaType}:${language}:${page}:${JSON.stringify(parameters)}`;
+    return this.cache.remember(cacheKey, 600, async () => {
+      const kind = filters.mediaType === 'MOVIE' ? 'movie' : 'tv';
+      const data = await this.request(`/discover/${kind}`, parameters, mediaListSchema);
+      return data.results
+        .map((result) =>
+          normalizeSummary({
+            ...result,
+            media_type: filters.mediaType === 'MOVIE' ? ('movie' as const) : ('tv' as const),
+          }),
+        )
+        .filter((item): item is ProviderMediaSummary => item !== null)
         .slice(0, 20);
     });
   }

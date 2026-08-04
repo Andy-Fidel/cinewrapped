@@ -237,6 +237,31 @@ export const recommendationFeedbackSchema = z.object({
   feedbackType: z.enum(['VIEWED', 'SAVED', 'DISMISSED', 'SELECTED']),
 });
 
+export const intelligentDiscoverySchema = z.object({
+  query: z.string().trim().min(3).max(500),
+  language: languageTagSchema.default('en-US'),
+  countryCode: countryCodeSchema.default('US'),
+});
+
+export const conversationalRecommendationSchema = intelligentDiscoverySchema.extend({
+  turns: z
+    .array(
+      z.object({
+        role: z.enum(['USER', 'ASSISTANT']),
+        content: z.string().trim().min(1).max(1_000),
+      }),
+    )
+    .max(12)
+    .default([]),
+});
+
+export const reviewAssistantSchema = z.object({
+  mediaId: uuidSchema,
+  notes: z.string().trim().min(3).max(5_000),
+  style: z.enum(['SHORT', 'DETAILED', 'FUNNY', 'SPOILER_FREE', 'SOCIAL_CAPTION']),
+  containsSpoilers: z.boolean().default(false),
+});
+
 export const createFriendshipSchema = z.object({ addresseeUserId: uuidSchema });
 export const respondFriendshipSchema = z.object({ action: z.enum(['ACCEPT', 'DECLINE']) });
 export const createCommentSchema = z.object({

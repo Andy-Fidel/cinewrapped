@@ -174,3 +174,17 @@ This checklist follows the mandatory execution order in the master build prompt.
 - [x] Migration, shared contracts, validation, OpenAPI decorators, and tests
 - [x] Full typecheck, lint, test, schema, build, and production-audit verification
 - [x] Documentation and phase handoff
+
+## Phase 9 — Advanced AI Features
+
+- [x] Auditable natural-language constraint interpretation
+- [x] Mood, runtime, era, language, media type, popularity, and service discovery filters
+- [x] Request-scoped conversational recommendation refinement
+- [x] Typed AI provider boundary with an honest local grounded adapter
+- [x] Short, detailed, funny, spoiler-free, and social-caption review drafts
+- [x] Explicit assisted-draft labeling, editing, and approval before publication
+- [x] Evidence-counted enhanced Movie DNA with confidence and versioning
+- [x] Recommendation opt-in enforcement, bounded inputs, and rate limiting
+- [x] Mobile discovery, assistant, review, and Movie DNA experiences
+- [x] Unit, validation, typecheck, lint, test, schema, and build verification
+- [x] Documentation and phase handoff

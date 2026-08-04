@@ -1,5 +1,6 @@
 import type {
   MonthlyWatchCount,
+  MovieDnaProfile,
   StatisticsSummary,
   TasteStatistics,
   WrapDetail,
@@ -112,6 +113,11 @@ export default function InsightsScreen() {
     queryFn: () => api.request<WrapSummary[]>('wraps?limit=30'),
     enabled: session !== null,
   });
+  const movieDna = useQuery({
+    queryKey: ['movie-dna'],
+    queryFn: () => api.request<MovieDnaProfile>('ai/movie-dna'),
+    enabled: session !== null,
+  });
   const generate = useMutation({
     mutationFn: (type: Exclude<WrapType, 'CUSTOM'>) =>
       api.request<WrapDetail>('wraps', {
@@ -124,9 +130,16 @@ export default function InsightsScreen() {
     },
   });
   if (session === null) return <Redirect href="/(auth)/login" />;
-  const isRefreshing = summary.isRefetching || monthly.isRefetching || taste.isRefetching;
+  const isRefreshing =
+    summary.isRefetching || monthly.isRefetching || taste.isRefetching || movieDna.isRefetching;
   const refresh = () =>
-    void Promise.all([summary.refetch(), monthly.refetch(), taste.refetch(), wraps.refetch()]);
+    void Promise.all([
+      summary.refetch(),
+      monthly.refetch(),
+      taste.refetch(),
+      movieDna.refetch(),
+      wraps.refetch(),
+    ]);
   return (
     <SafeAreaView
       style={[styles.safeArea, { backgroundColor: colors.background }]}
@@ -200,6 +213,50 @@ export default function InsightsScreen() {
           {summary.isError || monthly.isError || taste.isError ? (
             <Text accessibilityRole="alert" style={{ color: colors.danger }}>
               {errorMessage(summary.error ?? monthly.error ?? taste.error)}
+            </Text>
+          ) : null}
+          {movieDna.data === undefined ? null : (
+            <View style={[styles.panel, { borderColor: colors.border }]}>
+              <View style={styles.dnaHeader}>
+                <View style={styles.grow}>
+                  <Text style={[styles.eyebrow, { color: colors.brand }]}>MOVIE DNA</Text>
+                  <Text style={[styles.heading, { color: colors.textPrimary }]}>
+                    {movieDna.data.label}
+                  </Text>
+                </View>
+                <Text style={{ color: colors.brand, fontWeight: '800' }}>
+                  {movieDna.data.confidence}
+                </Text>
+              </View>
+              <Text style={{ color: colors.textSecondary }}>
+                {movieDna.data.sampleSize} completed-title signals · {movieDna.data.notice}
+              </Text>
+              {movieDna.data.traits.map((item) => (
+                <View key={item.key} style={[styles.dnaTrait, { borderColor: colors.border }]}>
+                  <View style={styles.grow}>
+                    <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{item.label}</Text>
+                    <Text style={{ color: colors.textPrimary, fontSize: 17, fontWeight: '800' }}>
+                      {item.value}
+                    </Text>
+                    <Text style={{ color: colors.textSecondary, fontSize: 12, lineHeight: 17 }}>
+                      {item.explanation}
+                    </Text>
+                  </View>
+                  <Text style={{ color: colors.brand, fontWeight: '800' }}>
+                    {item.evidenceCount}
+                  </Text>
+                </View>
+              ))}
+              {movieDna.data.traits.length === 0 ? (
+                <Text style={{ color: colors.textSecondary }}>
+                  Complete and rate more titles to reveal grounded traits.
+                </Text>
+              ) : null}
+            </View>
+          )}
+          {movieDna.isError ? (
+            <Text accessibilityRole="alert" style={{ color: colors.danger }}>
+              {errorMessage(movieDna.error)}
             </Text>
           ) : null}
           <View style={[styles.panel, { borderColor: colors.border }]}>
@@ -283,4 +340,12 @@ const styles = StyleSheet.create({
     padding: 15,
   },
   grow: { flex: 1 },
+  dnaHeader: { alignItems: 'center', flexDirection: 'row', gap: 12 },
+  dnaTrait: {
+    alignItems: 'center',
+    borderTopWidth: 1,
+    flexDirection: 'row',
+    gap: 12,
+    paddingTop: 12,
+  },
 });

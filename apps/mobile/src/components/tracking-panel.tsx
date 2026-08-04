@@ -1,4 +1,9 @@
-import type { MediaTrackingState, WatchStatus } from '@cinewrapped/shared-types';
+import type {
+  MediaTrackingState,
+  ReviewAssistantResult,
+  ReviewAssistantStyle,
+  WatchStatus,
+} from '@cinewrapped/shared-types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -28,6 +33,9 @@ export function TrackingPanel({ mediaId }: { mediaId: string }) {
   const queryClient = useQueryClient();
   const [reviewBody, setReviewBody] = useState<string | null>(null);
   const [spoilers, setSpoilers] = useState<boolean | null>(null);
+  const [assistantStyle, setAssistantStyle] = useState<ReviewAssistantStyle>('SHORT');
+  const [assistedDraft, setAssistedDraft] = useState(false);
+  const [draftApproved, setDraftApproved] = useState(false);
   const tracking = useQuery({
     queryKey: ['tracking-state', mediaId],
     queryFn: () => api.request<MediaTrackingState>(`library/media/${mediaId}`),
@@ -110,7 +118,26 @@ export function TrackingPanel({ mediaId }: { mediaId: string }) {
     onSuccess: async () => {
       setReviewBody(null);
       setSpoilers(null);
+      setAssistedDraft(false);
+      setDraftApproved(false);
       await refresh();
+    },
+  });
+  const assistantMutation = useMutation({
+    mutationFn: () =>
+      api.request<ReviewAssistantResult>('ai/reviews/assist', {
+        method: 'POST',
+        body: {
+          mediaId,
+          notes: currentReviewBody,
+          style: assistantStyle,
+          containsSpoilers,
+        },
+      }),
+    onSuccess: (result) => {
+      setReviewBody(result.draft);
+      setAssistedDraft(true);
+      setDraftApproved(false);
     },
   });
 
@@ -193,12 +220,69 @@ export function TrackingPanel({ mediaId }: { mediaId: string }) {
       <TextInput
         accessibilityLabel="Review"
         multiline
-        onChangeText={setReviewBody}
+        onChangeText={(value) => {
+          setReviewBody(value);
+          if (assistedDraft) setDraftApproved(false);
+        }}
         placeholder="What did you think?"
         placeholderTextColor={colors.textDisabled}
         style={[styles.review, { borderColor: colors.border, color: colors.textPrimary }]}
         value={currentReviewBody}
       />
+      <Text style={[styles.label, { color: colors.textPrimary }]}>Review assistant</Text>
+      <View style={styles.chips}>
+        {(['SHORT', 'DETAILED', 'FUNNY', 'SPOILER_FREE', 'SOCIAL_CAPTION'] as const).map(
+          (style) => {
+            const selected = assistantStyle === style;
+            return (
+              <Pressable
+                accessibilityRole="radio"
+                accessibilityState={{ checked: selected }}
+                key={style}
+                onPress={() => setAssistantStyle(style)}
+                style={[
+                  styles.chip,
+                  {
+                    backgroundColor: selected ? colors.brand : colors.surfaceRaised,
+                    borderColor: selected ? colors.brand : colors.border,
+                  },
+                ]}
+              >
+                <Text style={{ color: selected ? colors.onBrand : colors.textPrimary }}>
+                  {style.replaceAll('_', ' ').toLowerCase()}
+                </Text>
+              </Pressable>
+            );
+          },
+        )}
+      </View>
+      <Button
+        disabled={currentReviewBody.trim().length < 3}
+        label="Rewrite from my notes"
+        loading={assistantMutation.isPending}
+        onPress={() => assistantMutation.mutate()}
+        variant="secondary"
+      />
+      {assistedDraft ? (
+        <View style={[styles.assistantNotice, { backgroundColor: colors.surfaceRaised }]}>
+          <Text style={{ color: colors.textPrimary, fontWeight: '700' }}>
+            Assisted draft · local grounded source
+          </Text>
+          <Text style={{ color: colors.textSecondary, lineHeight: 19 }}>
+            This draft uses only your notes and title facts. Edit it freely, then approve it before
+            publishing.
+          </Text>
+          <Pressable
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: draftApproved }}
+            onPress={() => setDraftApproved((value) => !value)}
+          >
+            <Text style={{ color: colors.textPrimary }}>
+              {draftApproved ? '☑' : '☐'} I reviewed and approve this draft
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
       <Pressable
         accessibilityRole="checkbox"
         accessibilityState={{ checked: containsSpoilers }}
@@ -209,14 +293,19 @@ export function TrackingPanel({ mediaId }: { mediaId: string }) {
         </Text>
       </Pressable>
       <Button
-        disabled={currentReviewBody.trim().length === 0}
+        disabled={currentReviewBody.trim().length === 0 || (assistedDraft && !draftApproved)}
         label={existingReview === null ? 'Publish review' : 'Update review'}
         loading={reviewMutation.isPending}
         onPress={() => reviewMutation.mutate()}
       />
-      {[statusMutation, watchedMutation, watchlistMutation, ratingMutation, reviewMutation].some(
-        (mutation) => mutation.isError,
-      ) ? (
+      {[
+        statusMutation,
+        watchedMutation,
+        watchlistMutation,
+        ratingMutation,
+        reviewMutation,
+        assistantMutation,
+      ].some((mutation) => mutation.isError) ? (
         <Text accessibilityRole="alert" style={{ color: colors.danger }}>
           That change could not be saved. Refresh and try again.
         </Text>
@@ -246,4 +335,5 @@ const styles = StyleSheet.create({
     padding: 12,
     textAlignVertical: 'top',
   },
+  assistantNotice: { borderRadius: 12, gap: 8, padding: 12 },
 });

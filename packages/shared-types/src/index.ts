@@ -360,6 +360,73 @@ export interface RecommendationSummary {
   feedback: RecommendationFeedbackType[];
 }
 
+export type DiscoveryMood =
+  'FUNNY' | 'COZY' | 'ROMANTIC' | 'TENSE' | 'THOUGHTFUL' | 'UPLIFTING' | 'SCARY' | 'ADVENTUROUS';
+
+export interface DiscoveryInterpretation {
+  originalQuery: string;
+  mediaType: MediaType;
+  moods: DiscoveryMood[];
+  genres: string[];
+  originalLanguage: string | null;
+  releaseYearMinimum: number | null;
+  releaseYearMaximum: number | null;
+  runtimeMaximum: number | null;
+  minimumRating: number | null;
+  hiddenGemsOnly: boolean;
+  streamingServices: string[];
+  companions: 'SOLO' | 'PARTNER' | 'FRIENDS' | 'FAMILY' | 'CHILDREN' | null;
+  endingPreference: 'HAPPY' | 'NOT_SAD' | null;
+  explanation: string;
+  unsupportedConstraints: string[];
+}
+
+export interface IntelligentDiscoveryResult {
+  interpretation: DiscoveryInterpretation;
+  results: MediaSummary[];
+  source: 'LOCAL_GROUNDED';
+  notice: string;
+}
+
+export interface ConversationTurn {
+  role: 'USER' | 'ASSISTANT';
+  content: string;
+}
+
+export interface ConversationalRecommendationResult extends IntelligentDiscoveryResult {
+  reply: string;
+  suggestedFollowUps: string[];
+}
+
+export type ReviewAssistantStyle =
+  'SHORT' | 'DETAILED' | 'FUNNY' | 'SPOILER_FREE' | 'SOCIAL_CAPTION';
+
+export interface ReviewAssistantResult {
+  draft: string;
+  style: ReviewAssistantStyle;
+  source: 'LOCAL_GROUNDED';
+  requiresApproval: true;
+  notice: string;
+}
+
+export interface MovieDnaTrait {
+  key: string;
+  label: string;
+  value: string;
+  evidenceCount: number;
+  explanation: string;
+}
+
+export interface MovieDnaProfile {
+  label: string;
+  confidence: 'LOW' | 'MEDIUM' | 'HIGH';
+  sampleSize: number;
+  traits: MovieDnaTrait[];
+  generatedAt: string;
+  modelVersion: 'grounded-dna-v1';
+  notice: string;
+}
+
 export interface UserSummary {
   id: string;
   username: string;

@@ -68,11 +68,29 @@ export interface ProviderStreamingAvailability {
   }>;
 }
 
+export interface ProviderDiscoveryFilters {
+  mediaType: 'MOVIE' | 'TV';
+  genreExternalIds: string[];
+  originalLanguage?: string;
+  releaseYearMinimum?: number;
+  releaseYearMaximum?: number;
+  runtimeMaximum?: number;
+  minimumRating?: number;
+  maximumPopularity?: number;
+  watchRegion?: string;
+  watchProviderExternalIds?: string[];
+}
+
 export interface MediaProvider {
   searchMedia(query: string, language: string, page: number): Promise<ProviderMediaSummary[]>;
   getTrending(
     window: 'DAY' | 'WEEK',
     mediaType: 'MOVIE' | 'TV' | undefined,
+    language: string,
+    page: number,
+  ): Promise<ProviderMediaSummary[]>;
+  discoverMedia(
+    filters: ProviderDiscoveryFilters,
     language: string,
     page: number,
   ): Promise<ProviderMediaSummary[]>;

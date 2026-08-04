@@ -114,6 +114,11 @@ export default function HomeScreen() {
               onPress={() => refresh.mutate()}
             />
             <Button
+              label="Ask the discovery assistant"
+              onPress={() => router.push('/ai')}
+              variant="secondary"
+            />
+            <Button
               label="View statistics & wraps"
               onPress={() => router.push('/insights')}
               variant="secondary"

@@ -41,6 +41,7 @@ tags:
       description: 'Achievements, challenges, streaks, privacy-safe leaderboards, and passports.',
     }
   - { name: Clubs, description: 'Membership, discussions, polls, group lists, and watch events.' }
+  - { name: AI, description: 'Grounded discovery, review assistance, and Movie DNA.' }
   - { name: Notifications, description: 'In-app notifications and push device registration.' }
 
 paths:
@@ -1411,6 +1412,57 @@ paths:
           '200': { $ref: '#/components/responses/Ok' },
           '403': { $ref: '#/components/responses/Forbidden' },
           '422': { $ref: '#/components/responses/ValidationError' },
+        }
+
+  /ai/discovery:
+    post:
+      tags: [AI]
+      operationId: intelligentDiscovery
+      x-request-dto: IntelligentDiscoveryRequest
+      x-response-dto: IntelligentDiscoveryResult
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Ok' },
+          '403': { $ref: '#/components/responses/Forbidden' },
+          '422': { $ref: '#/components/responses/ValidationError' },
+          '429': { $ref: '#/components/responses/RateLimited' },
+        }
+  /ai/recommendations/conversation:
+    post:
+      tags: [AI]
+      operationId: conversationalRecommendations
+      x-request-dto: ConversationalRecommendationRequest
+      x-response-dto: ConversationalRecommendationResult
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Ok' },
+          '403': { $ref: '#/components/responses/Forbidden' },
+          '422': { $ref: '#/components/responses/ValidationError' },
+          '429': { $ref: '#/components/responses/RateLimited' },
+        }
+  /ai/reviews/assist:
+    post:
+      tags: [AI]
+      operationId: assistReview
+      x-request-dto: ReviewAssistantRequest
+      x-response-dto: ReviewAssistantResult
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Ok' },
+          '403': { $ref: '#/components/responses/Forbidden' },
+          '409': { $ref: '#/components/responses/Conflict' },
+          '422': { $ref: '#/components/responses/ValidationError' },
+          '429': { $ref: '#/components/responses/RateLimited' },
+        }
+  /ai/movie-dna:
+    get:
+      tags: [AI]
+      operationId: getMovieDna
+      x-response-dto: MovieDnaProfile
+      responses:
+        {
+          '200': { $ref: '#/components/responses/Ok' },
+          '403': { $ref: '#/components/responses/Forbidden' },
         }
 
 components:

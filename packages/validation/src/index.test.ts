@@ -10,6 +10,8 @@ import {
   countryCodeSchema,
   normalizeUsername,
   recommendationFeedbackSchema,
+  intelligentDiscoverySchema,
+  reviewAssistantSchema,
   updatePrivacySchema,
   updatePreferencesSchema,
   updateReviewSchema,
@@ -18,6 +20,18 @@ import {
 } from './index.js';
 
 describe('shared validation', () => {
+  it('bounds intelligent discovery and review-assistant inputs', () => {
+    expect(
+      intelligentDiscoverySchema.parse({ query: 'cozy family movie', countryCode: 'GH' }),
+    ).toMatchObject({ language: 'en-US', countryCode: 'GH' });
+    expect(() =>
+      reviewAssistantSchema.parse({
+        mediaId: 'not-a-uuid',
+        notes: 'good',
+        style: 'SHORT',
+      }),
+    ).toThrow();
+  });
   it('normalizes valid usernames', () => {
     expect(normalizeUsername('  Film_Friend  ')).toBe('film_friend');
   });

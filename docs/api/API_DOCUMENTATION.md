@@ -274,6 +274,17 @@ Feedback types are `VIEWED`, `SAVED`, `DISMISSED`, and `SELECTED`. `SAVED` also 
 
 Phase 4 additionally ships `GET /recommendations/taste-profile` and rate-limited `POST /recommendations/refresh`. The scoring inputs, fixed weights, confidence thresholds, exclusions, and current limitations are documented in [`../recommendations/RECOMMENDATIONS.md`](../recommendations/RECOMMENDATIONS.md).
 
+### 3.8.1 Advanced grounded intelligence
+
+| Method | Path                               | Access | Request                                     | Response                            |
+| ------ | ---------------------------------- | -----: | ------------------------------------------- | ----------------------------------- |
+| `POST` | `/ai/discovery`                    |   A, O | query, language, country                    | interpretation and `MediaSummary[]` |
+| `POST` | `/ai/recommendations/conversation` |   A, O | query, up to 12 turns, language, country    | reply, interpretation, and matches  |
+| `POST` | `/ai/reviews/assist`               |   A, O | media ID, notes, style, spoiler declaration | editable approval-required draft    |
+| `GET`  | `/ai/movie-dna`                    |   A, O | —                                           | evidence-counted `MovieDnaProfile`  |
+
+These endpoints follow the member's recommendation opt-in. They expose `source=LOCAL_GROUNDED`; no hosted model is implied. Unsupported provider facts such as ending sentiment are reported instead of guessed. Review output cannot publish content and requires client-side member approval. See [`../ai/ADVANCED_AI.md`](../ai/ADVANCED_AI.md).
+
 ### 3.9 Follows, friendships, shares, and feed
 
 | Method   | Path                          | Access | Request                    | Response         |

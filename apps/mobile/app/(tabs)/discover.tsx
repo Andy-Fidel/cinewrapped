@@ -1,4 +1,4 @@
-import type { MediaSummary } from '@cinewrapped/shared-types';
+import type { IntelligentDiscoveryResult, MediaSummary } from '@cinewrapped/shared-types';
 import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
@@ -8,11 +8,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MediaCard } from '../../src/components/media-card';
 import { useColors } from '../../src/components/ui';
 import { api } from '../../src/lib/api';
+import { useAuth } from '../../src/providers/auth-provider';
 
 type MediaFilter = 'ALL' | 'MOVIE' | 'TV';
 
 export default function DiscoverScreen() {
   const colors = useColors();
+  const { user } = useAuth();
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [filter, setFilter] = useState<MediaFilter>('ALL');
@@ -24,12 +26,17 @@ export default function DiscoverScreen() {
 
   const mediaType = filter === 'ALL' ? '' : `&mediaType=${filter}`;
   const search = useQuery({
-    queryKey: ['media-search', debouncedQuery, filter],
+    queryKey: ['media-search', debouncedQuery, filter, user?.preferredLanguage, user?.countryCode],
     queryFn: () =>
-      api.request<MediaSummary[]>(
-        `search/media?q=${encodeURIComponent(debouncedQuery)}&language=en-US${mediaType}`,
-      ),
-    enabled: debouncedQuery.length >= 2,
+      api.request<IntelligentDiscoveryResult>('ai/discovery', {
+        method: 'POST',
+        body: {
+          query: `${debouncedQuery}${filter === 'ALL' ? '' : ` ${filter === 'MOVIE' ? 'movies' : 'TV shows'}`}`,
+          language: user?.preferredLanguage ?? 'en-US',
+          countryCode: user?.countryCode ?? 'US',
+        },
+      }),
+    enabled: debouncedQuery.length >= 3,
     staleTime: 5 * 60 * 1000,
   });
   const trending = useQuery({
@@ -38,9 +45,9 @@ export default function DiscoverScreen() {
       api.request<MediaSummary[]>(`media/trending?window=WEEK&language=en-US${mediaType}`),
     staleTime: 10 * 60 * 1000,
   });
-  const active = debouncedQuery.length >= 2 ? search : trending;
-  const heading =
-    debouncedQuery.length >= 2 ? `Results for “${debouncedQuery}”` : 'Trending this week';
+  const searching = debouncedQuery.length >= 3;
+  const activeData = searching ? search.data?.results : trending.data;
+  const heading = searching ? `Results for “${debouncedQuery}”` : 'Trending this week';
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
@@ -53,7 +60,7 @@ export default function DiscoverScreen() {
           accessibilityLabel="Search movies and television shows"
           autoCapitalize="none"
           onChangeText={setQuery}
-          placeholder="Search movies and shows"
+          placeholder="Try “funny movies under 100 minutes”"
           placeholderTextColor={colors.textDisabled}
           returnKeyType="search"
           style={[
@@ -93,12 +100,22 @@ export default function DiscoverScreen() {
           })}
         </View>
         <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{heading}</Text>
+        {searching && search.data !== undefined ? (
+          <View style={[styles.interpretation, { backgroundColor: colors.surfaceRaised }]}>
+            <Text style={{ color: colors.textPrimary, fontWeight: '700' }}>
+              {search.data.interpretation.explanation}
+            </Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 12, lineHeight: 17 }}>
+              {search.data.notice}
+            </Text>
+          </View>
+        ) : null}
       </View>
-      {active.isPending ? (
+      {(searching ? search : trending).isPending ? (
         <View style={styles.center}>
           <ActivityIndicator color={colors.brand} />
         </View>
-      ) : active.isError ? (
+      ) : (searching ? search : trending).isError ? (
         <View style={styles.center}>
           <Text accessibilityRole="alert" style={{ color: colors.danger }}>
             Discovery is unavailable. Pull down or try again shortly.
@@ -107,11 +124,11 @@ export default function DiscoverScreen() {
       ) : (
         <FlashList
           contentContainerStyle={styles.list}
-          data={active.data}
+          data={activeData}
           keyExtractor={(item) => item.id}
           numColumns={2}
-          onRefresh={() => void active.refetch()}
-          refreshing={active.isRefetching}
+          onRefresh={() => void (searching ? search : trending).refetch()}
+          refreshing={(searching ? search : trending).isRefetching}
           renderItem={({ item }) => <MediaCard media={item} />}
           ListEmptyComponent={
             <View style={styles.center}>
@@ -133,6 +150,7 @@ const styles = StyleSheet.create({
   filters: { flexDirection: 'row', gap: 8 },
   filter: { borderRadius: 999, justifyContent: 'center', minHeight: 44, paddingHorizontal: 18 },
   sectionTitle: { fontSize: 20, fontWeight: '700', marginTop: 4 },
+  interpretation: { borderRadius: 12, gap: 5, padding: 12 },
   list: { paddingHorizontal: 12, paddingTop: 16 },
   center: { alignItems: 'center', flex: 1, justifyContent: 'center', padding: 24 },
 });

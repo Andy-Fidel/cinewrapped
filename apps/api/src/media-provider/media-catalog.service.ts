@@ -16,6 +16,7 @@ import {
   type MediaProvider,
   type ProviderMediaDetails,
   type ProviderMediaSummary,
+  type ProviderDiscoveryFilters,
 } from './media-provider.types.js';
 
 type MediaWithGenres = Prisma.MediaGetPayload<{ include: { genres: true } }>;
@@ -148,6 +149,14 @@ export class MediaCatalogService {
       await this.provider.getTrending(window, mediaType, language, page),
     );
     return media.slice(0, limit);
+  }
+
+  public async discover(
+    filters: ProviderDiscoveryFilters,
+    language: string,
+    page: number,
+  ): Promise<MediaSummary[]> {
+    return this.persistSummaries(await this.provider.discoverMedia(filters, language, page));
   }
 
   public async details(
