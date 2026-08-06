@@ -10,6 +10,8 @@ import { type PropsWithChildren, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { PassportGlobe3D } from '../../src/components/passport-globe-3d';
+import { TrophyCabinet3D } from '../../src/components/trophy-cabinet-3d';
 import { useColors } from '../../src/components/ui';
 import { api } from '../../src/lib/api';
 import { errorMessage } from '../../src/lib/error-message';
@@ -96,6 +98,8 @@ export default function GamificationScreen() {
 
               {/* Achievements Section */}
               <Section title="Achievements">
+                <TrophyCabinet3D achievements={data.achievements} />
+
                 <View style={styles.itemsList}>
                   {data.achievements.map((achievement) => {
                     const isUnlocked = achievement.unlockedAt !== null;
@@ -212,6 +216,8 @@ export default function GamificationScreen() {
 
               {/* Movie Passport Section */}
               <Section title="Movie Passport">
+                <PassportGlobe3D stamps={data.passport.stamps} />
+
                 <View style={styles.metrics}>
                   <Metric icon="globe-outline" label="countries" value={data.passport.countriesVisited} />
                   <Metric icon="language-outline" label="languages" value={data.passport.languagesExplored} />

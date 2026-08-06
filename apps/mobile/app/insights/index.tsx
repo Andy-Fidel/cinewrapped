@@ -13,6 +13,7 @@ import { Redirect, Stack, router } from 'expo-router';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { MovieDna3D } from '../../src/components/movie-dna-3d';
 import { useColors } from '../../src/components/ui';
 import { api } from '../../src/lib/api';
 import { errorMessage } from '../../src/lib/error-message';
@@ -323,6 +324,7 @@ export default function InsightsScreen() {
               <Text style={{ color: colors.textSecondary, fontSize: 13 }}>
                 {movieDna.data.sampleSize} completed-title signals · {movieDna.data.notice}
               </Text>
+              <MovieDna3D traits={movieDna.data.traits} label={movieDna.data.label} />
               {movieDna.data.traits.map((item) => (
                 <View key={item.key} style={[styles.dnaTrait, { borderColor: colors.border }]}>
                   <View style={styles.grow}>

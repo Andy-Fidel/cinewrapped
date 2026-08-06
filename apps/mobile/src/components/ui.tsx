@@ -10,7 +10,7 @@ import {
   type TextInputProps,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 
 import { useTheme } from '../providers/theme-provider';
 
@@ -18,11 +18,18 @@ export function useColors() {
   return useTheme().colors;
 }
 
-export function Screen({ children, scroll = true }: PropsWithChildren<{ scroll?: boolean }>) {
+export function Screen({
+  children,
+  scroll = true,
+  edges,
+}: PropsWithChildren<{ scroll?: boolean; edges?: Edge[] }>) {
   const colors = useColors();
   const body = <View style={styles.content}>{children}</View>;
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+    <SafeAreaView
+      {...(edges === undefined ? {} : { edges })}
+      style={[styles.safeArea, { backgroundColor: colors.background }]}
+    >
       {scroll ? <ScrollView keyboardShouldPersistTaps="handled">{body}</ScrollView> : body}
     </SafeAreaView>
   );

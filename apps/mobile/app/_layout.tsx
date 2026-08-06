@@ -31,7 +31,11 @@ function ThemedNavigation() {
         style={resolvedTheme === 'light' ? 'dark' : 'light'}
       />
       <Stack
-        screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}
+        screenOptions={{
+          headerShown: false,
+          headerBackTitle: 'Back',
+          contentStyle: { backgroundColor: colors.background },
+        }}
       />
     </>
   );

@@ -1,7 +1,8 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Ionicons } from '@expo/vector-icons';
 import { Link } from 'expo-router';
 import { Controller, useForm } from 'react-hook-form';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { z } from 'zod';
 
 import {
@@ -17,7 +18,7 @@ import { errorMessage } from '../../src/lib/error-message';
 import { supabase } from '../../src/lib/supabase';
 import { useAuth } from '../../src/providers/auth-provider';
 
-const schema = z.object({ email: z.email(), password: z.string().min(8) });
+const schema = z.object({ email: z.string().email(), password: z.string().min(8) });
 type FormValues = z.infer<typeof schema>;
 
 export default function LoginScreen() {
@@ -41,6 +42,7 @@ export default function LoginScreen() {
       setError('root', { message: errorMessage(error) });
     }
   });
+
   const social = async (provider: 'google' | 'apple') => {
     try {
       await oauth(provider);
@@ -51,66 +53,171 @@ export default function LoginScreen() {
 
   return (
     <Screen>
-      <BrandHeader
-        title="Welcome back"
-        body="Track every watch, then see the story your taste tells."
-      />
-      <Controller
-        control={control}
-        name="email"
-        render={({ field }) => (
-          <Field
-            label="Email"
-            autoCapitalize="none"
-            autoComplete="email"
-            keyboardType="email-address"
-            value={field.value}
-            onBlur={field.onBlur}
-            onChangeText={field.onChange}
-            error={errors.email?.message}
+      <View style={styles.screenContent}>
+        {/* Brand Hero Crest */}
+        <View style={styles.heroHeader}>
+          <View style={[styles.logoBadge, { backgroundColor: colors.surfaceRaised, borderColor: colors.border }]}>
+            <Ionicons name="film" size={28} color={colors.brand} />
+          </View>
+          <BrandHeader
+            title="Welcome Back"
+            body="Track every watch, then see the story your taste tells."
           />
-        )}
-      />
-      <Controller
-        control={control}
-        name="password"
-        render={({ field }) => (
-          <PasswordField
-            label="Password"
-            autoCapitalize="none"
-            autoComplete="current-password"
-            value={field.value}
-            onBlur={field.onBlur}
-            onChangeText={field.onChange}
-            error={errors.password?.message}
+        </View>
+
+        {/* Main Login Form Card */}
+        <View style={[styles.formCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Controller
+            control={control}
+            name="email"
+            render={({ field }) => (
+              <Field
+                label="Email Address"
+                autoCapitalize="none"
+                autoComplete="email"
+                keyboardType="email-address"
+                value={field.value}
+                onBlur={field.onBlur}
+                onChangeText={field.onChange}
+                error={errors.email?.message}
+              />
+            )}
           />
-        )}
-      />
-      {errors.root?.message === undefined ? null : <ErrorText>{errors.root.message}</ErrorText>}
-      <Button label="Sign in" loading={isSubmitting} onPress={() => void submit()} />
-      <Button
-        label="Continue with Google"
-        variant="secondary"
-        onPress={() => void social('google')}
-      />
-      <Button
-        label="Continue with Apple"
-        variant="secondary"
-        onPress={() => void social('apple')}
-      />
-      <View style={styles.links}>
-        <Link href="/(auth)/forgot-password" style={{ color: colors.brand }}>
-          Forgot password?
-        </Link>
-        <Text style={{ color: colors.textSecondary }}>
-          New here?{' '}
-          <Link href="/(auth)/register" style={{ color: colors.brand }}>
-            Create account
+
+          <Controller
+            control={control}
+            name="password"
+            render={({ field }) => (
+              <PasswordField
+                label="Password"
+                autoCapitalize="none"
+                autoComplete="current-password"
+                value={field.value}
+                onBlur={field.onBlur}
+                onChangeText={field.onChange}
+                error={errors.password?.message}
+              />
+            )}
+          />
+
+          {errors.root?.message === undefined ? null : <ErrorText>{errors.root.message}</ErrorText>}
+
+          <Button label="Sign In" loading={isSubmitting} onPress={() => void submit()} />
+        </View>
+
+        {/* Divider */}
+        <View style={styles.dividerRow}>
+          <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+          <Text style={[styles.dividerText, { color: colors.textSecondary }]}>OR CONTINUE WITH</Text>
+          <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+        </View>
+
+        {/* Social OAuth Buttons */}
+        <View style={styles.socialButtonsRow}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => void social('google')}
+            style={({ pressed }) => [
+              styles.socialButton,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                opacity: pressed ? 0.8 : 1,
+                transform: [{ scale: pressed ? 0.97 : 1 }],
+              },
+            ]}
+          >
+            <Ionicons name="logo-google" size={18} color={colors.textPrimary} />
+            <Text style={{ color: colors.textPrimary, fontWeight: '700', fontSize: 13 }}>Google</Text>
+          </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => void social('apple')}
+            style={({ pressed }) => [
+              styles.socialButton,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                opacity: pressed ? 0.8 : 1,
+                transform: [{ scale: pressed ? 0.97 : 1 }],
+              },
+            ]}
+          >
+            <Ionicons name="logo-apple" size={18} color={colors.textPrimary} />
+            <Text style={{ color: colors.textPrimary, fontWeight: '700', fontSize: 13 }}>Apple</Text>
+          </Pressable>
+        </View>
+
+        {/* Navigation Links & Footer */}
+        <View style={styles.links}>
+          <Link href="/(auth)/forgot-password" style={[styles.linkText, { color: colors.brand }]}>
+            Forgot password?
           </Link>
-        </Text>
+          <Text style={{ color: colors.textSecondary, fontSize: 14 }}>
+            New here?{' '}
+            <Link href="/(auth)/register" style={[styles.linkText, { color: colors.brand }]}>
+              Create account
+            </Link>
+          </Text>
+        </View>
+
+        {/* Security Note */}
+        <View style={styles.securityNoteRow}>
+          <Ionicons name="shield-checkmark-outline" size={13} color={colors.textDisabled} />
+          <Text style={[styles.securityNoteText, { color: colors.textDisabled }]}>
+            End-to-end encrypted authentication
+          </Text>
+        </View>
       </View>
     </Screen>
   );
 }
 
-const styles = StyleSheet.create({ links: { alignItems: 'center', gap: 14, marginTop: 4 } });
+const styles = StyleSheet.create({
+  screenContent: { gap: 18 },
+  heroHeader: { alignItems: 'flex-start', gap: 12 },
+  logoBadge: {
+    alignItems: 'center',
+    borderRadius: 20,
+    borderWidth: 1,
+    height: 52,
+    justifyContent: 'center',
+    width: 52,
+  },
+  formCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 14,
+    padding: 18,
+  },
+  dividerRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12,
+    marginVertical: 4,
+  },
+  dividerLine: { flex: 1, height: 1 },
+  dividerText: { fontSize: 11, fontWeight: '700', letterSpacing: 0.8 },
+  socialButtonsRow: { flexDirection: 'row', gap: 10 },
+  socialButton: {
+    alignItems: 'center',
+    borderRadius: 12,
+    borderWidth: 1,
+    flex: 1,
+    flexDirection: 'row',
+    gap: 8,
+    height: 46,
+    justifyContent: 'center',
+  },
+  links: { alignItems: 'center', gap: 12, marginTop: 8 },
+  linkText: { fontWeight: '700' },
+  securityNoteRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 5,
+    justifyContent: 'center',
+    marginTop: 10,
+  },
+  securityNoteText: { fontSize: 11, fontWeight: '500' },
+});

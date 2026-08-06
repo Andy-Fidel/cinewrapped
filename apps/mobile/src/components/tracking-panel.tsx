@@ -1,7 +1,9 @@
 import type {
   MediaTrackingState,
+  PrivacySettingsSummary,
   ReviewAssistantResult,
   ReviewAssistantStyle,
+  ReviewSummary,
   WatchStatus,
 } from '@cinewrapped/shared-types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -9,6 +11,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { api } from '../lib/api';
+import { errorMessage } from '../lib/error-message';
 import { Button, useColors } from './ui';
 
 const statuses: Array<{ value: WatchStatus; label: string }> = [
@@ -36,9 +39,15 @@ export function TrackingPanel({ mediaId }: { mediaId: string }) {
   const [assistantStyle, setAssistantStyle] = useState<ReviewAssistantStyle>('SHORT');
   const [assistedDraft, setAssistedDraft] = useState(false);
   const [draftApproved, setDraftApproved] = useState(false);
+  const [shareReviewActivity, setShareReviewActivity] = useState(false);
+  const [reviewNotice, setReviewNotice] = useState<string | null>(null);
   const tracking = useQuery({
     queryKey: ['tracking-state', mediaId],
     queryFn: () => api.request<MediaTrackingState>(`library/media/${mediaId}`),
+  });
+  const privacy = useQuery({
+    queryKey: ['privacy-settings'],
+    queryFn: () => api.request<PrivacySettingsSummary>('users/me/privacy'),
   });
   const refresh = async () => {
     await Promise.all([
@@ -91,12 +100,13 @@ export function TrackingPanel({ mediaId }: { mediaId: string }) {
     onSuccess: refresh,
   });
   const reviewMutation = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       const existing = tracking.data?.latestReview;
       const body = reviewBody ?? existing?.body ?? '';
       const containsSpoilers = spoilers ?? existing?.containsSpoilers ?? false;
-      return existing === null || existing === undefined
-        ? api.request(`media/${mediaId}/reviews`, {
+      const review =
+        existing === null || existing === undefined
+          ? await api.request<ReviewSummary>(`media/${mediaId}/reviews`, {
             method: 'POST',
             body: {
               body,
@@ -105,7 +115,7 @@ export function TrackingPanel({ mediaId }: { mediaId: string }) {
               visibility: 'PUBLIC',
             },
           })
-        : api.request(`reviews/${existing.id}`, {
+          : await api.request<ReviewSummary>(`reviews/${existing.id}`, {
             method: 'PATCH',
             body: {
               body,
@@ -114,14 +124,41 @@ export function TrackingPanel({ mediaId }: { mediaId: string }) {
               expectedVersion: existing.version,
             },
           });
+      let sharingEnabled = privacy.data?.shareReviewActivity === true;
+      let sharingFailed = false;
+      if (!sharingEnabled && shareReviewActivity) {
+        try {
+          const updatedPrivacy = await api.request<PrivacySettingsSummary>('users/me/privacy', {
+            method: 'PATCH',
+            body: { shareReviewActivity: true },
+          });
+          queryClient.setQueryData(['privacy-settings'], updatedPrivacy);
+          sharingEnabled = true;
+        } catch {
+          sharingFailed = true;
+        }
+      }
+      return { review, sharingEnabled, sharingFailed };
     },
-    onSuccess: async () => {
+    onSuccess: async ({ sharingEnabled, sharingFailed }) => {
       setReviewBody(null);
       setSpoilers(null);
       setAssistedDraft(false);
       setDraftApproved(false);
-      await refresh();
+      setShareReviewActivity(false);
+      setReviewNotice(
+        sharingFailed
+          ? 'Review published, but Social sharing could not be enabled. You can enable it in Settings.'
+          : sharingEnabled
+            ? 'Review published and shared to your Social feed.'
+            : 'Review published. Social sharing remains off in your privacy settings.',
+      );
+      await Promise.all([
+        refresh(),
+        queryClient.invalidateQueries({ queryKey: ['social-feed'] }),
+      ]);
     },
+    onError: (error) => setReviewNotice(errorMessage(error)),
   });
   const assistantMutation = useMutation({
     mutationFn: () =>
@@ -222,6 +259,7 @@ export function TrackingPanel({ mediaId }: { mediaId: string }) {
         multiline
         onChangeText={(value) => {
           setReviewBody(value);
+          setReviewNotice(null);
           if (assistedDraft) setDraftApproved(false);
         }}
         placeholder="What did you think?"
@@ -292,12 +330,38 @@ export function TrackingPanel({ mediaId }: { mediaId: string }) {
           {containsSpoilers ? '☑' : '☐'} Contains spoilers
         </Text>
       </Pressable>
+      {privacy.data?.shareReviewActivity === true ? (
+        <View style={[styles.shareNotice, { backgroundColor: colors.surfaceRaised }]}>
+          <Text style={{ color: colors.textPrimary, fontWeight: '700' }}>
+            Social sharing is on
+          </Text>
+          <Text style={{ color: colors.textSecondary, lineHeight: 18 }}>
+            Publishing will also add this review activity to your Social feed.
+          </Text>
+        </View>
+      ) : (
+        <Pressable
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: shareReviewActivity }}
+          disabled={privacy.isPending}
+          onPress={() => setShareReviewActivity((value) => !value)}
+        >
+          <Text style={{ color: colors.textSecondary }}>
+            {shareReviewActivity ? '☑' : '☐'} Also share published reviews to Social
+          </Text>
+        </Pressable>
+      )}
       <Button
         disabled={currentReviewBody.trim().length === 0 || (assistedDraft && !draftApproved)}
         label={existingReview === null ? 'Publish review' : 'Update review'}
         loading={reviewMutation.isPending}
         onPress={() => reviewMutation.mutate()}
       />
+      {reviewNotice === null ? null : (
+        <Text accessibilityRole="alert" style={{ color: colors.textSecondary, lineHeight: 19 }}>
+          {reviewNotice}
+        </Text>
+      )}
       {[
         statusMutation,
         watchedMutation,
@@ -336,4 +400,5 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   assistantNotice: { borderRadius: 12, gap: 8, padding: 12 },
+  shareNotice: { borderRadius: 12, gap: 4, padding: 12 },
 });
