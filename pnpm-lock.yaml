@@ -242,6 +242,12 @@ importers:
       '@cinewrapped/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@cinewrapped/database':
+        specifier: workspace:*
+        version: link:../../packages/database
+      '@cinewrapped/jobs':
+        specifier: workspace:*
+        version: link:../../packages/jobs
       '@nestjs/common':
         specifier: 11.1.28
         version: 11.1.28(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -315,6 +321,12 @@ importers:
       typescript:
         specifier: '>=5.9.0'
         version: 5.9.3
+
+  packages/jobs:
+    devDependencies:
+      '@cinewrapped/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
 
   packages/shared-types:
     devDependencies:

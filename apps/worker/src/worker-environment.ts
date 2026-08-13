@@ -1,0 +1,1 @@
+export const WORKER_ENVIRONMENT = Symbol('WORKER_ENVIRONMENT');

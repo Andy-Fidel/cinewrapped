@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider } from '../src/providers/auth-provider';
+import { FeatureFlagsProvider } from '../src/providers/feature-flags-provider';
 import { ThemeProvider, useTheme } from '../src/providers/theme-provider';
 
 export default function RootLayout() {
@@ -14,7 +15,9 @@ export default function RootLayout() {
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <ThemeProvider>
-            <ThemedNavigation />
+            <FeatureFlagsProvider>
+              <ThemedNavigation />
+            </FeatureFlagsProvider>
           </ThemeProvider>
         </AuthProvider>
       </QueryClientProvider>

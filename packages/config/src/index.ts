@@ -35,6 +35,9 @@ const apiEnvironmentSchema = sharedServerSchema.extend({
 
 const workerEnvironmentSchema = sharedServerSchema.extend({
   WORKER_CONCURRENCY: z.coerce.number().int().min(1).max(100).default(4),
+  OUTBOX_POLL_INTERVAL_MS: z.coerce.number().int().min(250).max(60_000).default(2_000),
+  OUTBOX_BATCH_SIZE: z.coerce.number().int().min(1).max(500).default(50),
+  OUTBOX_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(100).default(10),
   S3_ENDPOINT: z.url(),
   S3_REGION: z.string().min(1),
   S3_BUCKET: z.string().min(3),

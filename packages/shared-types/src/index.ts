@@ -786,3 +786,40 @@ export interface ClubDetails extends ClubSummary {
   watchlist: ClubWatchlistItemSummary[];
   watchEvents: ClubWatchEventSummary[];
 }
+
+export const advancedFeatureKeys = [
+  'AI_DISCOVERY_ADVANCED',
+  'MOVIE_JOURNAL',
+  'WATCH_PARTIES',
+  'CLUB_INSIGHTS',
+  'CALENDAR_HEATMAP',
+  'CALENDAR_INTEGRATION',
+  'DATA_IMPORT_EXPORT',
+  'HOME_WIDGETS',
+  'SOUNDTRACKS',
+  'SCENE_IDENTIFICATION',
+  'PREDICTION_LEAGUE',
+] as const;
+
+export type AdvancedFeatureKey = (typeof advancedFeatureKeys)[number];
+export type FeatureFlagSource = 'DEFAULT' | 'ROLLOUT' | 'USER_OVERRIDE';
+
+export interface FeatureFlagEvaluation {
+  enabled: boolean;
+  source: FeatureFlagSource;
+}
+
+export interface FeatureFlagsResponse {
+  flags: Record<AdvancedFeatureKey, FeatureFlagEvaluation>;
+  fetchedAt: string;
+}
+
+export const privateStorageBuckets = [
+  'journal-attachments',
+  'scene-identification',
+  'data-exports',
+  'data-imports',
+  'club-covers',
+] as const;
+
+export type PrivateStorageBucket = (typeof privateStorageBuckets)[number];

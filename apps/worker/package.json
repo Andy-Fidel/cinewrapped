@@ -13,6 +13,8 @@
   },
   "dependencies": {
     "@cinewrapped/config": "workspace:*",
+    "@cinewrapped/database": "workspace:*",
+    "@cinewrapped/jobs": "workspace:*",
     "@nestjs/common": "11.1.28",
     "@nestjs/core": "11.1.28",
     "bullmq": "6.0.5",

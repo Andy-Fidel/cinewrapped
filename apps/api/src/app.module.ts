@@ -9,6 +9,7 @@ import { ApiExceptionFilter } from './common/api-exception.filter.js';
 import { EnvironmentModule } from './config/environment.module.js';
 import { DatabaseModule } from './database/database.module.js';
 import { GamificationModule } from './gamification/gamification.module.js';
+import { FeatureFlagsModule } from './feature-flags/feature-flags.module.js';
 import { InsightsModule } from './insights/insights.module.js';
 import { MediaProviderModule } from './media-provider/media-provider.module.js';
 import { RecommendationsModule } from './recommendations/recommendations.module.js';
@@ -22,6 +23,7 @@ import { UsersModule } from './users/users.module.js';
     DatabaseModule,
     AiModule,
     GamificationModule,
+    FeatureFlagsModule,
     InsightsModule,
     AuthModule,
     ClubsModule,

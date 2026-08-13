@@ -408,6 +408,7 @@ model User {
   rolesGranted              UserRoleAssignment[]      @relation("RoleGrantor")
   auditLogs                 AuditLog[]                @relation("AuditUserActor")
   idempotencyRecords        IdempotencyRecord[]
+  featureFlagOverrides      UserFeatureFlagOverride[]
   clubsOwned                Club[]                    @relation("ClubOwner")
   clubMemberships           ClubMember[]
   clubPosts                 ClubPost[]
@@ -1548,6 +1549,37 @@ model OutboxEvent {
   @@index([aggregateType, aggregateId, createdAt])
   @@index([publishedAt])
   @@map("outbox_events")
+}
+
+model FeatureFlag {
+  key               String                    @id @db.VarChar(80)
+  description       String                    @db.VarChar(500)
+  enabled           Boolean                   @default(false)
+  rolloutPercentage Int                       @default(0)
+  environments      String[]                  @default([])
+  createdAt         DateTime                  @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime                  @updatedAt @db.Timestamptz(3)
+  overrides         UserFeatureFlagOverride[]
+
+  @@index([enabled])
+  @@map("feature_flags")
+}
+
+model UserFeatureFlagOverride {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @db.Uuid
+  featureKey String    @db.VarChar(80)
+  enabled    Boolean
+  expiresAt  DateTime? @db.Timestamptz(3)
+  createdAt  DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime  @updatedAt @db.Timestamptz(3)
+
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  feature FeatureFlag @relation(fields: [featureKey], references: [key], onDelete: Cascade)
+
+  @@unique([userId, featureKey])
+  @@index([expiresAt])
+  @@map("user_feature_flag_overrides")
 }
 
 model IdempotencyRecord {
