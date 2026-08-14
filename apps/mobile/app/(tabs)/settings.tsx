@@ -6,11 +6,13 @@ import { SettingsCard, SettingsLink } from '../../src/components/settings-contro
 import { BrandHeader, Button, Screen, useColors } from '../../src/components/ui';
 import { useAuth } from '../../src/providers/auth-provider';
 import { useTheme } from '../../src/providers/theme-provider';
+import { useFeatureFlags } from '../../src/providers/feature-flags-provider';
 
 export default function SettingsScreen() {
   const colors = useColors();
   const { user, signOut } = useAuth();
   const { preference: themePreference, setPreference: setThemePreference } = useTheme();
+  const { isEnabled } = useFeatureFlags();
 
   return (
     <Screen>
@@ -105,6 +107,22 @@ export default function SettingsScreen() {
       </SettingsCard>
 
       <View style={styles.links}>
+        {isEnabled('MOVIE_JOURNAL') ? (
+          <SettingsLink
+            icon="book-outline"
+            label="Movie Journal"
+            detail="Private notes, moods, photos, tickets, and viewing memories"
+            onPress={() => router.push('/journal')}
+          />
+        ) : null}
+        {isEnabled('CALENDAR_INTEGRATION') ? (
+          <SettingsLink
+            icon="calendar-outline"
+            label="Viewing Calendar"
+            detail="Watch plans, release reminders, and calendar export"
+            onPress={() => router.push('/calendar')}
+          />
+        ) : null}
         <SettingsLink
           icon="person-circle-outline"
           label="Profile & Region"

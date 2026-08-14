@@ -12,7 +12,11 @@ import { Button, useColors } from '../../src/components/ui';
 import { api } from '../../src/lib/api';
 import { useAuth } from '../../src/providers/auth-provider';
 
-const filters: Array<{ label: string; value: WatchStatus | undefined; icon: keyof typeof Ionicons.glyphMap }> = [
+const filters: Array<{
+  label: string;
+  value: WatchStatus | undefined;
+  icon: keyof typeof Ionicons.glyphMap;
+}> = [
   { label: 'All', value: undefined, icon: 'film-outline' },
   { label: 'Watching', value: 'WATCHING', icon: 'play-circle-outline' },
   { label: 'Planned', value: 'PLANNED', icon: 'bookmark-outline' },
@@ -48,9 +52,7 @@ export default function LibraryScreen() {
             </Text>
           </View>
           <View style={[styles.countBadge, { backgroundColor: colors.surfaceRaised }]}>
-            <Text style={[styles.countText, { color: colors.brand }]}>
-              📚 Showing {totalItems}
-            </Text>
+            <Text style={[styles.countText, { color: colors.brand }]}>📚 Showing {totalItems}</Text>
           </View>
         </View>
 
@@ -130,7 +132,8 @@ export default function LibraryScreen() {
                 <Text style={[styles.status, { color: colors.textSecondary }]}>
                   {item.status.toLowerCase()} · {progressPercent}%
                 </Text>
-                {item.rating?.ratingValue === null || item.rating?.ratingValue === undefined ? null : (
+                {item.rating?.ratingValue === null ||
+                item.rating?.ratingValue === undefined ? null : (
                   <View style={[styles.ratingBadge, { backgroundColor: colors.surfaceRaised }]}>
                     <Ionicons name="star" size={11} color="#FFD700" />
                     <Text style={{ color: colors.textPrimary, fontWeight: '800', fontSize: 11 }}>

@@ -7,7 +7,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Redirect, Stack } from 'expo-router';
 import { type PropsWithChildren, useState } from 'react';
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PassportGlobe3D } from '../../src/components/passport-globe-3d';
@@ -17,7 +25,11 @@ import { api } from '../../src/lib/api';
 import { errorMessage } from '../../src/lib/error-message';
 import { useAuth } from '../../src/providers/auth-provider';
 
-const leaderboardMetrics: Array<{ id: LeaderboardMetric; label: string; icon: keyof typeof Ionicons.glyphMap }> = [
+const leaderboardMetrics: Array<{
+  id: LeaderboardMetric;
+  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+}> = [
   { id: 'POINTS', label: 'Points', icon: 'star-outline' },
   { id: 'VIEWINGS', label: 'Viewings', icon: 'film-outline' },
   { id: 'STREAK', label: 'Streak', icon: 'flame-outline' },
@@ -92,8 +104,16 @@ export default function GamificationScreen() {
               {/* Journey Metrics */}
               <View style={styles.metrics}>
                 <Metric icon="star-outline" label="points" value={data.totalPoints} />
-                <Metric icon="trophy-outline" label="unlocked" value={`${data.unlockedCount}/${data.achievementCount}`} />
-                <Metric icon="flame-outline" label="current streak" value={`${data.streak.currentDays}d`} />
+                <Metric
+                  icon="trophy-outline"
+                  label="unlocked"
+                  value={`${data.unlockedCount}/${data.achievementCount}`}
+                />
+                <Metric
+                  icon="flame-outline"
+                  label="current streak"
+                  value={`${data.streak.currentDays}d`}
+                />
               </View>
 
               {/* Achievements Section */}
@@ -123,7 +143,9 @@ export default function GamificationScreen() {
                           <Text style={[styles.itemTitle, { color: colors.textPrimary }]}>
                             {achievement.name}
                           </Text>
-                          <View style={[styles.pointsBadge, { backgroundColor: colors.surfaceRaised }]}>
+                          <View
+                            style={[styles.pointsBadge, { backgroundColor: colors.surfaceRaised }]}
+                          >
                             <Text style={{ color: colors.brand, fontWeight: '800', fontSize: 12 }}>
                               +{achievement.points} pts
                             </Text>
@@ -146,63 +168,74 @@ export default function GamificationScreen() {
                     const isJoining = join.isPending && join.variables === challenge.id;
                     return (
                       <View
-                      key={challenge.id}
-                      style={[
-                        styles.item,
-                        {
-                          backgroundColor: colors.surface,
-                          borderColor: colors.border,
-                        },
-                      ]}
-                    >
-                      <View style={styles.itemHeader}>
-                        <Ionicons name="flag-outline" size={20} color={colors.brand} />
-                        <Text style={[styles.itemTitle, { color: colors.textPrimary }]}>
-                          {challenge.name}
-                        </Text>
-                        <View style={[styles.pointsBadge, { backgroundColor: colors.surfaceRaised }]}>
-                          <Text style={{ color: colors.brand, fontWeight: '800', fontSize: 12 }}>
-                            +{challenge.points} pts
+                        key={challenge.id}
+                        style={[
+                          styles.item,
+                          {
+                            backgroundColor: colors.surface,
+                            borderColor: colors.border,
+                          },
+                        ]}
+                      >
+                        <View style={styles.itemHeader}>
+                          <Ionicons name="flag-outline" size={20} color={colors.brand} />
+                          <Text style={[styles.itemTitle, { color: colors.textPrimary }]}>
+                            {challenge.name}
                           </Text>
-                        </View>
-                      </View>
-                      <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 18 }}>
-                        {challenge.description}
-                      </Text>
-                      <Progress current={challenge.progress} target={challenge.target} />
-                      <View style={styles.challengeFooterRow}>
-                        <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
-                          Ends {new Date(challenge.endsAt).toLocaleDateString()}
-                        </Text>
-                        {challenge.joined ? (
-                          <View style={[styles.joinedBadge, { backgroundColor: colors.surfaceRaised }]}>
-                            <Text style={{ color: colors.brand, fontWeight: '700', fontSize: 12 }}>
-                              {challenge.completedAt === null ? '✓ Joined' : '🏆 Completed'}
+                          <View
+                            style={[styles.pointsBadge, { backgroundColor: colors.surfaceRaised }]}
+                          >
+                            <Text style={{ color: colors.brand, fontWeight: '800', fontSize: 12 }}>
+                              +{challenge.points} pts
                             </Text>
                           </View>
-                        ) : (
-                          <Pressable
-                            accessibilityRole="button"
-                            disabled={join.isPending}
-                            onPress={() => join.mutate(challenge.id)}
-                            style={({ pressed }) => [
-                              styles.joinButton,
-                              {
-                                backgroundColor: colors.brand,
-                                opacity: pressed || join.isPending ? 0.8 : 1,
-                              },
-                            ]}
-                          >
-                            {isJoining ? (
-                              <ActivityIndicator size="small" color={colors.onBrand} />
-                            ) : (
-                              <Text style={{ color: colors.onBrand, fontWeight: '700', fontSize: 12 }}>
-                                Join Challenge
+                        </View>
+                        <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 18 }}>
+                          {challenge.description}
+                        </Text>
+                        <Progress current={challenge.progress} target={challenge.target} />
+                        <View style={styles.challengeFooterRow}>
+                          <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
+                            Ends {new Date(challenge.endsAt).toLocaleDateString()}
+                          </Text>
+                          {challenge.joined ? (
+                            <View
+                              style={[
+                                styles.joinedBadge,
+                                { backgroundColor: colors.surfaceRaised },
+                              ]}
+                            >
+                              <Text
+                                style={{ color: colors.brand, fontWeight: '700', fontSize: 12 }}
+                              >
+                                {challenge.completedAt === null ? '✓ Joined' : '🏆 Completed'}
                               </Text>
-                            )}
-                          </Pressable>
-                        )}
-                      </View>
+                            </View>
+                          ) : (
+                            <Pressable
+                              accessibilityRole="button"
+                              disabled={join.isPending}
+                              onPress={() => join.mutate(challenge.id)}
+                              style={({ pressed }) => [
+                                styles.joinButton,
+                                {
+                                  backgroundColor: colors.brand,
+                                  opacity: pressed || join.isPending ? 0.8 : 1,
+                                },
+                              ]}
+                            >
+                              {isJoining ? (
+                                <ActivityIndicator size="small" color={colors.onBrand} />
+                              ) : (
+                                <Text
+                                  style={{ color: colors.onBrand, fontWeight: '700', fontSize: 12 }}
+                                >
+                                  Join Challenge
+                                </Text>
+                              )}
+                            </Pressable>
+                          )}
+                        </View>
                       </View>
                     );
                   })}
@@ -219,9 +252,21 @@ export default function GamificationScreen() {
                 <PassportGlobe3D stamps={data.passport.stamps} />
 
                 <View style={styles.metrics}>
-                  <Metric icon="globe-outline" label="countries" value={data.passport.countriesVisited} />
-                  <Metric icon="language-outline" label="languages" value={data.passport.languagesExplored} />
-                  <Metric icon="calendar-outline" label="decades" value={data.passport.decadesExplored} />
+                  <Metric
+                    icon="globe-outline"
+                    label="countries"
+                    value={data.passport.countriesVisited}
+                  />
+                  <Metric
+                    icon="language-outline"
+                    label="languages"
+                    value={data.passport.languagesExplored}
+                  />
+                  <Metric
+                    icon="calendar-outline"
+                    label="decades"
+                    value={data.passport.decadesExplored}
+                  />
                 </View>
 
                 <View style={styles.chips}>
@@ -233,12 +278,16 @@ export default function GamificationScreen() {
                         { backgroundColor: colors.surface, borderColor: colors.border },
                       ]}
                     >
-                      <View style={[styles.stampCodeBox, { backgroundColor: colors.surfaceRaised }]}>
+                      <View
+                        style={[styles.stampCodeBox, { backgroundColor: colors.surfaceRaised }]}
+                      >
                         <Text style={{ color: colors.brand, fontWeight: '900', fontSize: 14 }}>
                           {stamp.countryCode}
                         </Text>
                       </View>
-                      <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: '600' }}>
+                      <Text
+                        style={{ color: colors.textSecondary, fontSize: 12, fontWeight: '600' }}
+                      >
                         {stamp.uniqueTitles} {stamp.uniqueTitles === 1 ? 'title' : 'titles'}
                       </Text>
                     </View>
@@ -291,7 +340,13 @@ export default function GamificationScreen() {
               {leaderboard.data?.entries.map((entry) => {
                 const isTop3 = entry.rank <= 3;
                 const medalIcon =
-                  entry.rank === 1 ? '🥇' : entry.rank === 2 ? '🥈' : entry.rank === 3 ? '🥉' : `#${entry.rank}`;
+                  entry.rank === 1
+                    ? '🥇'
+                    : entry.rank === 2
+                      ? '🥈'
+                      : entry.rank === 3
+                        ? '🥉'
+                        : `#${entry.rank}`;
                 return (
                   <View
                     key={entry.user.id}
@@ -303,7 +358,9 @@ export default function GamificationScreen() {
                       },
                     ]}
                   >
-                    <Text style={[styles.rank, { color: isTop3 ? colors.brand : colors.textSecondary }]}>
+                    <Text
+                      style={[styles.rank, { color: isTop3 ? colors.brand : colors.textSecondary }]}
+                    >
                       {medalIcon}
                     </Text>
                     <Text style={[styles.rankName, { color: colors.textPrimary }]}>
@@ -351,7 +408,14 @@ function Metric({
         <Ionicons name={icon} size={18} color={colors.brand} />
       </View>
       <Text style={[styles.metricValue, { color: colors.textPrimary }]}>{value}</Text>
-      <Text style={{ color: colors.textSecondary, textAlign: 'center', fontSize: 12, fontWeight: '600' }}>
+      <Text
+        style={{
+          color: colors.textSecondary,
+          textAlign: 'center',
+          fontSize: 12,
+          fontWeight: '600',
+        }}
+      >
         {label}
       </Text>
     </View>

@@ -7,8 +7,19 @@ import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 import { AppModule } from './app.module.js';
+
+const rootEnvironmentFile = [
+  resolve(import.meta.dirname, '../../../.env'),
+  resolve(import.meta.dirname, '../../../../.env'),
+  resolve(process.cwd(), '.env'),
+  resolve(process.cwd(), '../../.env'),
+].find((candidate) => existsSync(candidate));
+
+if (rootEnvironmentFile !== undefined) process.loadEnvFile(rootEnvironmentFile);
 
 async function bootstrap(): Promise<void> {
   const environment = parseApiEnvironment(process.env);

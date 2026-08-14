@@ -77,7 +77,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    void supabase.auth.getSession().then(({ data }) => bootstrap(data.session));
+    const restoreSession = async () => {
+      try {
+        const { data, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError !== null) throw sessionError;
+        await bootstrap(data.session);
+      } catch {
+        // A stale token can fail to refresh while the app launches. Remove only the local
+        // credential so the user can sign in again instead of leaving an unhandled rejection.
+        setSession(null);
+        setUser(null);
+        setError('We could not restore your secure session. Please sign in again.');
+        setLoading(false);
+        await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
+      }
+    };
+
+    void restoreSession();
     const { data } = supabase.auth.onAuthStateChange((event: AuthChangeEvent, nextSession) => {
       if (event === 'PASSWORD_RECOVERY') router.replace('/(auth)/update-password');
       void bootstrap(nextSession);

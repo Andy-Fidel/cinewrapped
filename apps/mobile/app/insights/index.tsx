@@ -10,7 +10,15 @@ import type {
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Redirect, Stack, router } from 'expo-router';
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { MovieDna3D } from '../../src/components/movie-dna-3d';
@@ -109,9 +117,7 @@ function WrapCard({ wrap }: { wrap: WrapSummary }) {
 
       <View style={styles.grow}>
         <View style={styles.wrapBadgeRow}>
-          <Text style={[styles.wrapTypePill, { color: colors.brand }]}>
-            {wrap.wrapType} WRAP
-          </Text>
+          <Text style={[styles.wrapTypePill, { color: colors.brand }]}>{wrap.wrapType} WRAP</Text>
         </View>
         <Text style={[styles.wrapHeadline, { color: colors.textPrimary }]}>
           {wrap.headline ?? statusLabel}
@@ -243,13 +249,26 @@ export default function InsightsScreen() {
               {/* Key Metrics Grid */}
               <View style={styles.metrics}>
                 <Metric icon="film-outline" label="viewings" value={summary.data.viewingCount} />
-                <Metric icon="library-outline" label="unique titles" value={summary.data.uniqueTitles} />
+                <Metric
+                  icon="library-outline"
+                  label="unique titles"
+                  value={summary.data.uniqueTitles}
+                />
                 <Metric icon="time-outline" label="hours watched" value={summary.data.totalHours} />
-                <Metric icon="flame-outline" label="day streak" value={summary.data.longestStreakDays} />
+                <Metric
+                  icon="flame-outline"
+                  label="day streak"
+                  value={summary.data.longestStreakDays}
+                />
               </View>
 
               {/* Monthly Trend Panel */}
-              <View style={[styles.panel, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <View
+                style={[
+                  styles.panel,
+                  { backgroundColor: colors.surface, borderColor: colors.border },
+                ]}
+              >
                 <View style={styles.panelHeaderRow}>
                   <Ionicons name="bar-chart-outline" size={20} color={colors.brand} />
                   <Text style={[styles.heading, { color: colors.textPrimary }]}>Monthly Trend</Text>
@@ -263,7 +282,12 @@ export default function InsightsScreen() {
               </View>
 
               {/* Taste Details Panel */}
-              <View style={[styles.panel, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <View
+                style={[
+                  styles.panel,
+                  { backgroundColor: colors.surface, borderColor: colors.border },
+                ]}
+              >
                 <View style={styles.panelHeaderRow}>
                   <Ionicons name="pie-chart-outline" size={20} color={colors.brand} />
                   <Text style={[styles.heading, { color: colors.textPrimary }]}>Taste Details</Text>
@@ -285,7 +309,10 @@ export default function InsightsScreen() {
                 </View>
                 <View style={styles.bucketList}>
                   {(taste.data?.runtimeBuckets ?? []).map((bucket) => (
-                    <View key={bucket.id} style={[styles.bucketRow, { backgroundColor: colors.surfaceRaised }]}>
+                    <View
+                      key={bucket.id}
+                      style={[styles.bucketRow, { backgroundColor: colors.surfaceRaised }]}
+                    >
                       <Text style={{ color: colors.textPrimary, fontWeight: '600', fontSize: 13 }}>
                         {bucket.label}
                       </Text>
@@ -307,7 +334,12 @@ export default function InsightsScreen() {
 
           {/* Movie DNA Section */}
           {movieDna.data === undefined ? null : (
-            <View style={[styles.panel, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View
+              style={[
+                styles.panel,
+                { backgroundColor: colors.surface, borderColor: colors.border },
+              ]}
+            >
               <View style={styles.dnaHeader}>
                 <View style={styles.grow}>
                   <Text style={[styles.eyebrow, { color: colors.brand }]}>MOVIE DNA</Text>
@@ -360,7 +392,9 @@ export default function InsightsScreen() {
           ) : null}
 
           {/* Create a Wrap Section */}
-          <View style={[styles.panel, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View
+            style={[styles.panel, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          >
             <View style={styles.panelHeaderRow}>
               <Ionicons name="sparkles-outline" size={20} color={colors.brand} />
               <Text style={[styles.heading, { color: colors.textPrimary }]}>Create a Wrap</Text>
@@ -388,7 +422,11 @@ export default function InsightsScreen() {
                     },
                   ]}
                 >
-                  <Ionicons name={item.icon as keyof typeof Ionicons.glyphMap} size={16} color={colors.brand} />
+                  <Ionicons
+                    name={item.icon as keyof typeof Ionicons.glyphMap}
+                    size={16}
+                    color={colors.brand}
+                  />
                   <Text style={{ color: colors.textPrimary, fontWeight: '700', fontSize: 13 }}>
                     {item.label}
                   </Text>

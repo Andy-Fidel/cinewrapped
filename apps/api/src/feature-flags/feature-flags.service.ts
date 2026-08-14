@@ -11,6 +11,7 @@ import { createHash } from 'node:crypto';
 import type { AuthPrincipal } from '../auth/auth.types.js';
 import { API_ENVIRONMENT } from '../config/environment.module.js';
 import { PrismaService } from '../database/prisma.service.js';
+import { AppException } from '../common/app.exception.js';
 
 type FlagRecord = {
   key: string;
@@ -85,5 +86,17 @@ export class FeatureFlagsService {
       ) as FeatureFlagsResponse['flags'],
       fetchedAt: new Date().toISOString(),
     };
+  }
+
+  public async assertEnabled(principal: AuthPrincipal, key: AdvancedFeatureKey): Promise<void> {
+    const evaluation = await this.evaluate(principal);
+    if (!evaluation.flags[key].enabled) {
+      throw new AppException(
+        403,
+        'FEATURE_DISABLED',
+        'This feature is not available for this account yet.',
+        { feature: key },
+      );
+    }
   }
 }

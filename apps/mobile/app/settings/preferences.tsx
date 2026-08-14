@@ -359,9 +359,7 @@ export default function PreferenceSettingsScreen() {
             { label: 'Balanced', value: 50 },
             { label: 'Popular picks', value: 75 },
           ]}
-          onChange={(mainstreamPreferencePercent) =>
-            update.mutate({ mainstreamPreferencePercent })
-          }
+          onChange={(mainstreamPreferencePercent) => update.mutate({ mainstreamPreferencePercent })}
         />
       </SettingsCard>
 
@@ -416,11 +414,7 @@ export default function PreferenceSettingsScreen() {
             value={streamingCountry}
             onChangeText={setStreamingCountry}
           />
-          <Button
-            label="Save Filters"
-            loading={update.isPending}
-            onPress={saveRegional}
-          />
+          <Button label="Save Filters" loading={update.isPending} onPress={saveRegional} />
         </View>
       </SettingsCard>
 

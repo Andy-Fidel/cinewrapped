@@ -86,9 +86,20 @@ function Chip({
       ]}
     >
       {selected ? (
-        <Ionicons name="checkmark-circle" size={16} color={colors.onBrand} style={{ marginRight: 4 }} />
+        <Ionicons
+          name="checkmark-circle"
+          size={16}
+          color={colors.onBrand}
+          style={{ marginRight: 4 }}
+        />
       ) : null}
-      <Text style={{ color: selected ? colors.onBrand : colors.textPrimary, fontWeight: '600', fontSize: 13 }}>
+      <Text
+        style={{
+          color: selected ? colors.onBrand : colors.textPrimary,
+          fontWeight: '600',
+          fontSize: 13,
+        }}
+      >
         {label}
       </Text>
     </Pressable>
@@ -367,7 +378,8 @@ export default function OnboardingScreen() {
       {draft.step === 1 && (
         <View style={styles.stepContentWrap}>
           <Text style={{ color: colors.textSecondary, fontSize: 14 }}>
-            Select at least 5 genres to help us personalize your recommendations ({draft.genreIds.length}/5).
+            Select at least 5 genres to help us personalize your recommendations (
+            {draft.genreIds.length}/5).
           </Text>
           <View style={styles.chips}>
             {genres.data?.map((genre) => (
@@ -474,7 +486,12 @@ export default function OnboardingScreen() {
                   },
                 ]}
               >
-                <View style={[styles.optionIconBox, { backgroundColor: selected ? colors.brand : colors.surfaceRaised }]}>
+                <View
+                  style={[
+                    styles.optionIconBox,
+                    { backgroundColor: selected ? colors.brand : colors.surfaceRaised },
+                  ]}
+                >
                   <Ionicons
                     name={option.icon as keyof typeof Ionicons.glyphMap}
                     size={20}
@@ -482,8 +499,12 @@ export default function OnboardingScreen() {
                   />
                 </View>
                 <View style={styles.optionTextWrap}>
-                  <Text style={[styles.optionTitle, { color: colors.textPrimary }]}>{option.title}</Text>
-                  <Text style={[styles.optionDesc, { color: colors.textSecondary }]}>{option.desc}</Text>
+                  <Text style={[styles.optionTitle, { color: colors.textPrimary }]}>
+                    {option.title}
+                  </Text>
+                  <Text style={[styles.optionDesc, { color: colors.textSecondary }]}>
+                    {option.desc}
+                  </Text>
                 </View>
                 {selected ? (
                   <Ionicons name="checkmark-circle" size={22} color={colors.brand} />
@@ -513,7 +534,9 @@ export default function OnboardingScreen() {
             <View
               style={[
                 styles.optionIconBox,
-                { backgroundColor: draft.notificationsEnabled ? colors.brand : colors.surfaceRaised },
+                {
+                  backgroundColor: draft.notificationsEnabled ? colors.brand : colors.surfaceRaised,
+                },
               ]}
             >
               <Ionicons

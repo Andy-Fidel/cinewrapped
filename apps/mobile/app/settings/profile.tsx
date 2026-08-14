@@ -2,12 +2,17 @@ import type { CurrentUser, ProfileVisibility } from '@cinewrapped/shared-types';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as Linking from 'expo-linking';
-import { Stack } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import { randomUUID } from 'expo-crypto';
 import { useEffect, useState } from 'react';
 import { Alert, Image, StyleSheet, Text, View } from 'react-native';
 
-import { ChoiceRow, SettingsCard, ToggleRow } from '../../src/components/settings-controls';
+import {
+  ChoiceRow,
+  SettingsCard,
+  SettingsLink,
+  ToggleRow,
+} from '../../src/components/settings-controls';
 import { Button, Field, Screen, useColors } from '../../src/components/ui';
 import { api } from '../../src/lib/api';
 import { errorMessage } from '../../src/lib/error-message';
@@ -129,6 +134,13 @@ export default function ProfileSettingsScreen() {
         }}
       />
 
+      <SettingsLink
+        icon="calendar-outline"
+        label="Viewing Calendar"
+        detail="See upcoming watch plans and release reminders."
+        onPress={() => router.push('/calendar')}
+      />
+
       <SettingsCard
         icon="person-circle-outline"
         title="Public Profile"
@@ -143,7 +155,9 @@ export default function ProfileSettingsScreen() {
             </View>
           )}
           <View style={styles.avatarCopy}>
-            <Text style={[styles.email, { color: colors.textSecondary }]}>{session?.user.email}</Text>
+            <Text style={[styles.email, { color: colors.textSecondary }]}>
+              {session?.user.email}
+            </Text>
             <Button
               label="Change avatar"
               variant="secondary"

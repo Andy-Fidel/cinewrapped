@@ -1,4 +1,5 @@
 import type {
+  CalendarEventSummary,
   RecommendationFeedbackType,
   RecommendationSummary,
   TasteProfile,
@@ -14,11 +15,14 @@ import { MediaCard } from '../../src/components/media-card';
 import { useColors } from '../../src/components/ui';
 import { api } from '../../src/lib/api';
 import { useAuth } from '../../src/providers/auth-provider';
+import { useFeatureFlags } from '../../src/providers/feature-flags-provider';
 
 export default function HomeScreen() {
   const colors = useColors();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { session, user } = useAuth();
+  const { isEnabled } = useFeatureFlags();
+  const calendarEnabled = isEnabled('CALENDAR_INTEGRATION');
   const taste = useQuery({
     queryKey: ['taste-profile'],
     queryFn: () => api.request<TasteProfile>('recommendations/taste-profile'),
@@ -28,6 +32,19 @@ export default function HomeScreen() {
     queryKey: ['recommendations'],
     queryFn: () => api.request<RecommendationSummary[]>('recommendations?limit=30'),
     staleTime: 5 * 60 * 1000,
+  });
+  const upcomingEvents = useQuery({
+    queryKey: ['calendar', 'home-preview'],
+    queryFn: () => {
+      const from = new Date();
+      const to = new Date(from);
+      to.setDate(to.getDate() + 30);
+      return api.request<CalendarEventSummary[]>(
+        `calendar?from=${encodeURIComponent(from.toISOString())}&to=${encodeURIComponent(to.toISOString())}`,
+      );
+    },
+    enabled: session !== null && calendarEnabled,
+    staleTime: 60 * 1000,
   });
   const refresh = useMutation({
     mutationFn: () => api.request('recommendations/refresh', { method: 'POST' }),
@@ -58,6 +75,7 @@ export default function HomeScreen() {
       ]);
     },
   });
+  const upcomingEvent = upcomingEvents.data?.at(0);
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
@@ -73,14 +91,19 @@ export default function HomeScreen() {
             <View style={styles.greetingRow}>
               <View style={styles.greetingTextWrap}>
                 <Text style={[styles.eyebrow, { color: colors.brand }]}>FOR YOU</Text>
-                <Text accessibilityRole="header" style={[styles.title, { color: colors.textPrimary }]}>
+                <Text
+                  accessibilityRole="header"
+                  style={[styles.title, { color: colors.textPrimary }]}
+                >
                   Picks for {user?.displayName ?? 'you'}
                 </Text>
               </View>
               {user?.avatarUrl ? (
                 <Image source={{ uri: user.avatarUrl }} style={styles.userAvatar} />
               ) : (
-                <View style={[styles.userAvatarFallback, { backgroundColor: colors.surfaceRaised }]}>
+                <View
+                  style={[styles.userAvatarFallback, { backgroundColor: colors.surfaceRaised }]}
+                >
                   <Ionicons name="person" size={20} color={colors.brand} />
                 </View>
               )}
@@ -128,7 +151,9 @@ export default function HomeScreen() {
 
                 <View style={styles.statsSummaryRow}>
                   <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
-                    ⭐ {taste.data.signalCounts.favorites} favorites · 💬 {taste.data.signalCounts.ratings} ratings · 🍿 {taste.data.signalCounts.completedTitles} completed
+                    ⭐ {taste.data.signalCounts.favorites} favorites · 💬{' '}
+                    {taste.data.signalCounts.ratings} ratings · 🍿{' '}
+                    {taste.data.signalCounts.completedTitles} completed
                   </Text>
                 </View>
               </View>
@@ -149,7 +174,9 @@ export default function HomeScreen() {
                 ]}
               >
                 <Ionicons name="sparkles-outline" size={20} color={colors.brand} />
-                <Text style={[styles.gridItemText, { color: colors.textPrimary }]}>AI Assistant</Text>
+                <Text style={[styles.gridItemText, { color: colors.textPrimary }]}>
+                  AI Assistant
+                </Text>
               </Pressable>
 
               <Pressable
@@ -165,7 +192,9 @@ export default function HomeScreen() {
                 ]}
               >
                 <Ionicons name="analytics-outline" size={20} color={colors.brand} />
-                <Text style={[styles.gridItemText, { color: colors.textPrimary }]}>Stats & Wraps</Text>
+                <Text style={[styles.gridItemText, { color: colors.textPrimary }]}>
+                  Stats & Wraps
+                </Text>
               </Pressable>
 
               <Pressable
@@ -202,9 +231,80 @@ export default function HomeScreen() {
                 ) : (
                   <Ionicons name="refresh-outline" size={20} color={colors.brand} />
                 )}
-                <Text style={[styles.gridItemText, { color: colors.textPrimary }]}>Refresh Picks</Text>
+                <Text style={[styles.gridItemText, { color: colors.textPrimary }]}>
+                  Refresh Picks
+                </Text>
               </Pressable>
+
+              {calendarEnabled ? (
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => router.push('/calendar')}
+                  style={({ pressed }) => [
+                    styles.gridItem,
+                    {
+                      backgroundColor: colors.surface,
+                      borderColor: colors.border,
+                      opacity: pressed ? 0.8 : 1,
+                    },
+                  ]}
+                >
+                  <Ionicons name="calendar-outline" size={20} color={colors.brand} />
+                  <Text style={[styles.gridItemText, { color: colors.textPrimary }]}>Calendar</Text>
+                </Pressable>
+              ) : null}
             </View>
+
+            {calendarEnabled ? (
+              <Pressable
+                accessibilityHint={
+                  upcomingEvents.isError
+                    ? 'Retries loading your viewing calendar'
+                    : 'Opens your complete viewing calendar'
+                }
+                accessibilityRole="button"
+                onPress={() =>
+                  upcomingEvents.isError ? void upcomingEvents.refetch() : router.push('/calendar')
+                }
+                style={({ pressed }) => [
+                  styles.calendarPreview,
+                  {
+                    backgroundColor: colors.surface,
+                    borderColor: colors.border,
+                    opacity: pressed ? 0.8 : 1,
+                  },
+                ]}
+              >
+                <View style={[styles.calendarIcon, { backgroundColor: colors.surfaceRaised }]}>
+                  <Ionicons name="calendar" size={22} color={colors.brand} />
+                </View>
+                <View style={styles.calendarCopy}>
+                  <Text style={[styles.calendarLabel, { color: colors.brand }]}>UP NEXT</Text>
+                  <Text
+                    numberOfLines={1}
+                    style={[styles.calendarTitle, { color: colors.textPrimary }]}
+                  >
+                    {upcomingEvents.isError
+                      ? 'Calendar unavailable'
+                      : upcomingEvents.isPending
+                        ? 'Loading your viewing calendar…'
+                        : (upcomingEvent?.title ?? 'Plan your next movie night')}
+                  </Text>
+                  <Text style={[styles.calendarDate, { color: colors.textSecondary }]}>
+                    {upcomingEvents.isError
+                      ? 'Tap to retry'
+                      : upcomingEvent === undefined
+                        ? 'No plans in the next 30 days'
+                        : new Date(upcomingEvent.startsAt).toLocaleString()}
+                  </Text>
+                </View>
+                <Ionicons
+                  name={upcomingEvents.isError ? 'refresh' : 'chevron-forward'}
+                  size={20}
+                  color={upcomingEvents.isError ? colors.danger : colors.textDisabled}
+                />
+              </Pressable>
+            ) : null}
 
             {refresh.isError ? (
               <Text accessibilityRole="alert" style={{ color: colors.danger }}>
@@ -346,6 +446,25 @@ const styles = StyleSheet.create({
     width: '48%',
   },
   gridItemText: { fontSize: 13, fontWeight: '700' },
+  calendarPreview: {
+    alignItems: 'center',
+    borderRadius: 16,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 12,
+    padding: 14,
+  },
+  calendarIcon: {
+    alignItems: 'center',
+    borderRadius: 12,
+    height: 44,
+    justifyContent: 'center',
+    width: 44,
+  },
+  calendarCopy: { flex: 1, gap: 2 },
+  calendarLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 1 },
+  calendarTitle: { fontSize: 15, fontWeight: '800' },
+  calendarDate: { fontSize: 12 },
   card: { borderRadius: 18, borderWidth: 1, marginBottom: 18, overflow: 'hidden', padding: 12 },
   cardCopy: { gap: 10, paddingHorizontal: 6, paddingBottom: 4 },
   kindRow: { flexDirection: 'row' },

@@ -13,6 +13,7 @@ import {
   Screen,
   useColors,
 } from '../../src/components/ui';
+import { errorMessage } from '../../src/lib/error-message';
 import { supabase } from '../../src/lib/supabase';
 
 const schema = z.object({
@@ -39,15 +40,19 @@ export default function RegisterScreen() {
     defaultValues: { displayName: '', email: '', password: '' },
   });
   const submit = handleSubmit(async ({ displayName, email, password }) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { full_name: displayName } },
-    });
-    if (error !== null) setError('root', { message: error.message });
-    else if (data.session === null) {
-      setValue('password', '');
-      setError('root', { message: 'Check your email to verify your account, then sign in.' });
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { full_name: displayName } },
+      });
+      if (error !== null) setError('root', { message: error.message });
+      else if (data.session === null) {
+        setValue('password', '');
+        setError('root', { message: 'Check your email to verify your account, then sign in.' });
+      }
+    } catch (error) {
+      setError('root', { message: errorMessage(error) });
     }
   });
   return (

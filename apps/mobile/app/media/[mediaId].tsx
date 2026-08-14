@@ -20,6 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button, useColors } from '../../src/components/ui';
 import { TrackingPanel } from '../../src/components/tracking-panel';
+import { useFeatureFlags } from '../../src/providers/feature-flags-provider';
 import { api } from '../../src/lib/api';
 import { useAuth } from '../../src/providers/auth-provider';
 
@@ -67,6 +68,7 @@ export default function MediaDetailsScreen() {
   const { session, user } = useAuth();
   const { mediaId } = useLocalSearchParams<{ mediaId: string }>();
   const [showTrailer, setShowTrailer] = useState(false);
+  const { isEnabled } = useFeatureFlags();
 
   const details = useQuery({
     queryKey: ['media-details', mediaId, user?.countryCode],
@@ -148,10 +150,7 @@ export default function MediaDetailsScreen() {
               accessibilityLabel="Play official trailer"
               accessibilityRole="button"
               onPress={() => void handlePlayTrailer()}
-              style={({ pressed }) => [
-                styles.heroPlayOverlay,
-                { opacity: pressed ? 0.75 : 1 },
-              ]}
+              style={({ pressed }) => [styles.heroPlayOverlay, { opacity: pressed ? 0.75 : 1 }]}
             >
               <View style={[styles.heroPlayCircle, { backgroundColor: 'rgba(0, 0, 0, 0.65)' }]}>
                 <Ionicons name="play" size={32} color="#FFFFFF" style={{ marginLeft: 3 }} />
@@ -178,7 +177,10 @@ export default function MediaDetailsScreen() {
               </View>
             )}
             <View style={styles.titleMetaSection}>
-              <Text accessibilityRole="header" style={[styles.title, { color: colors.textPrimary }]}>
+              <Text
+                accessibilityRole="header"
+                style={[styles.title, { color: colors.textPrimary }]}
+              >
                 {media.title}
               </Text>
               {media.averageProviderRating !== null ? (
@@ -203,10 +205,11 @@ export default function MediaDetailsScreen() {
             ]
               .filter(Boolean)
               .map((item, idx) => (
-                <View key={idx} style={[styles.metaChip, { backgroundColor: colors.surfaceRaised }]}>
-                  <Text style={[styles.metaChipText, { color: colors.textSecondary }]}>
-                    {item}
-                  </Text>
+                <View
+                  key={idx}
+                  style={[styles.metaChip, { backgroundColor: colors.surfaceRaised }]}
+                >
+                  <Text style={[styles.metaChipText, { color: colors.textSecondary }]}>{item}</Text>
                 </View>
               ))}
           </View>
@@ -318,6 +321,64 @@ export default function MediaDetailsScreen() {
 
           <TrackingPanel mediaId={media.id} />
 
+          {isEnabled('CALENDAR_INTEGRATION') ? (
+            <Pressable
+              accessibilityHint="Opens Calendar with this title already selected"
+              accessibilityRole="button"
+              onPress={() =>
+                router.push({
+                  pathname: '/calendar',
+                  params: { eventType: 'WATCH_PLAN', mediaId: media.id, title: media.title },
+                })
+              }
+              style={({ pressed }) => [
+                styles.journalButton,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                  opacity: pressed ? 0.75 : 1,
+                },
+              ]}
+            >
+              <Ionicons color={colors.brand} name="calendar-outline" size={22} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: '800' }}>
+                  Plan to watch
+                </Text>
+                <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
+                  Add {media.title} to your viewing calendar
+                </Text>
+              </View>
+              <Ionicons color={colors.textDisabled} name="chevron-forward" size={19} />
+            </Pressable>
+          ) : null}
+
+          {isEnabled('MOVIE_JOURNAL') ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.push(`/journal/new?mediaId=${media.id}`)}
+              style={({ pressed }) => [
+                styles.journalButton,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                  opacity: pressed ? 0.75 : 1,
+                },
+              ]}
+            >
+              <Ionicons color={colors.brand} name="book-outline" size={22} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: '800' }}>
+                  Add to Movie Journal
+                </Text>
+                <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
+                  Private notes, moods, photos, quotes, and memories
+                </Text>
+              </View>
+              <Ionicons color={colors.textDisabled} name="chevron-forward" size={19} />
+            </Pressable>
+          ) : null}
+
           {/* Streaming Availability Section */}
           <Text style={[styles.heading, { color: colors.textPrimary }]}>
             Where to Watch ({media.streamingAvailability?.countryCode ?? user?.countryCode})
@@ -353,11 +414,11 @@ export default function MediaDetailsScreen() {
                   <Text style={{ color: colors.textPrimary, flex: 1, fontWeight: '600' }}>
                     {item.providerName}
                   </Text>
-                  <View style={[styles.monetizationBadge, { backgroundColor: colors.surfaceRaised }]}>
+                  <View
+                    style={[styles.monetizationBadge, { backgroundColor: colors.surfaceRaised }]}
+                  >
                     <Text style={[styles.monetizationText, { color: colors.brand }]}>
-                      {item.monetizationType === 'FLATRATE'
-                        ? 'Stream'
-                        : item.monetizationType}
+                      {item.monetizationType === 'FLATRATE' ? 'Stream' : item.monetizationType}
                     </Text>
                   </View>
                   {item.providerUrl === null ? null : (
@@ -424,7 +485,11 @@ export default function MediaDetailsScreen() {
                         {season.airDate === null ? '' : ` · ${season.airDate.slice(0, 4)}`}
                       </Text>
                     </View>
-                    <Ionicons name="chevron-forward-outline" size={20} color={colors.textSecondary} />
+                    <Ionicons
+                      name="chevron-forward-outline"
+                      size={20}
+                      color={colors.textSecondary}
+                    />
                   </Pressable>
                 ))}
               </View>
@@ -495,6 +560,14 @@ const styles = StyleSheet.create({
   chip: { borderRadius: 999, paddingHorizontal: 13, paddingVertical: 6 },
   overview: { fontSize: 15, lineHeight: 24 },
   actionButtons: { flexDirection: 'row', gap: 12 },
+  journalButton: {
+    alignItems: 'center',
+    borderRadius: 14,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 12,
+    padding: 15,
+  },
   actionButton: {
     alignItems: 'center',
     borderRadius: 12,

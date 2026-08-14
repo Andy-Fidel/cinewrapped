@@ -56,7 +56,12 @@ export default function LoginScreen() {
       <View style={styles.screenContent}>
         {/* Brand Hero Crest */}
         <View style={styles.heroHeader}>
-          <View style={[styles.logoBadge, { backgroundColor: colors.surfaceRaised, borderColor: colors.border }]}>
+          <View
+            style={[
+              styles.logoBadge,
+              { backgroundColor: colors.surfaceRaised, borderColor: colors.border },
+            ]}
+          >
             <Ionicons name="film" size={28} color={colors.brand} />
           </View>
           <BrandHeader
@@ -66,7 +71,9 @@ export default function LoginScreen() {
         </View>
 
         {/* Main Login Form Card */}
-        <View style={[styles.formCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <View
+          style={[styles.formCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+        >
           <Controller
             control={control}
             name="email"
@@ -108,7 +115,9 @@ export default function LoginScreen() {
         {/* Divider */}
         <View style={styles.dividerRow}>
           <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-          <Text style={[styles.dividerText, { color: colors.textSecondary }]}>OR CONTINUE WITH</Text>
+          <Text style={[styles.dividerText, { color: colors.textSecondary }]}>
+            OR CONTINUE WITH
+          </Text>
           <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
         </View>
 
@@ -128,7 +137,9 @@ export default function LoginScreen() {
             ]}
           >
             <Ionicons name="logo-google" size={18} color={colors.textPrimary} />
-            <Text style={{ color: colors.textPrimary, fontWeight: '700', fontSize: 13 }}>Google</Text>
+            <Text style={{ color: colors.textPrimary, fontWeight: '700', fontSize: 13 }}>
+              Google
+            </Text>
           </Pressable>
 
           <Pressable
@@ -145,7 +156,9 @@ export default function LoginScreen() {
             ]}
           >
             <Ionicons name="logo-apple" size={18} color={colors.textPrimary} />
-            <Text style={{ color: colors.textPrimary, fontWeight: '700', fontSize: 13 }}>Apple</Text>
+            <Text style={{ color: colors.textPrimary, fontWeight: '700', fontSize: 13 }}>
+              Apple
+            </Text>
           </Pressable>
         </View>
 

@@ -100,4 +100,44 @@ export class ApiClient {
     const success = payload as SuccessResponse<TData>;
     return success.data;
   }
+
+  public async requestText(path: string, options: ApiRequestOptions = {}): Promise<string> {
+    const { body, headers: headerValues, idempotencyKey, ...requestInit } = options;
+    const accessToken = await this.#accessTokenProvider.getAccessToken();
+    const headers = new Headers(headerValues);
+    headers.set('Accept', 'text/calendar, text/plain;q=0.9');
+    if (accessToken !== null) headers.set('Authorization', `Bearer ${accessToken}`);
+    if (body !== undefined) headers.set('Content-Type', 'application/json');
+    if (idempotencyKey !== undefined) headers.set('Idempotency-Key', idempotencyKey);
+
+    const response = await this.#fetch(`${this.#baseUrl}/${path.replace(/^\//u, '')}`, {
+      ...requestInit,
+      headers,
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    });
+    const payload = await response.text();
+    if (response.ok) return payload;
+
+    try {
+      const errorPayload: unknown = JSON.parse(payload);
+      if (isErrorResponse(errorPayload)) {
+        throw new ApiClientError(
+          response.status,
+          errorPayload.error.code,
+          errorPayload.error.message,
+          errorPayload.error.requestId,
+          errorPayload.error.details,
+        );
+      }
+    } catch (error) {
+      if (error instanceof ApiClientError) throw error;
+    }
+    throw new ApiClientError(
+      response.status,
+      'INVALID_API_RESPONSE',
+      'The API returned an invalid text error response.',
+      response.headers.get('X-Request-ID') ?? 'unknown',
+      null,
+    );
+  }
 }

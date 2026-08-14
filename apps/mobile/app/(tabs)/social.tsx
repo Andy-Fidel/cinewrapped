@@ -129,11 +129,15 @@ function FriendRequest({ request }: { request: FriendshipSummary }) {
 
 function formatActivityType(type: string) {
   const clean = type.replace('USER_', '').replaceAll('_', ' ').toLowerCase();
-  if (clean.includes('watch') || clean.includes('completed')) return { label: '🎬 Watched', icon: 'film-outline' };
+  if (clean.includes('watch') || clean.includes('completed'))
+    return { label: '🎬 Watched', icon: 'film-outline' };
   if (clean.includes('rate')) return { label: '⭐ Rated', icon: 'star-outline' };
   if (clean.includes('review')) return { label: '💬 Reviewed', icon: 'chatbox-ellipses-outline' };
   if (clean.includes('favorite')) return { label: '❤️ Favorited', icon: 'heart-outline' };
-  return { label: `🔥 ${clean.charAt(0).toUpperCase() + clean.slice(1)}`, icon: 'sparkles-outline' };
+  return {
+    label: `🔥 ${clean.charAt(0).toUpperCase() + clean.slice(1)}`,
+    icon: 'sparkles-outline',
+  };
 }
 
 function ActivityCard({ activity }: { activity: FeedActivitySummary }) {
@@ -202,7 +206,9 @@ function ActivityCard({ activity }: { activity: FeedActivitySummary }) {
             <Text style={{ color: colors.textPrimary, fontWeight: '800', fontSize: 15 }}>
               {activity.actor.displayName}
             </Text>
-            <Text style={{ color: colors.textSecondary, fontSize: 12 }}>@{activity.actor.username}</Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
+              @{activity.actor.username}
+            </Text>
           </View>
         </Pressable>
 
@@ -239,7 +245,8 @@ function ActivityCard({ activity }: { activity: FeedActivitySummary }) {
               {activity.media.title}
             </Text>
             <Text style={[styles.mediaMeta, { color: colors.textSecondary }]}>
-              {activity.media.releaseYear ?? 'TBA'} · {activity.media.mediaType === 'MOVIE' ? 'Movie' : 'TV'}
+              {activity.media.releaseYear ?? 'TBA'} ·{' '}
+              {activity.media.mediaType === 'MOVIE' ? 'Movie' : 'TV'}
             </Text>
           </View>
           <Ionicons name="chevron-forward-outline" size={18} color={colors.textDisabled} />
@@ -296,7 +303,12 @@ function ActivityCard({ activity }: { activity: FeedActivitySummary }) {
 
       {/* Comments Drawer */}
       {showComments ? (
-        <View style={[styles.comments, { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 12 }]}>
+        <View
+          style={[
+            styles.comments,
+            { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 12 },
+          ]}
+        >
           {(comments.data ?? []).map((item) => (
             <View key={item.id} style={styles.commentItem}>
               <Text style={{ color: colors.textPrimary, fontSize: 14, lineHeight: 20 }}>
@@ -401,7 +413,9 @@ export default function SocialScreen() {
                 </Text>
               </View>
               <View style={[styles.explorePill, { backgroundColor: colors.brand }]}>
-                <Text style={{ color: colors.onBrand, fontWeight: '700', fontSize: 12 }}>Explore</Text>
+                <Text style={{ color: colors.onBrand, fontWeight: '700', fontSize: 12 }}>
+                  Explore
+                </Text>
               </View>
             </Pressable>
           </View>
@@ -416,7 +430,12 @@ export default function SocialScreen() {
               },
             ]}
           >
-            <Ionicons name="search-outline" size={18} color={colors.textDisabled} style={styles.searchIcon} />
+            <Ionicons
+              name="search-outline"
+              size={18}
+              color={colors.textDisabled}
+              style={styles.searchIcon}
+            />
             <TextInput
               accessibilityLabel="Search members"
               autoCapitalize="none"

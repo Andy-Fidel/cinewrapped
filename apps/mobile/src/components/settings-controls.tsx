@@ -195,7 +195,11 @@ export function SelectChip({
       ]}
     >
       <Text
-        style={{ color: selected ? colors.onBrand : colors.textPrimary, fontSize: 12, fontWeight: '700' }}
+        style={{
+          color: selected ? colors.onBrand : colors.textPrimary,
+          fontSize: 12,
+          fontWeight: '700',
+        }}
       >
         {label}
       </Text>
@@ -223,7 +227,13 @@ const styles = StyleSheet.create({
     minHeight: 76,
     padding: 14,
   },
-  linkIcon: { alignItems: 'center', borderRadius: 12, height: 44, justifyContent: 'center', width: 44 },
+  linkIcon: {
+    alignItems: 'center',
+    borderRadius: 12,
+    height: 44,
+    justifyContent: 'center',
+    width: 44,
+  },
   linkLabel: { fontSize: 15, fontWeight: '800' },
   linkDetail: { fontSize: 12, lineHeight: 17, marginTop: 3 },
   toggleRow: { alignItems: 'center', flexDirection: 'row', gap: 16, minHeight: 50 },

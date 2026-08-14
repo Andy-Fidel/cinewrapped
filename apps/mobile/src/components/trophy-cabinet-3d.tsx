@@ -1,8 +1,10 @@
 import type { AchievementSummary } from '@cinewrapped/shared-types';
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useColors } from './ui';
+
+const supportsCanvas = Platform.OS === 'web';
 
 export function TrophyCabinet3D({ achievements }: { achievements: AchievementSummary[] }) {
   const colors = useColors();
@@ -12,13 +14,15 @@ export function TrophyCabinet3D({ achievements }: { achievements: AchievementSum
   const selectedAchievement = achievements.find((a) => a.id === selectedId) ?? achievements[0];
 
   useEffect(() => {
+    if (!supportsCanvas) return;
+
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    let width = (canvas.width = canvas.parentElement?.clientWidth || 340);
-    let height = (canvas.height = 240);
+    const width = (canvas.width = canvas.parentElement?.clientWidth || 340);
+    const height = (canvas.height = 240);
 
     let rotationY = 0;
     let rotationX = 0.15;
@@ -53,6 +57,17 @@ export function TrophyCabinet3D({ achievements }: { achievements: AchievementSum
       return { x: rx, y: ry, z: rz2 };
     };
 
+    const transformScenePoint = (x: number, y: number, z: number) => {
+      const shelfCenterY = 55;
+      const rotated = rotate3D(x, y - shelfCenterY, z, rotationX, rotationY);
+      return { x: rotated.x, y: rotated.y + shelfCenterY, z: rotated.z };
+    };
+
+    const projectScenePoint = (x: number, y: number, z: number) => {
+      const rotated = transformScenePoint(x, y, z);
+      return project(rotated.x, rotated.y, rotated.z);
+    };
+
     // Drag Controls
     const onMouseDown = (e: MouseEvent) => {
       isDragging = true;
@@ -63,7 +78,7 @@ export function TrophyCabinet3D({ achievements }: { achievements: AchievementSum
       const dx = e.clientX - lastMousePos.x;
       const dy = e.clientY - lastMousePos.y;
       rotationY += dx * 0.012;
-      rotationX += dy * 0.008;
+      rotationX = Math.max(-0.45, Math.min(0.45, rotationX + dy * 0.008));
       lastMousePos = { x: e.clientX, y: e.clientY };
     };
     const onMouseUp = () => {
@@ -83,7 +98,7 @@ export function TrophyCabinet3D({ achievements }: { achievements: AchievementSum
       const dx = touch.clientX - lastMousePos.x;
       const dy = touch.clientY - lastMousePos.y;
       rotationY += dx * 0.012;
-      rotationX += dy * 0.008;
+      rotationX = Math.max(-0.45, Math.min(0.45, rotationX + dy * 0.008));
       lastMousePos = { x: touch.clientX, y: touch.clientY };
     };
     const onTouchEnd = () => {
@@ -127,10 +142,10 @@ export function TrophyCabinet3D({ achievements }: { achievements: AchievementSum
       const shelfWidth = 240;
       const shelfDepth = 80;
 
-      const p1 = project(-shelfWidth / 2, shelfY, -shelfDepth / 2);
-      const p2 = project(shelfWidth / 2, shelfY, -shelfDepth / 2);
-      const p3 = project(shelfWidth / 2, shelfY, shelfDepth / 2);
-      const p4 = project(-shelfWidth / 2, shelfY, shelfDepth / 2);
+      const p1 = projectScenePoint(-shelfWidth / 2, shelfY, -shelfDepth / 2);
+      const p2 = projectScenePoint(shelfWidth / 2, shelfY, -shelfDepth / 2);
+      const p3 = projectScenePoint(shelfWidth / 2, shelfY, shelfDepth / 2);
+      const p4 = projectScenePoint(-shelfWidth / 2, shelfY, shelfDepth / 2);
 
       // Shelf Top Face Gradient
       ctx.beginPath();
@@ -180,18 +195,16 @@ export function TrophyCabinet3D({ achievements }: { achievements: AchievementSum
         const posY = shelfY - 45;
         const posZ = 0;
 
-        // Apply 3D Rotation to Trophy geometry
-        const localRotY = isSelected ? rotationY : rotationY + index * 0.8;
-        const localRotX = rotationX;
+        const transformedPosition = transformScenePoint(posX, posY, posZ);
 
         renderObjects.push({
           achievement: item,
-          z: posZ,
+          z: transformedPosition.z,
           draw: () => {
             ctx.save();
 
             // Ground Shadow beneath trophy
-            const shadowCenter = project(posX, shelfY - 2, posZ);
+            const shadowCenter = projectScenePoint(posX, shelfY - 2, posZ);
             ctx.beginPath();
             ctx.ellipse(
               shadowCenter.x,
@@ -206,7 +219,7 @@ export function TrophyCabinet3D({ achievements }: { achievements: AchievementSum
             ctx.fill();
 
             // Render Trophy Pedestal Base
-            const baseP = project(posX, posY + 25, posZ);
+            const baseP = projectScenePoint(posX, posY + 25, posZ);
             ctx.beginPath();
             ctx.arc(baseP.x, baseP.y, 18 * baseP.scale, 0, Math.PI * 2);
             ctx.fillStyle = isUnlocked ? '#334155' : '#1E293B';
@@ -216,7 +229,7 @@ export function TrophyCabinet3D({ achievements }: { achievements: AchievementSum
             ctx.stroke();
 
             // Render 3D Trophy Body Geometry (Cup / Star / Shield)
-            const nodeP = project(posX, posY, posZ);
+            const nodeP = projectScenePoint(posX, posY, posZ);
 
             if (isUnlocked) {
               // Glowing Golden Trophy Cup
@@ -279,7 +292,7 @@ export function TrophyCabinet3D({ achievements }: { achievements: AchievementSum
         });
       });
 
-      renderObjects.forEach((obj) => obj.draw());
+      renderObjects.sort((a, b) => b.z - a.z).forEach((obj) => obj.draw());
     };
 
     render();
@@ -296,17 +309,60 @@ export function TrophyCabinet3D({ achievements }: { achievements: AchievementSum
   }, [achievements, selectedId, colors]);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+    <View
+      style={[styles.container, { backgroundColor: colors.surface, borderColor: colors.border }]}
+    >
       <View style={styles.headerRow}>
         <View style={styles.headerTitleWrap}>
           <Ionicons name="trophy-outline" size={18} color={colors.brand} />
           <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>3D Trophy Cabinet</Text>
         </View>
-        <Text style={[styles.hintText, { color: colors.textSecondary }]}>Drag to rotate 360°</Text>
+        <Text style={[styles.hintText, { color: colors.textSecondary }]}>
+          {supportsCanvas ? 'Drag to rotate 360°' : 'Your latest achievements'}
+        </Text>
       </View>
 
-      {/* 3D Canvas Scene */}
-      <canvas ref={canvasRef} style={{ width: '100%', height: 240, cursor: 'grab', display: 'block' }} />
+      {supportsCanvas ? (
+        <canvas
+          ref={canvasRef}
+          style={{ width: '100%', height: 240, cursor: 'grab', display: 'block' }}
+        />
+      ) : (
+        <View style={[styles.nativeTrophyStage, { backgroundColor: colors.surfaceRaised }]}>
+          {achievements.slice(0, 5).map((item) => {
+            const isSelected = item.id === selectedId;
+            const isUnlocked = item.unlockedAt !== null;
+            return (
+              <Pressable
+                key={item.id}
+                accessibilityRole="button"
+                accessibilityState={{ selected: isSelected }}
+                accessibilityLabel={`${item.name}${isUnlocked ? ', unlocked' : ', locked'}`}
+                onPress={() => setSelectedId(item.id)}
+                style={({ pressed }) => [
+                  styles.nativeTrophy,
+                  {
+                    backgroundColor: isSelected ? colors.brand : colors.surface,
+                    borderColor: isSelected ? colors.brand : colors.border,
+                    opacity: pressed ? 0.8 : isUnlocked ? 1 : 0.6,
+                  },
+                ]}
+              >
+                <Text style={styles.nativeTrophyIcon}>{isUnlocked ? '🏆' : '🔒'}</Text>
+                <Text
+                  numberOfLines={1}
+                  style={{
+                    color: isSelected ? colors.onBrand : colors.textPrimary,
+                    fontWeight: '700',
+                  }}
+                >
+                  {item.name}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
 
       {/* Trophy Selector Pills */}
       <View style={styles.trophyPillsRow}>
@@ -346,7 +402,12 @@ export function TrophyCabinet3D({ achievements }: { achievements: AchievementSum
 
       {/* Active Selected Trophy Details Card */}
       {selectedAchievement ? (
-        <View style={[styles.detailsCard, { backgroundColor: colors.surfaceRaised, borderColor: colors.border }]}>
+        <View
+          style={[
+            styles.detailsCard,
+            { backgroundColor: colors.surfaceRaised, borderColor: colors.border },
+          ]}
+        >
           <View style={styles.detailsHeaderRow}>
             <Text style={[styles.detailsTitle, { color: colors.textPrimary }]}>
               {selectedAchievement.unlockedAt ? '✨ ' : '🔒 '}
@@ -401,6 +462,26 @@ const styles = StyleSheet.create({
   headerTitleWrap: { alignItems: 'center', flexDirection: 'row', gap: 6 },
   headerTitle: { fontSize: 16, fontWeight: '800' },
   hintText: { fontSize: 11, fontWeight: '600' },
+  nativeTrophyStage: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    justifyContent: 'center',
+    minHeight: 160,
+    padding: 18,
+  },
+  nativeTrophy: {
+    alignItems: 'center',
+    borderRadius: 14,
+    borderWidth: 1,
+    gap: 6,
+    maxWidth: 104,
+    minWidth: 88,
+    paddingHorizontal: 10,
+    paddingVertical: 12,
+  },
+  nativeTrophyIcon: { fontSize: 32 },
   trophyPillsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',

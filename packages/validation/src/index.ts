@@ -208,6 +208,65 @@ export const createReviewSchema = z.object({
   status: z.enum(['DRAFT', 'PUBLISHED']).default('DRAFT'),
 });
 
+const journalTextListSchema = z.array(z.string().trim().min(1).max(300)).max(20);
+const journalMoodSchema = z.string().trim().min(1).max(40).nullable();
+
+export const createJournalEntrySchema = z.object({
+  mediaId: uuidSchema,
+  viewingId: uuidSchema.nullable().optional(),
+  status: z.enum(['DRAFT', 'COMPLETED']).default('DRAFT'),
+  title: z.string().trim().min(1).max(160).nullable().optional(),
+  notes: z.string().trim().max(20_000).nullable().optional(),
+  viewingLocation: z.string().trim().max(200).nullable().optional(),
+  companionNames: journalTextListSchema.default([]),
+  memorableQuotes: journalTextListSchema.default([]),
+  moodBefore: journalMoodSchema.optional(),
+  moodAfter: journalMoodSchema.optional(),
+  watchedAt: z.iso.datetime({ offset: true }).nullable().optional(),
+});
+
+export const updateJournalEntrySchema = createJournalEntrySchema
+  .omit({ mediaId: true })
+  .partial()
+  .extend({ expectedVersion: z.number().int().min(1) })
+  .refine((value) => Object.keys(value).length > 1, 'At least one journal field is required.');
+
+export const registerJournalAttachmentSchema = z
+  .object({
+    attachmentType: z.enum(['TICKET', 'PERSONAL_PHOTO']),
+    storagePath: z
+      .string()
+      .min(38)
+      .max(1_024)
+      .regex(/^[0-9a-f-]{36}\/[0-9a-f-]{36}\.[a-z0-9]{1,10}$/iu),
+    fileName: z.string().trim().min(1).max(255),
+    mimeType: z.enum(['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'application/pdf']),
+    byteSize: z.number().int().min(1).max(10_485_760),
+  })
+  .refine((value) => value.attachmentType === 'TICKET' || value.mimeType !== 'application/pdf', {
+    message: 'Personal photos must use an image format.',
+    path: ['mimeType'],
+  });
+
+export const createCalendarEventSchema = z.object({
+  mediaId: uuidSchema.nullable().optional(),
+  eventType: z.enum(['WATCH_PLAN', 'RELEASE_REMINDER']).default('WATCH_PLAN'),
+  title: z.string().trim().min(1).max(160),
+  notes: z.string().trim().max(2_000).nullable().optional(),
+  startsAt: z.iso.datetime({ offset: true }),
+  timezone: z.string().trim().min(1).max(64),
+  durationMinutes: z.number().int().min(15).max(1_440).default(120),
+  reminderMinutes: z.array(z.number().int().min(0).max(43_200)).max(5).default([60]),
+});
+
+export const updateCalendarEventSchema = createCalendarEventSchema
+  .partial()
+  .extend({
+    expectedVersion: z.number().int().min(1),
+    status: z.enum(['SCHEDULED', 'CANCELLED', 'COMPLETED']).optional(),
+  })
+  .refine((value) => Object.keys(value).length > 1, 'At least one calendar field is required.');
+
 export const updateReviewSchema = createReviewSchema
   .partial()
   .extend({

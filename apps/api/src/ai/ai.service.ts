@@ -38,8 +38,8 @@ function trait(
 @Injectable()
 export class AiService {
   public constructor(
-    private readonly prisma: PrismaService,
-    private readonly catalog: MediaCatalogService,
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(MediaCatalogService) private readonly catalog: MediaCatalogService,
     @Inject(AI_PROVIDER) private readonly provider: AiProvider,
   ) {}
 

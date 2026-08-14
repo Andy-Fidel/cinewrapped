@@ -107,23 +107,23 @@ export function TrackingPanel({ mediaId }: { mediaId: string }) {
       const review =
         existing === null || existing === undefined
           ? await api.request<ReviewSummary>(`media/${mediaId}/reviews`, {
-            method: 'POST',
-            body: {
-              body,
-              containsSpoilers,
-              status: 'PUBLISHED',
-              visibility: 'PUBLIC',
-            },
-          })
+              method: 'POST',
+              body: {
+                body,
+                containsSpoilers,
+                status: 'PUBLISHED',
+                visibility: 'PUBLIC',
+              },
+            })
           : await api.request<ReviewSummary>(`reviews/${existing.id}`, {
-            method: 'PATCH',
-            body: {
-              body,
-              containsSpoilers,
-              status: 'PUBLISHED',
-              expectedVersion: existing.version,
-            },
-          });
+              method: 'PATCH',
+              body: {
+                body,
+                containsSpoilers,
+                status: 'PUBLISHED',
+                expectedVersion: existing.version,
+              },
+            });
       let sharingEnabled = privacy.data?.shareReviewActivity === true;
       let sharingFailed = false;
       if (!sharingEnabled && shareReviewActivity) {
@@ -153,10 +153,7 @@ export function TrackingPanel({ mediaId }: { mediaId: string }) {
             ? 'Review published and shared to your Social feed.'
             : 'Review published. Social sharing remains off in your privacy settings.',
       );
-      await Promise.all([
-        refresh(),
-        queryClient.invalidateQueries({ queryKey: ['social-feed'] }),
-      ]);
+      await Promise.all([refresh(), queryClient.invalidateQueries({ queryKey: ['social-feed'] })]);
     },
     onError: (error) => setReviewNotice(errorMessage(error)),
   });
@@ -332,9 +329,7 @@ export function TrackingPanel({ mediaId }: { mediaId: string }) {
       </Pressable>
       {privacy.data?.shareReviewActivity === true ? (
         <View style={[styles.shareNotice, { backgroundColor: colors.surfaceRaised }]}>
-          <Text style={{ color: colors.textPrimary, fontWeight: '700' }}>
-            Social sharing is on
-          </Text>
+          <Text style={{ color: colors.textPrimary, fontWeight: '700' }}>Social sharing is on</Text>
           <Text style={{ color: colors.textSecondary, lineHeight: 18 }}>
             Publishing will also add this review activity to your Social feed.
           </Text>

@@ -345,6 +345,27 @@ enum IdempotencyStatus {
   FAILED
 }
 
+enum JournalEntryStatus {
+  DRAFT
+  COMPLETED
+}
+
+enum JournalAttachmentType {
+  TICKET
+  PERSONAL_PHOTO
+}
+
+enum CalendarEventType {
+  WATCH_PLAN
+  RELEASE_REMINDER
+}
+
+enum CalendarEventStatus {
+  SCHEDULED
+  CANCELLED
+  COMPLETED
+}
+
 model User {
   id                  String            @id @default(uuid()) @db.Uuid
   authProvider        String            @default("supabase") @db.VarChar(32)
@@ -384,6 +405,8 @@ model User {
   watchlistItemsAdded       WatchlistItem[]
   ratings                   Rating[]
   reviews                   Review[]
+  journalEntries            JournalEntry[]
+  calendarEvents            CalendarEvent[]
   outgoingFollows           Follow[]                  @relation("FollowFollower")
   incomingFollows           Follow[]                  @relation("FollowFollowing")
   friendshipsAsA            Friendship[]              @relation("FriendshipUserA")
@@ -575,6 +598,8 @@ model Media {
   watchlistItems        WatchlistItem[]
   ratings               Rating[]
   reviews               Review[]
+  journalEntries        JournalEntry[]
+  calendarEvents        CalendarEvent[]
   feedActivities        FeedActivity[]
   recommendations       Recommendation[]
   clubPollOptions       ClubPollOption[]
@@ -830,6 +855,7 @@ model Viewing {
   media        Media              @relation(fields: [mediaId], references: [id], onDelete: Restrict)
   watchHistory WatchHistory       @relation(fields: [watchHistoryId], references: [id], onDelete: Cascade)
   companions   ViewingCompanion[]
+  journalEntry JournalEntry?
 
   @@unique([userId, clientOperationId])
   @@index([userId, watchedAt(sort: Desc), id])
@@ -837,6 +863,80 @@ model Viewing {
   @@index([watchHistoryId, watchedAt(sort: Desc)])
   @@index([deletedAt])
   @@map("viewings")
+}
+
+model JournalEntry {
+  id              String             @id @default(uuid()) @db.Uuid
+  userId          String             @db.Uuid
+  mediaId         String             @db.Uuid
+  viewingId       String?            @unique @db.Uuid
+  status          JournalEntryStatus @default(DRAFT)
+  title           String?            @db.VarChar(160)
+  notes           String?            @db.Text
+  viewingLocation String?            @db.VarChar(200)
+  companionNames  String[]           @default([])
+  memorableQuotes String[]           @default([])
+  moodBefore      String?            @db.VarChar(40)
+  moodAfter       String?            @db.VarChar(40)
+  watchedAt       DateTime?          @db.Timestamptz(3)
+  version         Int                @default(1)
+  createdAt       DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime           @updatedAt @db.Timestamptz(3)
+  deletedAt       DateTime?          @db.Timestamptz(3)
+
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  media       Media               @relation(fields: [mediaId], references: [id], onDelete: Restrict)
+  viewing     Viewing?            @relation(fields: [viewingId], references: [id], onDelete: SetNull)
+  attachments JournalAttachment[]
+
+  @@index([userId, updatedAt(sort: Desc), id(sort: Desc)])
+  @@index([userId, status, updatedAt(sort: Desc)])
+  @@index([userId, mediaId, updatedAt(sort: Desc)])
+  @@index([deletedAt])
+  @@map("journal_entries")
+}
+
+model CalendarEvent {
+  id              String              @id @default(uuid()) @db.Uuid
+  userId          String              @db.Uuid
+  mediaId         String?             @db.Uuid
+  eventType       CalendarEventType
+  status          CalendarEventStatus @default(SCHEDULED)
+  title           String              @db.VarChar(160)
+  notes           String?             @db.VarChar(2000)
+  startsAt        DateTime            @db.Timestamptz(3)
+  timezone        String              @db.VarChar(64)
+  durationMinutes Int                 @default(120)
+  reminderMinutes Int[]               @default([60])
+  version         Int                 @default(1)
+  createdAt       DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime            @updatedAt @db.Timestamptz(3)
+  deletedAt       DateTime?           @db.Timestamptz(3)
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  media Media? @relation(fields: [mediaId], references: [id], onDelete: SetNull)
+
+  @@index([userId, startsAt, id])
+  @@index([mediaId, startsAt])
+  @@index([deletedAt])
+  @@map("calendar_events")
+}
+
+model JournalAttachment {
+  id             String                @id @default(uuid()) @db.Uuid
+  journalEntryId String                @db.Uuid
+  attachmentType JournalAttachmentType
+  storageBucket  String                @default("journal-attachments") @db.VarChar(80)
+  storagePath    String                @unique @db.VarChar(1024)
+  fileName       String                @db.VarChar(255)
+  mimeType       String                @db.VarChar(120)
+  byteSize       Int
+  createdAt      DateTime              @default(now()) @db.Timestamptz(3)
+
+  journalEntry JournalEntry @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+
+  @@index([journalEntryId, createdAt])
+  @@map("journal_attachments")
 }
 
 model ViewingCompanion {

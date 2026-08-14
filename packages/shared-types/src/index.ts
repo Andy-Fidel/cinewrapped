@@ -823,3 +823,55 @@ export const privateStorageBuckets = [
 ] as const;
 
 export type PrivateStorageBucket = (typeof privateStorageBuckets)[number];
+
+export type JournalEntryStatus = 'DRAFT' | 'COMPLETED';
+export type JournalAttachmentType = 'TICKET' | 'PERSONAL_PHOTO';
+
+export interface JournalAttachmentSummary {
+  id: string;
+  attachmentType: JournalAttachmentType;
+  storageBucket: 'journal-attachments';
+  storagePath: string;
+  fileName: string;
+  mimeType: string;
+  byteSize: number;
+  createdAt: string;
+}
+
+export interface JournalEntrySummary {
+  id: string;
+  media: MediaSummary;
+  viewingId: string | null;
+  status: JournalEntryStatus;
+  title: string | null;
+  notes: string | null;
+  viewingLocation: string | null;
+  companionNames: string[];
+  memorableQuotes: string[];
+  moodBefore: string | null;
+  moodAfter: string | null;
+  watchedAt: string | null;
+  attachments: JournalAttachmentSummary[];
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type CalendarEventType = 'WATCH_PLAN' | 'RELEASE_REMINDER';
+export type CalendarEventStatus = 'SCHEDULED' | 'CANCELLED' | 'COMPLETED';
+
+export interface CalendarEventSummary {
+  id: string;
+  media: MediaSummary | null;
+  eventType: CalendarEventType;
+  status: CalendarEventStatus;
+  title: string;
+  notes: string | null;
+  startsAt: string;
+  timezone: string;
+  durationMinutes: number;
+  reminderMinutes: number[];
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+}

@@ -122,14 +122,16 @@ export default function SecuritySettingsScreen() {
                   <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: '700' }}>
                     {sessionItem.current
                       ? 'This Device'
-                      : sessionItem.deviceName ?? sessionItem.platform}
+                      : (sessionItem.deviceName ?? sessionItem.platform)}
                   </Text>
                   <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
                     Last seen {new Date(sessionItem.lastSeenAt).toLocaleString()}
                   </Text>
                 </View>
                 {sessionItem.current ? (
-                  <Text style={{ color: colors.brand, fontSize: 11, fontWeight: '700' }}>CURRENT</Text>
+                  <Text style={{ color: colors.brand, fontSize: 11, fontWeight: '700' }}>
+                    CURRENT
+                  </Text>
                 ) : (
                   <View style={styles.revokeButton}>
                     <Button

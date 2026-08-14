@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  createCalendarEventSchema,
+  createJournalEntrySchema,
+  registerJournalAttachmentSchema,
   createCommentSchema,
   createClubPollSchema,
   createClubSchema,
@@ -63,6 +66,42 @@ describe('shared validation', () => {
 
   it('requires optimistic versioning when a review is edited', () => {
     expect(() => updateReviewSchema.parse({ body: 'Updated review' })).toThrow();
+  });
+
+  it('normalizes journal drafts and rejects a foreign attachment path shape', () => {
+    expect(
+      createJournalEntrySchema.parse({
+        mediaId: '4d54ff6c-3601-4fa5-8463-b2ad2e55da60',
+        notes: 'A private memory.',
+      }),
+    ).toMatchObject({ status: 'DRAFT', companionNames: [], memorableQuotes: [] });
+    expect(() =>
+      registerJournalAttachmentSchema.parse({
+        attachmentType: 'PERSONAL_PHOTO',
+        storagePath: '../photo.jpg',
+        fileName: 'photo.jpg',
+        mimeType: 'image/jpeg',
+        byteSize: 1_024,
+      }),
+    ).toThrow();
+  });
+
+  it('normalizes calendar plans and bounds reminders', () => {
+    expect(
+      createCalendarEventSchema.parse({
+        title: 'Friday movie night',
+        startsAt: '2026-08-14T20:00:00.000Z',
+        timezone: 'Africa/Accra',
+      }),
+    ).toMatchObject({ eventType: 'WATCH_PLAN', durationMinutes: 120, reminderMinutes: [60] });
+    expect(() =>
+      createCalendarEventSchema.parse({
+        title: 'Too many reminders',
+        startsAt: '2026-08-14T20:00:00.000Z',
+        timezone: 'UTC',
+        reminderMinutes: [1, 2, 3, 4, 5, 6],
+      }),
+    ).toThrow();
   });
 
   it('rejects unknown recommendation feedback actions', () => {

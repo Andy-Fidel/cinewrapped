@@ -48,6 +48,27 @@ describe('ApiClient', () => {
     });
   });
 
+  it('authenticates and returns text responses', async () => {
+    const fetchImplementation: typeof fetch = (_input, init) => {
+      const headers = new Headers(init?.headers);
+      expect(headers.get('Authorization')).toBe('Bearer test-token');
+      expect(headers.get('Accept')).toContain('text/calendar');
+      return Promise.resolve(
+        new Response('BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n', {
+          status: 200,
+          headers: { 'Content-Type': 'text/calendar' },
+        }),
+      );
+    };
+    const client = new ApiClient({
+      baseUrl: 'https://api.example.test/api/v1',
+      accessTokenProvider: tokenProvider,
+      fetchImplementation,
+    });
+
+    await expect(client.requestText('/calendar/event.ics')).resolves.toContain('VCALENDAR');
+  });
+
   it('throws a typed error from the API error envelope', async () => {
     const fetchImplementation: typeof fetch = () =>
       Promise.resolve(
