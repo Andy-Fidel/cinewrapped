@@ -30,6 +30,55 @@ export const idempotencyKeySchema = z
   .max(128)
   .regex(/^[\x21-\x7e]+$/u);
 
+const appleMusicUrlSchema = z
+  .url()
+  .max(2_048)
+  .refine((value) => new URL(value).hostname.endsWith('.apple.com'), 'Use an Apple Music URL.');
+const appleArtworkUrlSchema = z
+  .url()
+  .max(2_048)
+  .refine((value) => new URL(value).hostname.endsWith('.mzstatic.com'), 'Use Apple artwork.');
+
+export const saveSoundtrackSchema = z.object({
+  provider: z.literal('APPLE_MUSIC'),
+  providerAlbumId: z.string().trim().regex(/^\d+$/u).max(128),
+  title: z.string().trim().min(1).max(300),
+  artistName: z.string().trim().min(1).max(200),
+  artworkUrl: appleArtworkUrlSchema.nullable().optional(),
+  providerUrl: appleMusicUrlSchema,
+  releaseDate: z.iso.date().nullable().optional(),
+  trackCount: z.number().int().min(0).max(10_000).nullable().optional(),
+});
+
+export const identifySceneSchema = z.object({
+  storagePath: z
+    .string()
+    .trim()
+    .min(1)
+    .max(1_024)
+    .regex(/^[0-9a-f-]{36}\/[0-9a-f-]{36}\.(?:jpe?g|png|webp)$/iu),
+  signedImageUrl: z.url({ protocol: /^https$/ }).max(4_096),
+  mimeType: z.enum(['image/jpeg', 'image/png', 'image/webp']),
+  byteSize: z
+    .number()
+    .int()
+    .min(1)
+    .max(10 * 1024 * 1024),
+  language: languageTagSchema.default('en-US'),
+  countryCode: countryCodeSchema.default('US'),
+  privacyAcknowledged: z.literal(true),
+});
+
+export const sceneIdentificationFeedbackSchema = z
+  .object({
+    action: z.enum(['CONFIRM', 'REJECT']),
+    mediaId: uuidSchema.nullable().optional(),
+  })
+  .refine((value) => value.action === 'REJECT' || value.mediaId != null, {
+    path: ['mediaId'],
+    message: 'Choose the confirmed title.',
+  });
+
 export function normalizeUsername(value: string): string {
   return usernameSchema.parse(value);
 }

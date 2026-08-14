@@ -24,6 +24,8 @@ const apiEnvironmentSchema = sharedServerSchema.extend({
   SUPABASE_JWT_AUDIENCE: z.string().min(1),
   SUPABASE_JWKS_URL: z.url({ protocol: /^https$/ }),
   TMDB_API_TOKEN: secretSchema,
+  OPENAI_API_KEY: secretSchema,
+  OPENAI_VISION_MODEL: z.string().min(1).max(80).default('gpt-5.4-mini'),
   S3_ENDPOINT: z.url(),
   S3_REGION: z.string().min(1),
   S3_BUCKET: z.string().min(3),

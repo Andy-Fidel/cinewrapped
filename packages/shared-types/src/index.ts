@@ -814,6 +814,80 @@ export interface FeatureFlagsResponse {
   fetchedAt: string;
 }
 
+export type MusicProvider = 'APPLE_MUSIC';
+export type MusicService = 'APPLE_MUSIC' | 'SPOTIFY';
+
+export interface MusicServiceLink {
+  service: MusicService;
+  url: string;
+}
+
+export interface SoundtrackAlbumSummary {
+  provider: MusicProvider;
+  providerAlbumId: string;
+  title: string;
+  artistName: string;
+  artworkUrl: string | null;
+  providerUrl: string;
+  releaseDate: string | null;
+  trackCount: number | null;
+  explicit: boolean;
+  serviceLinks: MusicServiceLink[];
+  saveId: string | null;
+}
+
+export interface SoundtrackTrackSummary {
+  providerTrackId: string;
+  title: string;
+  artistName: string;
+  trackNumber: number | null;
+  durationMs: number | null;
+  previewUrl: string | null;
+  providerUrl: string;
+  explicit: boolean;
+}
+
+export interface SoundtrackDiscoverySummary {
+  mediaId: string;
+  query: string;
+  attribution: 'Apple';
+  albums: SoundtrackAlbumSummary[];
+}
+
+export interface SavedSoundtrackSummary extends SoundtrackAlbumSummary {
+  id: string;
+  media: MediaSummary;
+  savedAt: string;
+}
+
+export type SceneIdentificationStatus = 'MATCHED' | 'UNCERTAIN' | 'NO_MATCH';
+export type SceneIdentificationFeedback = 'PENDING' | 'CONFIRMED' | 'REJECTED';
+
+export interface SceneIdentificationCandidate {
+  suggestedTitle: string;
+  suggestedYear: number | null;
+  suggestedMediaType: MediaType | null;
+  confidence: number;
+  evidence: string[];
+  media: MediaSummary | null;
+}
+
+export interface SceneIdentificationSummary {
+  id: string;
+  status: SceneIdentificationStatus;
+  feedback: SceneIdentificationFeedback;
+  confidence: number;
+  sceneDescription: string;
+  candidates: SceneIdentificationCandidate[];
+  matchedMedia: MediaSummary | null;
+  model: string;
+  processingMs: number;
+  confirmedAt: string | null;
+  rejectedAt: string | null;
+  createdAt: string;
+  notice: string;
+}
+
 export const privateStorageBuckets = [
   'journal-attachments',
   'scene-identification',

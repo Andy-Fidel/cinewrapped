@@ -123,6 +123,22 @@ export default function SettingsScreen() {
             onPress={() => router.push('/calendar')}
           />
         ) : null}
+        {isEnabled('SOUNDTRACKS') ? (
+          <SettingsLink
+            icon="musical-notes-outline"
+            label="Saved Soundtracks"
+            detail="Music discovered and bookmarked from movies and series"
+            onPress={() => router.push('/soundtracks')}
+          />
+        ) : null}
+        {isEnabled('SCENE_IDENTIFICATION') ? (
+          <SettingsLink
+            icon="scan-outline"
+            label="Identify a Scene"
+            detail="Use a screenshot to find a movie or television title"
+            onPress={() => router.push('/scene-identification')}
+          />
+        ) : null}
         <SettingsLink
           icon="person-circle-outline"
           label="Profile & Region"

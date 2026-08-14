@@ -15,7 +15,9 @@ import { InsightsModule } from './insights/insights.module.js';
 import { JournalModule } from './journal/journal.module.js';
 import { MediaProviderModule } from './media-provider/media-provider.module.js';
 import { RecommendationsModule } from './recommendations/recommendations.module.js';
+import { SceneIdentificationModule } from './scene-identification/scene-identification.module.js';
 import { SocialModule } from './social/social.module.js';
+import { SoundtracksModule } from './soundtracks/soundtracks.module.js';
 import { LibraryModule } from './library/library.module.js';
 import { UsersModule } from './users/users.module.js';
 
@@ -35,7 +37,9 @@ import { UsersModule } from './users/users.module.js';
     MediaProviderModule,
     LibraryModule,
     RecommendationsModule,
+    SceneIdentificationModule,
     SocialModule,
+    SoundtracksModule,
   ],
   controllers: [AppController],
   providers: [{ provide: APP_FILTER, useClass: ApiExceptionFilter }],

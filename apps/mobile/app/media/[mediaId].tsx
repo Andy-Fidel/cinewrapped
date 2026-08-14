@@ -20,6 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button, useColors } from '../../src/components/ui';
 import { TrackingPanel } from '../../src/components/tracking-panel';
+import { SoundtracksPanel } from '../../src/components/soundtracks-panel';
 import { useFeatureFlags } from '../../src/providers/feature-flags-provider';
 import { api } from '../../src/lib/api';
 import { useAuth } from '../../src/providers/auth-provider';
@@ -377,6 +378,10 @@ export default function MediaDetailsScreen() {
               </View>
               <Ionicons color={colors.textDisabled} name="chevron-forward" size={19} />
             </Pressable>
+          ) : null}
+
+          {isEnabled('SOUNDTRACKS') ? (
+            <SoundtracksPanel mediaId={media.id} countryCode={user?.countryCode ?? 'US'} />
           ) : null}
 
           {/* Streaming Availability Section */}

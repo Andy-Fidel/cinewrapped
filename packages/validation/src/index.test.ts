@@ -14,7 +14,10 @@ import {
   normalizeUsername,
   recommendationFeedbackSchema,
   intelligentDiscoverySchema,
+  identifySceneSchema,
   reviewAssistantSchema,
+  saveSoundtrackSchema,
+  sceneIdentificationFeedbackSchema,
   updatePrivacySchema,
   updatePreferencesSchema,
   updateReviewSchema,
@@ -102,6 +105,50 @@ describe('shared validation', () => {
         reminderMinutes: [1, 2, 3, 4, 5, 6],
       }),
     ).toThrow();
+  });
+
+  it('accepts Apple soundtrack metadata and rejects untrusted provider links', () => {
+    const soundtrack = {
+      provider: 'APPLE_MUSIC' as const,
+      providerAlbumId: '123456',
+      title: 'Arrival (Original Motion Picture Soundtrack)',
+      artistName: 'Jóhann Jóhannsson',
+      artworkUrl: 'https://is1-ssl.mzstatic.com/image/thumb/600x600bb.jpg',
+      providerUrl: 'https://music.apple.com/us/album/arrival/123456',
+      releaseDate: '2016-11-11',
+      trackCount: 20,
+    };
+    expect(saveSoundtrackSchema.parse(soundtrack)).toEqual(soundtrack);
+    expect(() =>
+      saveSoundtrackSchema.parse({ ...soundtrack, providerUrl: 'https://example.com/listen' }),
+    ).toThrow(/Apple Music/u);
+  });
+
+  it('requires explicit consent and a supported private scene image', () => {
+    const input = {
+      storagePath: '4d54ff6c-3601-4fa5-8463-b2ad2e55da60/7c45bfcf-6d87-4afd-b51d-ae4196438e31.jpg',
+      signedImageUrl:
+        'https://example.supabase.co/storage/v1/object/sign/scene-identification/image?token=1234567890123456',
+      mimeType: 'image/jpeg' as const,
+      byteSize: 2_048,
+      privacyAcknowledged: true as const,
+    };
+    expect(identifySceneSchema.parse(input)).toMatchObject({
+      language: 'en-US',
+      countryCode: 'US',
+      privacyAcknowledged: true,
+    });
+    expect(() => identifySceneSchema.parse({ ...input, privacyAcknowledged: false })).toThrow();
+    expect(() => identifySceneSchema.parse({ ...input, mimeType: 'image/heic' })).toThrow();
+  });
+
+  it('requires a selected title when a scene match is confirmed', () => {
+    expect(() => sceneIdentificationFeedbackSchema.parse({ action: 'CONFIRM' })).toThrow(
+      /Choose the confirmed title/u,
+    );
+    expect(sceneIdentificationFeedbackSchema.parse({ action: 'REJECT' })).toEqual({
+      action: 'REJECT',
+    });
   });
 
   it('rejects unknown recommendation feedback actions', () => {

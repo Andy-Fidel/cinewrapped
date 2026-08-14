@@ -366,6 +366,22 @@ enum CalendarEventStatus {
   COMPLETED
 }
 
+enum MusicProvider {
+  APPLE_MUSIC
+}
+
+enum SceneIdentificationStatus {
+  MATCHED
+  UNCERTAIN
+  NO_MATCH
+}
+
+enum SceneIdentificationFeedback {
+  PENDING
+  CONFIRMED
+  REJECTED
+}
+
 model User {
   id                  String            @id @default(uuid()) @db.Uuid
   authProvider        String            @default("supabase") @db.VarChar(32)
@@ -407,6 +423,8 @@ model User {
   reviews                   Review[]
   journalEntries            JournalEntry[]
   calendarEvents            CalendarEvent[]
+  soundtrackSaves           SoundtrackSave[]
+  sceneIdentifications      SceneIdentification[]
   outgoingFollows           Follow[]                  @relation("FollowFollower")
   incomingFollows           Follow[]                  @relation("FollowFollowing")
   friendshipsAsA            Friendship[]              @relation("FriendshipUserA")
@@ -600,6 +618,8 @@ model Media {
   reviews               Review[]
   journalEntries        JournalEntry[]
   calendarEvents        CalendarEvent[]
+  soundtrackSaves       SoundtrackSave[]
+  identifiedScenes      SceneIdentification[]
   feedActivities        FeedActivity[]
   recommendations       Recommendation[]
   clubPollOptions       ClubPollOption[]
@@ -920,6 +940,58 @@ model CalendarEvent {
   @@index([mediaId, startsAt])
   @@index([deletedAt])
   @@map("calendar_events")
+}
+
+model SoundtrackSave {
+  id              String        @id @default(uuid()) @db.Uuid
+  userId          String        @db.Uuid
+  mediaId         String        @db.Uuid
+  provider        MusicProvider @default(APPLE_MUSIC)
+  providerAlbumId String        @db.VarChar(128)
+  title           String        @db.VarChar(300)
+  artistName      String        @db.VarChar(200)
+  artworkUrl      String?       @db.VarChar(2048)
+  providerUrl     String        @db.VarChar(2048)
+  releaseDate     DateTime?     @db.Date
+  trackCount      Int?
+  createdAt       DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime      @updatedAt @db.Timestamptz(3)
+  deletedAt       DateTime?     @db.Timestamptz(3)
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  media Media @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, mediaId, provider, providerAlbumId])
+  @@index([userId, createdAt(sort: Desc), id(sort: Desc)])
+  @@index([mediaId, createdAt(sort: Desc)])
+  @@index([deletedAt])
+  @@map("soundtrack_saves")
+}
+
+model SceneIdentification {
+  id               String                      @id @default(uuid()) @db.Uuid
+  userId           String                      @db.Uuid
+  matchedMediaId   String?                     @db.Uuid
+  status           SceneIdentificationStatus
+  feedback         SceneIdentificationFeedback @default(PENDING)
+  confidence       Int
+  sceneDescription String                      @db.VarChar(1000)
+  candidatesJson   Json                        @default("[]") @db.JsonB
+  model            String                      @db.VarChar(80)
+  processingMs     Int
+  confirmedAt      DateTime?                   @db.Timestamptz(3)
+  rejectedAt       DateTime?                   @db.Timestamptz(3)
+  createdAt        DateTime                    @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime                    @updatedAt @db.Timestamptz(3)
+  deletedAt        DateTime?                   @db.Timestamptz(3)
+
+  user         User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  matchedMedia Media? @relation(fields: [matchedMediaId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt(sort: Desc), id(sort: Desc)])
+  @@index([matchedMediaId, createdAt(sort: Desc)])
+  @@index([deletedAt])
+  @@map("scene_identifications")
 }
 
 model JournalAttachment {

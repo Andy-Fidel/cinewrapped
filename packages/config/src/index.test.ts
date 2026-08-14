@@ -18,6 +18,7 @@ describe('environment validation', () => {
       SUPABASE_JWT_AUDIENCE: 'authenticated',
       SUPABASE_JWKS_URL: 'https://example.supabase.co/auth/v1/.well-known/jwks.json',
       TMDB_API_TOKEN: 'test-token-at-least-sixteen-characters',
+      OPENAI_API_KEY: 'test-openai-key-at-least-sixteen-characters',
       S3_ENDPOINT: 'http://localhost:9000',
       S3_REGION: 'us-east-1',
       S3_BUCKET: 'cinewrapped-test',

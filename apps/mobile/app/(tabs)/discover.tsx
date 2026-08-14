@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
+import { router } from 'expo-router';
 import {
   ActivityIndicator,
   Pressable,
@@ -23,6 +24,7 @@ import { MediaCard } from '../../src/components/media-card';
 import { useColors } from '../../src/components/ui';
 import { api } from '../../src/lib/api';
 import { useAuth } from '../../src/providers/auth-provider';
+import { useFeatureFlags } from '../../src/providers/feature-flags-provider';
 
 type MediaFilter = 'ALL' | 'MOVIE' | 'TV';
 
@@ -36,6 +38,7 @@ const QUICK_PROMPTS = [
 export default function DiscoverScreen() {
   const colors = useColors();
   const { user } = useAuth();
+  const { isEnabled } = useFeatureFlags();
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [filter, setFilter] = useState<MediaFilter>('ALL');
@@ -99,6 +102,34 @@ export default function DiscoverScreen() {
       <Text accessibilityRole="header" style={[styles.title, { color: colors.textPrimary }]}>
         Find your next story
       </Text>
+
+      {isEnabled('SCENE_IDENTIFICATION') ? (
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.push('/scene-identification')}
+          style={({ pressed }) => [
+            styles.sceneAction,
+            {
+              backgroundColor: colors.surface,
+              borderColor: colors.border,
+              opacity: pressed ? 0.75 : 1,
+            },
+          ]}
+        >
+          <View style={[styles.sceneIcon, { backgroundColor: colors.surfaceRaised }]}>
+            <Ionicons color={colors.brand} name="scan-outline" size={22} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: '800' }}>
+              Identify a scene
+            </Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
+              Find a title from a screenshot
+            </Text>
+          </View>
+          <Ionicons color={colors.textDisabled} name="chevron-forward" size={18} />
+        </Pressable>
+      ) : null}
 
       {/* Enhanced Search Input */}
       <View
@@ -281,6 +312,21 @@ const styles = StyleSheet.create({
   },
   searchIcon: { marginRight: 8 },
   searchInput: { flex: 1, fontSize: 15, paddingVertical: 12 },
+  sceneAction: {
+    alignItems: 'center',
+    borderRadius: 14,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 11,
+    padding: 12,
+  },
+  sceneIcon: {
+    alignItems: 'center',
+    borderRadius: 10,
+    height: 40,
+    justifyContent: 'center',
+    width: 40,
+  },
   clearButton: { padding: 4 },
   promptsContainer: { gap: 8, paddingVertical: 2 },
   promptChip: {
