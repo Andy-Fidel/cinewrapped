@@ -16,6 +16,7 @@ import { JournalModule } from './journal/journal.module.js';
 import { MediaProviderModule } from './media-provider/media-provider.module.js';
 import { RecommendationsModule } from './recommendations/recommendations.module.js';
 import { SceneIdentificationModule } from './scene-identification/scene-identification.module.js';
+import { SearchModule } from './search/search.module.js';
 import { SocialModule } from './social/social.module.js';
 import { SoundtracksModule } from './soundtracks/soundtracks.module.js';
 import { LibraryModule } from './library/library.module.js';
@@ -38,6 +39,7 @@ import { UsersModule } from './users/users.module.js';
     LibraryModule,
     RecommendationsModule,
     SceneIdentificationModule,
+    SearchModule,
     SocialModule,
     SoundtracksModule,
   ],

@@ -1,29 +1,136 @@
 import type { CreditSummary, MediaDetails, ShareReceipt } from '@cinewrapped/shared-types';
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Redirect, Stack, router, useLocalSearchParams } from 'expo-router';
 import * as Linking from 'expo-linking';
+import { Redirect, Stack, router, useLocalSearchParams } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
   Platform,
   Pressable,
-  Share,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Button, useColors } from '../../src/components/ui';
-import { TrackingPanel } from '../../src/components/tracking-panel';
+import { MediaReviewsFeed } from '../../src/components/media-reviews-feed';
 import { SoundtracksPanel } from '../../src/components/soundtracks-panel';
-import { useFeatureFlags } from '../../src/providers/feature-flags-provider';
+import { TrackingPanel } from '../../src/components/tracking-panel';
+import { Button, PosterImage, StarRating, useColors } from '../../src/components/ui';
 import { api } from '../../src/lib/api';
+import { haptics } from '../../src/lib/haptics';
 import { useAuth } from '../../src/providers/auth-provider';
+import { useFeatureFlags } from '../../src/providers/feature-flags-provider';
+
+interface ProviderAppConfig {
+  brandColor: string;
+  nativeScheme?: string;
+}
+
+const PROVIDER_CONFIGS: Record<string, ProviderAppConfig> = {
+  netflix: { brandColor: '#E50914', nativeScheme: 'nflx://' },
+  'apple tv': { brandColor: '#D1D5DB', nativeScheme: 'appletv://' },
+  'apple tv plus': { brandColor: '#D1D5DB', nativeScheme: 'appletv://' },
+  'amazon prime video': { brandColor: '#00A8E1', nativeScheme: 'primevideo://' },
+  'prime video': { brandColor: '#00A8E1', nativeScheme: 'primevideo://' },
+  disney: { brandColor: '#113CCF', nativeScheme: 'disneyplus://' },
+  'disney+': { brandColor: '#113CCF', nativeScheme: 'disneyplus://' },
+  'disney plus': { brandColor: '#113CCF', nativeScheme: 'disneyplus://' },
+  max: { brandColor: '#5822B4', nativeScheme: 'max://' },
+  'hbo max': { brandColor: '#5822B4', nativeScheme: 'hbomax://' },
+  hulu: { brandColor: '#1CE783', nativeScheme: 'hulu://' },
+  peacock: { brandColor: '#000000', nativeScheme: 'peacocktv://' },
+  'peacock premium': { brandColor: '#000000', nativeScheme: 'peacocktv://' },
+  'criterion channel': { brandColor: '#D4AF37', nativeScheme: 'criterionchannel://' },
+  'the criterion channel': { brandColor: '#D4AF37', nativeScheme: 'criterionchannel://' },
+  'paramount+': { brandColor: '#0064FF', nativeScheme: 'paramountplus://' },
+  'paramount plus': { brandColor: '#0064FF', nativeScheme: 'paramountplus://' },
+};
+
+function getAmbientPalette(genres: Array<{ name: string }>): {
+  primaryGlow: string;
+  secondaryGlow: string;
+  ambientShadow: string;
+  accentBadge: string;
+} {
+  const names = genres.map((g) => g.name.toLowerCase());
+
+  if (names.some((n) => n.includes('horror') || n.includes('thriller') || n.includes('mystery'))) {
+    return {
+      primaryGlow: 'rgba(239, 68, 68, 0.35)', // Crimson Aura
+      secondaryGlow: 'rgba(139, 92, 246, 0.25)', // Violet
+      ambientShadow: '#DC2626',
+      accentBadge: 'rgba(239, 68, 68, 0.15)',
+    };
+  }
+  if (names.some((n) => n.includes('sci-fi') || n.includes('science fiction') || n.includes('action'))) {
+    return {
+      primaryGlow: 'rgba(59, 130, 246, 0.35)', // Electric Blue
+      secondaryGlow: 'rgba(245, 158, 11, 0.25)', // Amber
+      ambientShadow: '#2563EB',
+      accentBadge: 'rgba(59, 130, 246, 0.15)',
+    };
+  }
+  if (names.some((n) => n.includes('romance') || n.includes('drama'))) {
+    return {
+      primaryGlow: 'rgba(244, 63, 94, 0.35)', // Rose Glow
+      secondaryGlow: 'rgba(251, 146, 60, 0.25)', // Sunset
+      ambientShadow: '#E11D48',
+      accentBadge: 'rgba(244, 63, 94, 0.15)',
+    };
+  }
+  if (names.some((n) => n.includes('comedy') || n.includes('animation') || n.includes('family'))) {
+    return {
+      primaryGlow: 'rgba(234, 179, 8, 0.35)', // Warm Gold
+      secondaryGlow: 'rgba(16, 185, 129, 0.25)', // Emerald
+      ambientShadow: '#D97706',
+      accentBadge: 'rgba(234, 179, 8, 0.15)',
+    };
+  }
+
+  // Default Cinematic Indigo & Gold Aura
+  return {
+    primaryGlow: 'rgba(99, 102, 241, 0.35)',
+    secondaryGlow: 'rgba(245, 158, 11, 0.25)',
+    ambientShadow: '#4F46E5',
+    accentBadge: 'rgba(99, 102, 241, 0.15)',
+  };
+}
+
+async function openStreamingProvider(providerName: string, providerUrl: string | null) {
+  haptics.selection();
+  if (!providerUrl) return;
+
+  const key = providerName.trim().toLowerCase();
+  const config = Object.entries(PROVIDER_CONFIGS).find(([name]) => key.includes(name))?.[1];
+
+  if (config?.nativeScheme && Platform.OS !== 'web') {
+    try {
+      const canOpen = await Linking.canOpenURL(config.nativeScheme);
+      if (canOpen) {
+        await Linking.openURL(config.nativeScheme);
+        return;
+      }
+    } catch {
+      // Fallback to web link
+    }
+  }
+
+  try {
+    if (Platform.OS !== 'web') {
+      await WebBrowser.openBrowserAsync(providerUrl);
+    } else {
+      window.open(providerUrl, '_blank');
+    }
+  } catch {
+    void Linking.openURL(providerUrl);
+  }
+}
 
 function getYouTubeVideoId(url: string | null): string | null {
   if (url === null) return null;
@@ -58,25 +165,22 @@ function Person({ credit }: { credit: CreditSummary }) {
         {credit.name}
       </Text>
       <Text numberOfLines={2} style={[styles.personRole, { color: colors.textSecondary }]}>
-        {credit.character ?? credit.job ?? credit.department ?? credit.creditType}
+        {credit.character ?? credit.job ?? credit.department}
       </Text>
     </View>
   );
 }
 
-export default function MediaDetailsScreen() {
+export default function MediaDetailScreen() {
   const colors = useColors();
+  const { isEnabled } = useFeatureFlags();
   const { session, user } = useAuth();
   const { mediaId } = useLocalSearchParams<{ mediaId: string }>();
   const [showTrailer, setShowTrailer] = useState(false);
-  const { isEnabled } = useFeatureFlags();
 
   const details = useQuery({
-    queryKey: ['media-details', mediaId, user?.countryCode],
-    queryFn: () =>
-      api.request<MediaDetails>(
-        `media/${encodeURIComponent(mediaId)}?language=${encodeURIComponent(user?.preferredLanguage ?? 'en-US')}&countryCode=${encodeURIComponent(user?.countryCode ?? 'US')}`,
-      ),
+    queryKey: ['media-details', mediaId],
+    queryFn: () => api.request<MediaDetails>(`media/${mediaId}`),
     enabled: session !== null && typeof mediaId === 'string',
     staleTime: 6 * 60 * 60 * 1000,
   });
@@ -84,9 +188,15 @@ export default function MediaDetailsScreen() {
   const shareMedia = useMutation({
     mutationFn: () => api.request<ShareReceipt>(`media/${mediaId}/shares`, { method: 'POST' }),
     onSuccess: async (receipt) => {
+      haptics.selection();
       await Share.share({ message: `${receipt.title}\n${receipt.webUrl}`, url: receipt.deepLink });
     },
   });
+
+  const ambient = useMemo(
+    () => getAmbientPalette(details.data?.genres ?? []),
+    [details.data?.genres],
+  );
 
   if (session === null) return <Redirect href="/(auth)/login" />;
   if (details.isPending)
@@ -109,6 +219,7 @@ export default function MediaDetailsScreen() {
   const youtubeId = getYouTubeVideoId(media.trailerUrl);
 
   const handlePlayTrailer = async () => {
+    haptics.selection();
     if (Platform.OS === 'web') {
       setShowTrailer(true);
     } else if (media.trailerUrl) {
@@ -131,10 +242,20 @@ export default function MediaDetailsScreen() {
           title: media.title,
           headerStyle: { backgroundColor: colors.background },
           headerTintColor: colors.textPrimary,
+          headerRight: () => (
+            <Pressable
+              accessibilityLabel="Share Title"
+              accessibilityRole="button"
+              onPress={() => shareMedia.mutate()}
+              style={{ marginRight: 8 }}
+            >
+              <Ionicons name="share-outline" size={22} color={colors.textPrimary} />
+            </Pressable>
+          ),
         }}
       />
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Backdrop Hero Header */}
+        {/* Backdrop Hero Header with Adaptive Ambient Fog */}
         <View style={[styles.heroContainer, { backgroundColor: colors.surfaceRaised }]}>
           {media.backdropUrl === null ? null : (
             <Image
@@ -143,6 +264,13 @@ export default function MediaDetailsScreen() {
               style={StyleSheet.absoluteFill}
             />
           )}
+          {/* Ambient Lighting Gradient Layer */}
+          <View
+            style={[
+              styles.ambientBackdropLayer,
+              { backgroundColor: ambient.primaryGlow },
+            ]}
+          />
           <View style={styles.backdropOverlay} />
 
           {/* Hero Play Button Overlay if trailer exists */}
@@ -161,22 +289,31 @@ export default function MediaDetailsScreen() {
         </View>
 
         <View style={styles.content}>
-          {/* Header section with floating poster & title */}
+          {/* Header section with floating poster & Ambient Glow Aura */}
           <View style={styles.headerRow}>
             {media.posterUrl === null ? null : (
-              <View
-                style={[
-                  styles.floatingPoster,
-                  { backgroundColor: colors.surfaceRaised, borderColor: colors.border },
-                ]}
-              >
-                <Image
-                  source={{ uri: media.posterUrl }}
-                  resizeMode="cover"
-                  style={StyleSheet.absoluteFill}
+              <View style={styles.posterGlowWrapper}>
+                {/* Dynamic Ambient Glow Halo behind poster */}
+                <View
+                  style={[
+                    styles.posterAmbientGlow,
+                    {
+                      backgroundColor: ambient.primaryGlow,
+                      shadowColor: ambient.ambientShadow,
+                    },
+                  ]}
                 />
+                <View
+                  style={[
+                    styles.floatingPoster,
+                    { backgroundColor: colors.surfaceRaised, borderColor: colors.border },
+                  ]}
+                >
+                  <PosterImage uri={media.posterUrl} size="fill" rounded={14} />
+                </View>
               </View>
             )}
+
             <View style={styles.titleMetaSection}>
               <Text
                 accessibilityRole="header"
@@ -185,12 +322,8 @@ export default function MediaDetailsScreen() {
                 {media.title}
               </Text>
               {media.averageProviderRating !== null ? (
-                <View style={[styles.ratingBadge, { backgroundColor: colors.surfaceRaised }]}>
-                  <Ionicons name="star" size={14} color="#FFD700" />
-                  <Text style={[styles.ratingValue, { color: colors.textPrimary }]}>
-                    {media.averageProviderRating.toFixed(1)}
-                  </Text>
-                  <Text style={[styles.ratingScale, { color: colors.textSecondary }]}>/ 10</Text>
+                <View style={styles.starWrap}>
+                  <StarRating rating={media.averageProviderRating} size="md" />
                 </View>
               ) : null}
             </View>
@@ -251,9 +384,9 @@ export default function MediaDetailsScreen() {
                 </Text>
               </Pressable>
             )}
+
             <Pressable
               accessibilityRole="button"
-              disabled={shareMedia.isPending}
               onPress={() => shareMedia.mutate()}
               style={({ pressed }) => [
                 styles.actionButton,
@@ -261,24 +394,16 @@ export default function MediaDetailsScreen() {
                   backgroundColor: colors.surfaceRaised,
                   borderColor: colors.border,
                   borderWidth: 1,
-                  opacity: pressed || shareMedia.isPending ? 0.7 : 1,
+                  opacity: pressed ? 0.85 : 1,
                 },
               ]}
             >
-              {shareMedia.isPending ? (
-                <ActivityIndicator color={colors.textPrimary} />
-              ) : (
-                <>
-                  <Ionicons name="share-social-outline" size={18} color={colors.textPrimary} />
-                  <Text style={[styles.actionButtonText, { color: colors.textPrimary }]}>
-                    Share
-                  </Text>
-                </>
-              )}
+              <Ionicons name="share-social-outline" size={19} color={colors.textPrimary} />
+              <Text style={[styles.actionButtonText, { color: colors.textPrimary }]}>Share</Text>
             </Pressable>
           </View>
 
-          {/* Embedded YouTube Trailer Player */}
+          {/* Interactive Trailer Preview Frame if Active on Web */}
           {showTrailer && youtubeId ? (
             <View
               style={[
@@ -288,15 +413,14 @@ export default function MediaDetailsScreen() {
             >
               <View style={styles.trailerHeader}>
                 <View style={styles.trailerTitleRow}>
-                  <Ionicons name="film-outline" size={18} color={colors.brand} />
+                  <Ionicons name="logo-youtube" size={20} color="#FF0000" />
                   <Text style={[styles.trailerTitle, { color: colors.textPrimary }]}>
                     Official Trailer
                   </Text>
                 </View>
                 <Pressable
-                  accessibilityLabel="Close trailer player"
+                  accessibilityLabel="Close trailer"
                   accessibilityRole="button"
-                  hitSlop={8}
                   onPress={() => setShowTrailer(false)}
                 >
                   <Ionicons name="close-circle" size={22} color={colors.textSecondary} />
@@ -320,18 +444,36 @@ export default function MediaDetailsScreen() {
             </View>
           ) : null}
 
-          <TrackingPanel mediaId={media.id} />
+          {/* User Tracking Activity Panel */}
+          <TrackingPanel
+            genres={media.genres}
+            mediaId={media.id}
+            mediaTitle={media.title}
+            posterUrl={media.posterUrl}
+            releaseDate={media.releaseDate}
+          />
 
+          {/* Community Reviews Feed with Spoiler Shield & Letterboxd Share Cards */}
+          <MediaReviewsFeed
+            genres={media.genres}
+            mediaId={media.id}
+            mediaTitle={media.title}
+            posterUrl={media.posterUrl}
+            releaseDate={media.releaseDate}
+          />
+
+          {/* Schedule Movie Night */}
           {isEnabled('CALENDAR_INTEGRATION') ? (
             <Pressable
               accessibilityHint="Opens Calendar with this title already selected"
               accessibilityRole="button"
-              onPress={() =>
+              onPress={() => {
+                haptics.selection();
                 router.push({
                   pathname: '/calendar',
                   params: { eventType: 'WATCH_PLAN', mediaId: media.id, title: media.title },
-                })
-              }
+                });
+              }}
               style={({ pressed }) => [
                 styles.journalButton,
                 {
@@ -344,20 +486,24 @@ export default function MediaDetailsScreen() {
               <Ionicons color={colors.brand} name="calendar-outline" size={22} />
               <View style={{ flex: 1 }}>
                 <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: '800' }}>
-                  Plan to watch
+                  Plan to Watch
                 </Text>
                 <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
-                  Add {media.title} to your viewing calendar
+                  Add {media.title} to your cinema schedule
                 </Text>
               </View>
               <Ionicons color={colors.textDisabled} name="chevron-forward" size={19} />
             </Pressable>
           ) : null}
 
+          {/* Private Movie Journal */}
           {isEnabled('MOVIE_JOURNAL') ? (
             <Pressable
               accessibilityRole="button"
-              onPress={() => router.push(`/journal/new?mediaId=${media.id}`)}
+              onPress={() => {
+                haptics.selection();
+                router.push(`/journal/new?mediaId=${media.id}`);
+              }}
               style={({ pressed }) => [
                 styles.journalButton,
                 {
@@ -380,62 +526,149 @@ export default function MediaDetailsScreen() {
             </Pressable>
           ) : null}
 
+          {/* Soundtracks Panel */}
           {isEnabled('SOUNDTRACKS') ? (
             <SoundtracksPanel mediaId={media.id} countryCode={user?.countryCode ?? 'US'} />
           ) : null}
 
-          {/* Streaming Availability Section */}
-          <Text style={[styles.heading, { color: colors.textPrimary }]}>
-            Where to Watch ({media.streamingAvailability?.countryCode ?? user?.countryCode})
-          </Text>
+          {/* Streaming Availability Section with Direct App Deep Links */}
+          <View style={styles.streamingSectionHeader}>
+            <View style={styles.streamingTitleRow}>
+              <Ionicons name="play-outline" size={20} color={colors.brand} />
+              <Text style={[styles.heading, { color: colors.textPrimary, marginTop: 0 }]}>
+                Where to Watch
+              </Text>
+            </View>
+            <View style={[styles.countryBadge, { backgroundColor: colors.surfaceRaised }]}>
+              <Text style={[styles.countryBadgeText, { color: colors.brand }]}>
+                🌍 {media.streamingAvailability?.countryCode ?? user?.countryCode ?? 'US'}
+              </Text>
+            </View>
+          </View>
+
           {media.streamingAvailability?.items.length ? (
             <View style={styles.providers}>
-              {media.streamingAvailability.items.map((item) => (
-                <Pressable
-                  accessibilityRole={item.providerUrl === null ? undefined : 'link'}
-                  disabled={item.providerUrl === null}
-                  key={`${item.providerId}-${item.monetizationType}`}
-                  onPress={() =>
-                    item.providerUrl === null ? undefined : void Linking.openURL(item.providerUrl)
-                  }
-                  style={({ pressed }) => [
-                    styles.provider,
-                    {
-                      backgroundColor: colors.surface,
-                      borderColor: colors.border,
-                      opacity: pressed ? 0.85 : 1,
-                    },
-                  ]}
-                >
-                  {item.logoUrl === null ? (
-                    <Ionicons name="tv-outline" size={24} color={colors.textDisabled} />
-                  ) : (
-                    <Image
-                      source={{ uri: item.logoUrl }}
-                      resizeMode="contain"
-                      style={styles.providerLogo}
-                    />
-                  )}
-                  <Text style={{ color: colors.textPrimary, flex: 1, fontWeight: '600' }}>
-                    {item.providerName}
-                  </Text>
-                  <View
-                    style={[styles.monetizationBadge, { backgroundColor: colors.surfaceRaised }]}
+              {media.streamingAvailability.items.map((item) => {
+                const key = item.providerName.trim().toLowerCase();
+                const providerConfig = Object.entries(PROVIDER_CONFIGS).find(([name]) =>
+                  key.includes(name),
+                )?.[1];
+                const brandAccent = providerConfig?.brandColor ?? colors.brand;
+
+                return (
+                  <Pressable
+                    accessibilityRole="link"
+                    disabled={item.providerUrl === null}
+                    key={`${item.providerId}-${item.monetizationType}`}
+                    onPress={() => void openStreamingProvider(item.providerName, item.providerUrl)}
+                    style={({ pressed }) => [
+                      styles.providerCard,
+                      {
+                        backgroundColor: colors.surface,
+                        borderColor: colors.border,
+                        opacity: pressed ? 0.85 : 1,
+                      },
+                    ]}
                   >
-                    <Text style={[styles.monetizationText, { color: colors.brand }]}>
-                      {item.monetizationType === 'FLATRATE' ? 'Stream' : item.monetizationType}
-                    </Text>
-                  </View>
-                  {item.providerUrl === null ? null : (
-                    <Ionicons name="open-outline" size={16} color={colors.textDisabled} />
-                  )}
-                </Pressable>
-              ))}
+                    {/* Brand indicator strip */}
+                    <View style={[styles.providerBrandStrip, { backgroundColor: brandAccent }]} />
+
+                    {item.logoUrl === null ? (
+                      <View
+                        style={[
+                          styles.providerLogoFallback,
+                          { backgroundColor: colors.surfaceRaised },
+                        ]}
+                      >
+                        <Ionicons name="tv-outline" size={22} color={colors.textSecondary} />
+                      </View>
+                    ) : (
+                      <Image
+                        source={{ uri: item.logoUrl }}
+                        resizeMode="contain"
+                        style={styles.providerLogo}
+                      />
+                    )}
+
+                    <View style={styles.providerInfo}>
+                      <Text style={[styles.providerName, { color: colors.textPrimary }]}>
+                        {item.providerName}
+                      </Text>
+                      <View style={styles.providerTagRow}>
+                        <View
+                          style={[
+                            styles.monetizationBadge,
+                            {
+                              backgroundColor:
+                                item.monetizationType === 'FLATRATE'
+                                  ? 'rgba(16, 185, 129, 0.15)'
+                                  : colors.surfaceRaised,
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.monetizationText,
+                              {
+                                color:
+                                  item.monetizationType === 'FLATRATE'
+                                    ? '#10B981'
+                                    : colors.textSecondary,
+                              },
+                            ]}
+                          >
+                            {item.monetizationType === 'FLATRATE'
+                              ? 'Included'
+                              : item.monetizationType}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+
+                    {/* Launch Action Button */}
+                    <View
+                      style={[
+                        styles.launchPill,
+                        {
+                          backgroundColor:
+                            item.monetizationType === 'FLATRATE'
+                              ? colors.brand
+                              : colors.surfaceRaised,
+                        },
+                      ]}
+                    >
+                      <Ionicons
+                        name="play"
+                        size={12}
+                        color={
+                          item.monetizationType === 'FLATRATE' ? colors.onBrand : colors.textPrimary
+                        }
+                      />
+                      <Text
+                        style={[
+                          styles.launchText,
+                          {
+                            color:
+                              item.monetizationType === 'FLATRATE'
+                                ? colors.onBrand
+                                : colors.textPrimary,
+                          },
+                        ]}
+                      >
+                        Watch
+                      </Text>
+                    </View>
+                  </Pressable>
+                );
+              })}
             </View>
           ) : (
-            <Text style={{ color: colors.textSecondary, fontSize: 14 }}>
-              No streaming providers currently reported for this region.
-            </Text>
+            <View style={[styles.emptyStreamingCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Ionicons name="tv-outline" size={28} color={colors.textDisabled} />
+              <Text style={[styles.emptyStreamingText, { color: colors.textSecondary }]}>
+                No streaming options currently reported for this region.
+              </Text>
+            </View>
           )}
 
           {/* Cast Section */}
@@ -471,7 +704,10 @@ export default function MediaDetailsScreen() {
                   <Pressable
                     accessibilityRole="button"
                     key={season.id}
-                    onPress={() => router.push(`/media/${media.id}/season/${season.seasonNumber}`)}
+                    onPress={() => {
+                      haptics.selection();
+                      router.push(`/media/${media.id}/season/${season.seasonNumber}`);
+                    }}
                     style={({ pressed }) => [
                       styles.seasonCard,
                       {
@@ -502,7 +738,7 @@ export default function MediaDetailsScreen() {
           )}
 
           <Text style={[styles.attribution, { color: colors.textDisabled }]}>
-            Metadata and availability supplied by TMDB. Streaming availability subject to change.
+            Metadata and availability supplied by TMDB & JustWatch. Streaming availability subject to change.
           </Text>
         </View>
       </ScrollView>
@@ -514,9 +750,13 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   center: { alignItems: 'center', flex: 1, gap: 16, justifyContent: 'center', padding: 24 },
   heroContainer: { aspectRatio: 16 / 9, position: 'relative', width: '100%' },
+  ambientBackdropLayer: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.55,
+  },
   backdropOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.35)',
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
   },
   heroPlayOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -531,47 +771,57 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 72,
   },
-  content: { gap: 20, padding: 18 },
-  headerRow: { flexDirection: 'row', gap: 16, marginTop: -40, zIndex: 10 },
+  content: { gap: 18, padding: 16 },
+
+  // Header row & poster glow
+  headerRow: { flexDirection: 'row', gap: 16, marginTop: -42, zIndex: 10 },
+  posterGlowWrapper: {
+    position: 'relative',
+    width: 96,
+  },
+  posterAmbientGlow: {
+    borderRadius: 20,
+    bottom: -8,
+    elevation: 20,
+    left: -8,
+    opacity: 0.85,
+    position: 'absolute',
+    right: -8,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.9,
+    shadowRadius: 24,
+    top: -8,
+  },
   floatingPoster: {
     borderRadius: 14,
     borderWidth: 2,
     elevation: 8,
-    height: 140,
+    height: 144,
     overflow: 'hidden',
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    width: 95,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.45,
+    shadowRadius: 10,
+    width: 96,
   },
-  titleMetaSection: { flex: 1, gap: 8, justifyContent: 'flex-end', paddingTop: 38 },
-  title: { fontSize: 26, fontWeight: '800', letterSpacing: -0.4, lineHeight: 32 },
-  ratingBadge: {
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    borderRadius: 8,
-    flexDirection: 'row',
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  ratingValue: { fontSize: 14, fontWeight: '800' },
-  ratingScale: { fontSize: 12 },
+  titleMetaSection: { flex: 1, gap: 6, justifyContent: 'flex-end', paddingTop: 38 },
+  title: { fontSize: 24, fontWeight: '800', letterSpacing: -0.4, lineHeight: 30 },
+  starWrap: { marginTop: 2 },
+
   metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   metaChip: { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
   metaChipText: { fontSize: 12, fontWeight: '600' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { borderRadius: 999, paddingHorizontal: 13, paddingVertical: 6 },
-  overview: { fontSize: 15, lineHeight: 24 },
-  actionButtons: { flexDirection: 'row', gap: 12 },
+  overview: { fontSize: 14, lineHeight: 22 },
+  actionButtons: { flexDirection: 'row', gap: 10 },
   journalButton: {
     alignItems: 'center',
     borderRadius: 14,
     borderWidth: 1,
     flexDirection: 'row',
     gap: 12,
-    padding: 15,
+    padding: 14,
   },
   actionButton: {
     alignItems: 'center',
@@ -580,10 +830,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     justifyContent: 'center',
-    minHeight: 48,
-    paddingHorizontal: 16,
+    minHeight: 46,
+    paddingHorizontal: 14,
   },
-  actionButtonText: { fontSize: 15, fontWeight: '700' },
+  actionButtonText: { fontSize: 14, fontWeight: '700' },
   trailerCard: {
     borderRadius: 16,
     borderWidth: 1,
@@ -611,21 +861,72 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     width: '100%',
   },
-  heading: { fontSize: 20, fontWeight: '700', marginTop: 6 },
+  heading: { fontSize: 18, fontWeight: '800', marginTop: 4 },
+
+  // Streaming Section
+  streamingSectionHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 4,
+  },
+  streamingTitleRow: { alignItems: 'center', flexDirection: 'row', gap: 8 },
+  countryBadge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
+  countryBadgeText: { fontSize: 11, fontWeight: '700' },
   providers: { gap: 10 },
-  provider: {
+  providerCard: {
     alignItems: 'center',
     borderRadius: 14,
     borderWidth: 1,
     flexDirection: 'row',
     gap: 12,
-    minHeight: 56,
+    minHeight: 58,
+    overflow: 'hidden',
     paddingHorizontal: 14,
     paddingVertical: 10,
+    position: 'relative',
   },
-  providerLogo: { borderRadius: 8, height: 36, width: 36 },
-  monetizationBadge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
-  monetizationText: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase' },
+  providerBrandStrip: {
+    bottom: 0,
+    left: 0,
+    position: 'absolute',
+    top: 0,
+    width: 4,
+  },
+  providerLogo: { borderRadius: 8, height: 38, width: 38 },
+  providerLogoFallback: {
+    alignItems: 'center',
+    borderRadius: 8,
+    height: 38,
+    justifyContent: 'center',
+    width: 38,
+  },
+  providerInfo: { flex: 1, gap: 2 },
+  providerName: { fontSize: 14, fontWeight: '700' },
+  providerTagRow: { flexDirection: 'row', gap: 6 },
+  monetizationBadge: { borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 },
+  monetizationText: { fontSize: 10, fontWeight: '800', textTransform: 'uppercase' },
+
+  launchPill: {
+    alignItems: 'center',
+    borderRadius: 20,
+    flexDirection: 'row',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  launchText: { fontSize: 12, fontWeight: '700' },
+
+  emptyStreamingCard: {
+    alignItems: 'center',
+    borderRadius: 14,
+    borderWidth: 1,
+    gap: 8,
+    padding: 24,
+  },
+  emptyStreamingText: { fontSize: 13, textAlign: 'center' },
+
+  // Cast & Crew
   person: { marginRight: 14, width: 92 },
   avatar: { borderRadius: 46, borderWidth: 2, height: 84, width: 84 },
   avatarFallback: { alignItems: 'center', justifyContent: 'center' },
@@ -641,5 +942,5 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   seasonInfo: { gap: 4 },
-  attribution: { fontSize: 12, lineHeight: 18, marginTop: 10 },
+  attribution: { fontSize: 11, lineHeight: 16, marginTop: 8 },
 });

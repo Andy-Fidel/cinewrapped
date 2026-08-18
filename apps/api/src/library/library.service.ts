@@ -3,6 +3,7 @@ import type {
   LibraryItem,
   MediaSummary,
   MediaTrackingState,
+  PublicReviewItem,
   RatingSummary,
   ReviewSummary,
   ViewingSummary,
@@ -820,6 +821,69 @@ export class LibraryService {
     });
     if (result.count === 0)
       throw new AppException(404, 'REVIEW_NOT_FOUND', 'The review was not found.');
+  }
+
+  public async listMediaReviews(
+    _principal: AuthPrincipal,
+    mediaId: string,
+    limit = 20,
+  ): Promise<PublicReviewItem[]> {
+    const reviews = await this.prisma.review.findMany({
+      where: {
+        mediaId,
+        status: 'PUBLISHED',
+        visibility: 'PUBLIC',
+        deletedAt: null,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            displayName: true,
+            avatarUrl: true,
+          },
+        },
+      },
+      orderBy: [{ likeCount: 'desc' }, { publishedAt: 'desc' }, { createdAt: 'desc' }],
+      take: Math.min(limit, 50),
+    });
+
+    if (reviews.length === 0) return [];
+
+    const userIds = reviews.map((r) => r.userId);
+    const ratings = await this.prisma.rating.findMany({
+      where: {
+        mediaId,
+        userId: { in: userIds },
+        deletedAt: null,
+      },
+      select: {
+        userId: true,
+        ratingValue: true,
+      },
+    });
+
+    const ratingMap = new Map(ratings.map((r) => [r.userId, Number(r.ratingValue)]));
+
+    return reviews.map((r) => ({
+      id: r.id,
+      mediaId: r.mediaId,
+      title: r.title,
+      body: r.body,
+      containsSpoilers: r.containsSpoilers,
+      likeCount: r.likeCount,
+      commentCount: r.commentCount,
+      publishedAt: r.publishedAt?.toISOString() ?? null,
+      createdAt: r.createdAt.toISOString(),
+      ratingValue: ratingMap.get(r.userId) ?? null,
+      user: {
+        id: r.user.id,
+        handle: r.user.username,
+        displayName: r.user.displayName,
+        avatarUrl: r.user.avatarUrl,
+      },
+    }));
   }
 
   private toLibraryItem(record: LibraryRecord): LibraryItem {

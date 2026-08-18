@@ -12,6 +12,8 @@ import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { MediaCard } from '../../src/components/media-card';
+import { NetflixHeroBillboard } from '../../src/components/netflix-hero-billboard';
+import { NetflixTop10Shelf } from '../../src/components/netflix-top10-shelf';
 import { useColors } from '../../src/components/ui';
 import { api } from '../../src/lib/api';
 import { useAuth } from '../../src/providers/auth-provider';
@@ -75,6 +77,13 @@ export default function HomeScreen() {
       ]);
     },
   });
+  const watchlistMutation = useMutation({
+    mutationFn: (mediaId: string) =>
+      api.request('watchlist/items', { method: 'POST', body: { mediaId } }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['watchlists'] });
+    },
+  });
   const upcomingEvent = upcomingEvents.data?.at(0);
 
   return (
@@ -87,32 +96,84 @@ export default function HomeScreen() {
         contentContainerStyle={styles.list}
         ListHeaderComponent={
           <View style={styles.header}>
-            {/* Header Title with User Greeting & Avatar */}
-            <View style={styles.greetingRow}>
-              <View style={styles.greetingTextWrap}>
-                <Text style={[styles.eyebrow, { color: colors.brand }]}>FOR YOU</Text>
+            {/* Netflix Cinematic Hero Billboard */}
+            {recommendations.data && recommendations.data.length > 0 && recommendations.data[0] ? (
+              <NetflixHeroBillboard
+                featured={recommendations.data[0]}
+                onAddToWatchlist={() => {
+                  if (recommendations.data && recommendations.data[0]) {
+                    watchlistMutation.mutate(recommendations.data[0].media.id);
+                  }
+                }}
+              />
+            ) : null}
+
+            {/* Netflix-Style Top 10 Shelf with Giant Outlined Numbers */}
+            {recommendations.data && recommendations.data.length > 0 ? (
+              <NetflixTop10Shelf
+                items={recommendations.data}
+                title="Top 10 in CineWrapped Today"
+              />
+            ) : null}
+
+            {/* Prestige Cinephile Header: 'Picks for You' */}
+            <View style={[styles.greetingCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <View style={styles.greetingHeaderTop}>
+                {/* Eyebrow with Glow Pill & Radar Dot */}
+                <View style={styles.eyebrowPillRow}>
+                  <View style={[styles.curatedPill, { backgroundColor: 'rgba(99, 102, 241, 0.15)', borderColor: 'rgba(99, 102, 241, 0.35)' }]}>
+                    <View style={styles.pulseDot} />
+                    <Text style={[styles.curatedPillText, { color: colors.brand }]}>
+                      CURATED RADAR
+                    </Text>
+                  </View>
+                  <View style={[styles.algoTag, { backgroundColor: colors.surfaceRaised }]}>
+                    <Ionicons name="sparkles" size={11} color="#F59E0B" />
+                    <Text style={[styles.algoTagText, { color: colors.textSecondary }]}>
+                      Daily Refreshed
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Avatar with Prestige Ring */}
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => router.push('/insights')}
+                  style={({ pressed }) => [
+                    styles.avatarRing,
+                    { borderColor: colors.brand, opacity: pressed ? 0.8 : 1 },
+                  ]}
+                >
+                  {user?.avatarUrl ? (
+                    <Image source={{ uri: user.avatarUrl }} style={styles.userAvatar} />
+                  ) : (
+                    <View
+                      style={[styles.userAvatarFallback, { backgroundColor: colors.surfaceRaised }]}
+                    >
+                      <Ionicons name="person" size={18} color={colors.brand} />
+                    </View>
+                  )}
+                </Pressable>
+              </View>
+
+              {/* Dynamic Title with Highlighted User Name */}
+              <View style={styles.titleWrap}>
                 <Text
                   accessibilityRole="header"
                   style={[styles.title, { color: colors.textPrimary }]}
                 >
-                  Picks for {user?.displayName ?? 'you'}
+                  Picks for{' '}
+                  <Text style={[styles.titleNameHighlight, { color: colors.brand }]}>
+                    {user?.displayName ?? 'You'}
+                  </Text>
                 </Text>
               </View>
-              {user?.avatarUrl ? (
-                <Image source={{ uri: user.avatarUrl }} style={styles.userAvatar} />
-              ) : (
-                <View
-                  style={[styles.userAvatarFallback, { backgroundColor: colors.surfaceRaised }]}
-                >
-                  <Ionicons name="person" size={20} color={colors.brand} />
-                </View>
-              )}
-            </View>
 
-            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-              Deterministic recommendations built from your choices and activity—not generated
-              opinions.
-            </Text>
+              {/* Editorial Subtitle with Spec Dot */}
+              <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+                Bespoke selections engineered from your watch logs, favorites, and ratings.
+              </Text>
+            </View>
 
             {/* Taste Profile Card */}
             {taste.data === undefined ? null : (
@@ -306,6 +367,39 @@ export default function HomeScreen() {
               </Pressable>
             ) : null}
 
+            {/* Weekly Cinema Trivia Banner */}
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.push('/trivia')}
+              style={({ pressed }) => [
+                styles.triviaBanner,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: '#F59E0B',
+                  opacity: pressed ? 0.85 : 1,
+                },
+              ]}
+            >
+              <View style={[styles.triviaIconBox, { backgroundColor: 'rgba(245, 158, 11, 0.15)' }]}>
+                <Ionicons name="trophy" size={24} color="#F59E0B" />
+              </View>
+              <View style={styles.triviaCopy}>
+                <View style={styles.triviaEyebrowRow}>
+                  <Text style={[styles.triviaEyebrow, { color: '#F59E0B' }]}>WEEKLY TRIVIA</Text>
+                  <View style={[styles.triviaPointsPill, { backgroundColor: colors.surfaceRaised }]}>
+                    <Text style={{ color: colors.brand, fontSize: 10, fontWeight: '800' }}>+150 PTS</Text>
+                  </View>
+                </View>
+                <Text numberOfLines={1} style={[styles.triviaTitle, { color: colors.textPrimary }]}>
+                  Christopher Nolan Masterclass
+                </Text>
+                <Text style={[styles.triviaSub, { color: colors.textSecondary }]}>
+                  3 questions · Unlock the Golden Projector 3D Trophy
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.textDisabled} />
+            </Pressable>
+
             {refresh.isError ? (
               <Text accessibilityRole="alert" style={{ color: colors.danger }}>
                 Recommendations could not be refreshed yet.
@@ -408,23 +502,74 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   list: { padding: 16 },
   header: { gap: 14, marginBottom: 18 },
-  greetingRow: {
+  greetingCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    gap: 10,
+    marginTop: 4,
+    padding: 16,
+  },
+  greetingHeaderTop: {
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
-  greetingTextWrap: { flex: 1, gap: 4 },
-  userAvatar: { borderRadius: 22, height: 44, width: 44 },
+  eyebrowPillRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+  },
+  curatedPill: {
+    alignItems: 'center',
+    borderRadius: 999,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  pulseDot: {
+    backgroundColor: '#10B981',
+    borderRadius: 3,
+    height: 6,
+    width: 6,
+  },
+  curatedPillText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.2,
+  },
+  algoTag: {
+    alignItems: 'center',
+    borderRadius: 999,
+    flexDirection: 'row',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  algoTagText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  avatarRing: {
+    borderRadius: 22,
+    borderWidth: 2,
+    padding: 2,
+  },
+  userAvatar: { borderRadius: 18, height: 36, width: 36 },
   userAvatarFallback: {
     alignItems: 'center',
-    borderRadius: 22,
-    height: 44,
+    borderRadius: 18,
+    height: 36,
     justifyContent: 'center',
-    width: 44,
+    width: 36,
   },
-  eyebrow: { fontSize: 12, fontWeight: '700', letterSpacing: 1.4 },
-  title: { fontSize: 28, fontWeight: '800', letterSpacing: -0.4 },
-  subtitle: { fontSize: 14, lineHeight: 21 },
+  titleWrap: {
+    marginTop: 2,
+  },
+  title: { fontSize: 26, fontWeight: '900', letterSpacing: -0.5, lineHeight: 32 },
+  titleNameHighlight: { fontWeight: '900' },
+  subtitle: { fontSize: 13, lineHeight: 18 },
   taste: { borderRadius: 16, borderWidth: 1, gap: 12, padding: 16 },
   tasteHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
   tasteHeaderTitleRow: { alignItems: 'center', flexDirection: 'row', gap: 8 },
@@ -465,6 +610,27 @@ const styles = StyleSheet.create({
   calendarLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 1 },
   calendarTitle: { fontSize: 15, fontWeight: '800' },
   calendarDate: { fontSize: 12 },
+  triviaBanner: {
+    alignItems: 'center',
+    borderRadius: 16,
+    borderWidth: 1.5,
+    flexDirection: 'row',
+    gap: 12,
+    padding: 14,
+  },
+  triviaIconBox: {
+    alignItems: 'center',
+    borderRadius: 12,
+    height: 46,
+    justifyContent: 'center',
+    width: 46,
+  },
+  triviaCopy: { flex: 1, gap: 2 },
+  triviaEyebrowRow: { alignItems: 'center', flexDirection: 'row', gap: 6 },
+  triviaEyebrow: { fontSize: 10, fontWeight: '800', letterSpacing: 0.8 },
+  triviaPointsPill: { borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 },
+  triviaTitle: { fontSize: 15, fontWeight: '800' },
+  triviaSub: { fontSize: 12, lineHeight: 16 },
   card: { borderRadius: 18, borderWidth: 1, marginBottom: 18, overflow: 'hidden', padding: 12 },
   cardCopy: { gap: 10, paddingHorizontal: 6, paddingBottom: 4 },
   kindRow: { flexDirection: 'row' },

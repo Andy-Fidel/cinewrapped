@@ -1,18 +1,21 @@
 import type { JournalEntrySummary, MediaSummary } from '@cinewrapped/shared-types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Redirect, Stack, router, useLocalSearchParams } from 'expo-router';
-import { Alert, Image, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 
 import { FeatureGate } from '../../src/components/feature-gate';
 import { JournalForm, type JournalFormValue } from '../../src/components/journal-form';
 import { Screen, useColors } from '../../src/components/ui';
 import { api } from '../../src/lib/api';
 import { errorMessage } from '../../src/lib/error-message';
+import { haptics } from '../../src/lib/haptics';
 import { useAuth } from '../../src/providers/auth-provider';
+import { useDialog } from '../../src/providers/dialog-provider';
 
 export default function NewJournalEntryScreen() {
   const colors = useColors();
   const { session } = useAuth();
+  const { showError } = useDialog();
   const queryClient = useQueryClient();
   const { mediaId } = useLocalSearchParams<{ mediaId: string }>();
   const media = useQuery({
@@ -21,8 +24,9 @@ export default function NewJournalEntryScreen() {
     enabled: session !== null && typeof mediaId === 'string',
   });
   const create = useMutation({
-    mutationFn: (value: JournalFormValue) =>
-      api.request<JournalEntrySummary>('journal', {
+    mutationFn: (value: JournalFormValue) => {
+      haptics.clapperSnap();
+      return api.request<JournalEntrySummary>('journal', {
         method: 'POST',
         body: {
           mediaId,
@@ -36,12 +40,14 @@ export default function NewJournalEntryScreen() {
           moodAfter: value.moodAfter,
           watchedAt: new Date().toISOString(),
         },
-      }),
+      });
+    },
     onSuccess: async (entry) => {
+      haptics.celebration();
       await queryClient.invalidateQueries({ queryKey: ['journal'] });
       router.replace(`/journal/${entry.id}`);
     },
-    onError: (error) => Alert.alert('Could not save journal entry', errorMessage(error)),
+    onError: (error) => showError('Could not save journal entry', errorMessage(error)),
   });
   if (session === null) return <Redirect href="/(auth)/login" />;
 

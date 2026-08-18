@@ -6,18 +6,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import { Redirect, Stack, router } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Linking,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { FeatureGate } from '../../src/components/feature-gate';
 import { Screen, useColors } from '../../src/components/ui';
@@ -25,9 +15,9 @@ import { api } from '../../src/lib/api';
 import { errorMessage } from '../../src/lib/error-message';
 import { identifySceneFromAsset } from '../../src/lib/scene-identification';
 import { useAuth } from '../../src/providers/auth-provider';
+import { useDialog } from '../../src/providers/dialog-provider';
 
 function ConfidenceBadge({ value, size = 'medium' }: { value: number; size?: 'small' | 'medium' }) {
-  const colors = useColors();
   const isHigh = value >= 80;
   const isMedium = value >= 55;
 
@@ -69,7 +59,12 @@ function EvidenceChip({ text }: { text: string }) {
     iconName = 'person-outline';
   } else if (lower.includes('costume') || lower.includes('wearing') || lower.includes('suit')) {
     iconName = 'shirt-outline';
-  } else if (lower.includes('location') || lower.includes('setting') || lower.includes('city') || lower.includes('room')) {
+  } else if (
+    lower.includes('location') ||
+    lower.includes('setting') ||
+    lower.includes('city') ||
+    lower.includes('room')
+  ) {
     iconName = 'location-outline';
   } else if (lower.includes('color') || lower.includes('lighting') || lower.includes('tone')) {
     iconName = 'color-palette-outline';
@@ -78,7 +73,12 @@ function EvidenceChip({ text }: { text: string }) {
   }
 
   return (
-    <View style={[styles.evidenceChip, { backgroundColor: colors.surfaceRaised, borderColor: colors.border }]}>
+    <View
+      style={[
+        styles.evidenceChip,
+        { backgroundColor: colors.surfaceRaised, borderColor: colors.border },
+      ]}
+    >
       <Ionicons name={iconName} size={11} color={colors.brand} />
       <Text numberOfLines={2} style={[styles.evidenceChipText, { color: colors.textSecondary }]}>
         {text}
@@ -108,11 +108,7 @@ function CandidateCard({
         styles.candidateCard,
         {
           backgroundColor: colors.surface,
-          borderColor: selected
-            ? '#10B981'
-            : isTopCandidate
-              ? colors.brand
-              : colors.border,
+          borderColor: selected ? '#10B981' : isTopCandidate ? colors.brand : colors.border,
           borderWidth: isTopCandidate || selected ? 1.5 : 1,
         },
       ]}
@@ -215,7 +211,9 @@ function CandidateCard({
             )}
 
             {selected && (
-              <View style={[styles.confirmedBadge, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
+              <View
+                style={[styles.confirmedBadge, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}
+              >
                 <Ionicons color="#10B981" name="checkmark-circle" size={16} />
                 <Text style={styles.confirmedBadgeText}>Confirmed Match</Text>
               </View>
@@ -241,7 +239,6 @@ function ResultCard({
   onDelete?: (() => void) | undefined;
 }) {
   const colors = useColors();
-  const isConfirmed = result.feedback === 'CONFIRMED';
   const isRejected = result.feedback === 'REJECTED';
 
   return (
@@ -399,6 +396,7 @@ function ResultCard({
 export default function SceneIdentificationScreen() {
   const colors = useColors();
   const { session, user } = useAuth();
+  const { confirm, showError } = useDialog();
   const client = useQueryClient();
   const [asset, setAsset] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [acknowledged, setAcknowledged] = useState(false);
@@ -427,7 +425,7 @@ export default function SceneIdentificationScreen() {
       setAcknowledged(false);
       await client.invalidateQueries({ queryKey: ['scene-identifications'] });
     },
-    onError: (error) => Alert.alert('Could not identify scene', errorMessage(error)),
+    onError: (error) => showError('Could not identify scene', errorMessage(error)),
   });
 
   const feedback = useMutation({
@@ -448,7 +446,7 @@ export default function SceneIdentificationScreen() {
       setLatest((current) => (current?.id === result.id ? result : current));
       await client.invalidateQueries({ queryKey: ['scene-identifications'] });
     },
-    onError: (error) => Alert.alert('Could not update result', errorMessage(error)),
+    onError: (error) => showError('Could not update result', errorMessage(error)),
   });
 
   const remove = useMutation({
@@ -458,7 +456,7 @@ export default function SceneIdentificationScreen() {
       setLatest((current) => (current?.id === id ? null : current));
       await client.invalidateQueries({ queryKey: ['scene-identifications'] });
     },
-    onError: (error) => Alert.alert('Could not delete result', errorMessage(error)),
+    onError: (error) => showError('Could not delete result', errorMessage(error)),
   });
 
   // Dynamic status text ticker during analysis
@@ -487,14 +485,13 @@ export default function SceneIdentificationScreen() {
         ? await ImagePicker.requestCameraPermissionsAsync()
         : await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert(
-        'Photo access is off',
-        `Allow ${source === 'camera' ? 'camera' : 'photo'} access in Settings to choose a frame.`,
-        [
-          { text: 'Not now', style: 'cancel' },
-          { text: 'Open Settings', onPress: () => void Linking.openSettings() },
-        ],
-      );
+      const openSettings = await confirm({
+        title: 'Photo access is off',
+        message: `Allow ${source === 'camera' ? 'camera' : 'photo'} access in Settings to choose a frame.`,
+        confirmLabel: 'Open Settings',
+        cancelLabel: 'Not now',
+      });
+      if (openSettings) await Linking.openSettings();
       return;
     }
     const result =
@@ -510,6 +507,16 @@ export default function SceneIdentificationScreen() {
   };
 
   const busy = identify.isPending || feedback.isPending || remove.isPending;
+
+  const deleteResult = async (id: string) => {
+    const accepted = await confirm({
+      title: 'Delete scene result?',
+      message: 'This result will be permanently removed from your detection history.',
+      confirmLabel: 'Delete',
+      destructive: true,
+    });
+    if (accepted) remove.mutate(id);
+  };
 
   return (
     <FeatureGate feature="SCENE_IDENTIFICATION">
@@ -560,19 +567,27 @@ export default function SceneIdentificationScreen() {
                 </View>
               </View>
             ) : (
-              <View
-                style={[
-                  styles.previewPlaceholder,
-                  { backgroundColor: colors.surfaceRaised },
-                ]}
-              >
+              <View style={[styles.previewPlaceholder, { backgroundColor: colors.surfaceRaised }]}>
                 {/* Viewfinder Corner Reticles */}
-                <View style={[styles.reticle, styles.reticleTopLeft, { borderColor: colors.brand }]} />
-                <View style={[styles.reticle, styles.reticleTopRight, { borderColor: colors.brand }]} />
-                <View style={[styles.reticle, styles.reticleBottomLeft, { borderColor: colors.brand }]} />
-                <View style={[styles.reticle, styles.reticleBottomRight, { borderColor: colors.brand }]} />
+                <View
+                  style={[styles.reticle, styles.reticleTopLeft, { borderColor: colors.brand }]}
+                />
+                <View
+                  style={[styles.reticle, styles.reticleTopRight, { borderColor: colors.brand }]}
+                />
+                <View
+                  style={[styles.reticle, styles.reticleBottomLeft, { borderColor: colors.brand }]}
+                />
+                <View
+                  style={[styles.reticle, styles.reticleBottomRight, { borderColor: colors.brand }]}
+                />
 
-                <View style={[styles.scanIconCircle, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <View
+                  style={[
+                    styles.scanIconCircle,
+                    { backgroundColor: colors.surface, borderColor: colors.border },
+                  ]}
+                >
                   <Ionicons color={colors.brand} name="scan" size={32} />
                 </View>
 
@@ -665,7 +680,8 @@ export default function SceneIdentificationScreen() {
                 Ephemeral Private Processing
               </Text>
               <Text style={[styles.privacyBody, { color: colors.textSecondary }]}>
-                I agree to send this frame to OpenAI for recognition. Temporary cloud copies are purged immediately after analysis.
+                I agree to send this frame to OpenAI for recognition. Temporary cloud copies are
+                purged immediately after analysis.
               </Text>
             </View>
           </Pressable>
@@ -707,8 +723,10 @@ export default function SceneIdentificationScreen() {
             </View>
             <ResultCard
               busy={busy}
-              onConfirm={(mediaId) => feedback.mutate({ id: latest.id, action: 'CONFIRM', mediaId })}
-              onDelete={() => remove.mutate(latest.id)}
+              onConfirm={(mediaId) =>
+                feedback.mutate({ id: latest.id, action: 'CONFIRM', mediaId })
+              }
+              onDelete={() => void deleteResult(latest.id)}
               onReject={() => feedback.mutate({ id: latest.id, action: 'REJECT' })}
               result={latest}
             />
@@ -753,8 +771,10 @@ export default function SceneIdentificationScreen() {
               <ResultCard
                 busy={busy}
                 key={item.id}
-                onConfirm={(mediaId) => feedback.mutate({ id: item.id, action: 'CONFIRM', mediaId })}
-                onDelete={() => remove.mutate(item.id)}
+                onConfirm={(mediaId) =>
+                  feedback.mutate({ id: item.id, action: 'CONFIRM', mediaId })
+                }
+                onDelete={() => void deleteResult(item.id)}
                 onReject={() => feedback.mutate({ id: item.id, action: 'REJECT' })}
                 result={item}
               />
@@ -772,7 +792,8 @@ export default function SceneIdentificationScreen() {
                 No film stills analyzed yet
               </Text>
               <Text style={[styles.emptyHistorySubtitle, { color: colors.textSecondary }]}>
-                Snap or upload a screenshot from your favorite movie or show to test the neural recognition model.
+                Snap or upload a screenshot from your favorite movie or show to test the neural
+                recognition model.
               </Text>
             </View>
           )}

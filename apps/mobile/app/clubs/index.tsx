@@ -10,7 +10,6 @@ import { Stack, router } from 'expo-router';
 import { useDeferredValue, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -84,9 +83,7 @@ function ClubPassportCard({ club }: { club: ClubSummary }) {
               styles.memberRoleBadge,
               {
                 backgroundColor:
-                  role === 'OWNER'
-                    ? 'rgba(245, 158, 11, 0.15)'
-                    : 'rgba(16, 185, 129, 0.15)',
+                  role === 'OWNER' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(16, 185, 129, 0.15)',
               },
             ]}
           >
@@ -96,10 +93,7 @@ function ClubPassportCard({ club }: { club: ClubSummary }) {
               color={role === 'OWNER' ? '#F59E0B' : '#10B981'}
             />
             <Text
-              style={[
-                styles.memberRoleText,
-                { color: role === 'OWNER' ? '#F59E0B' : '#10B981' },
-              ]}
+              style={[styles.memberRoleText, { color: role === 'OWNER' ? '#F59E0B' : '#10B981' }]}
             >
               {role === 'OWNER' ? 'OWNER' : role === 'ADMIN' ? 'MODERATOR' : 'MEMBER'}
             </Text>
@@ -113,7 +107,8 @@ function ClubPassportCard({ club }: { club: ClubSummary }) {
           {club.name}
         </Text>
         <Text numberOfLines={2} style={[styles.cardDescription, { color: colors.textSecondary }]}>
-          {club.description || 'A cinema collective discussing films, curating watchlists, and hosting screenings.'}
+          {club.description ||
+            'A cinema collective discussing films, curating watchlists, and hosting screenings.'}
         </Text>
       </View>
 
@@ -241,7 +236,8 @@ export default function ClubsScreen() {
         </View>
 
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-          Discover film collectives, vote on group watchlists, host movie nights, and discuss cinema with fellow cinephiles.
+          Discover film collectives, vote on group watchlists, host movie nights, and discuss cinema
+          with fellow cinephiles.
         </Text>
 
         {/* Quick Metrics Bar */}
@@ -340,7 +336,8 @@ export default function ClubsScreen() {
               { color: scope === 'MINE' ? colors.onBrand : colors.textSecondary },
             ]}
           >
-            My Societies {scope === 'MINE' && metrics.totalClubs > 0 ? `(${metrics.totalClubs})` : ''}
+            My Societies{' '}
+            {scope === 'MINE' && metrics.totalClubs > 0 ? `(${metrics.totalClubs})` : ''}
           </Text>
         </Pressable>
       </View>
@@ -382,10 +379,7 @@ export default function ClubsScreen() {
 
       {/* Search Input */}
       <View
-        style={[
-          styles.searchBox,
-          { backgroundColor: colors.surface, borderColor: colors.border },
-        ]}
+        style={[styles.searchBox, { backgroundColor: colors.surface, borderColor: colors.border }]}
       >
         <Ionicons color={colors.textSecondary} name="search-outline" size={18} />
         <TextInput
@@ -426,7 +420,11 @@ export default function ClubsScreen() {
             placeholderTextColor={colors.textDisabled}
             style={[
               styles.input,
-              { color: colors.textPrimary, borderColor: colors.border, backgroundColor: colors.surfaceRaised },
+              {
+                color: colors.textPrimary,
+                borderColor: colors.border,
+                backgroundColor: colors.surfaceRaised,
+              },
             ]}
             value={name}
           />
@@ -442,13 +440,19 @@ export default function ClubsScreen() {
             style={[
               styles.input,
               styles.inputMultiline,
-              { color: colors.textPrimary, borderColor: colors.border, backgroundColor: colors.surfaceRaised },
+              {
+                color: colors.textPrimary,
+                borderColor: colors.border,
+                backgroundColor: colors.surfaceRaised,
+              },
             ]}
             value={description}
           />
 
           {/* Category Selector */}
-          <Text style={[styles.formSubtitle, { color: colors.textSecondary }]}>PRIMARY GENRE / THEME</Text>
+          <Text style={[styles.formSubtitle, { color: colors.textSecondary }]}>
+            PRIMARY GENRE / THEME
+          </Text>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -482,7 +486,9 @@ export default function ClubsScreen() {
           </ScrollView>
 
           {/* Membership Type Policy */}
-          <Text style={[styles.formSubtitle, { color: colors.textSecondary }]}>ADMISSION POLICY</Text>
+          <Text style={[styles.formSubtitle, { color: colors.textSecondary }]}>
+            ADMISSION POLICY
+          </Text>
           <View style={styles.membershipTypeRow}>
             <Pressable
               onPress={() => setMembershipType('OPEN')}
@@ -549,7 +555,10 @@ export default function ClubsScreen() {
               {
                 backgroundColor: colors.brand,
                 opacity:
-                  name.trim().length < 3 || description.trim().length === 0 || create.isPending || pressed
+                  name.trim().length < 3 ||
+                  description.trim().length === 0 ||
+                  create.isPending ||
+                  pressed
                     ? 0.65
                     : 1,
               },
@@ -568,9 +577,7 @@ export default function ClubsScreen() {
           </Pressable>
 
           {create.isError && (
-            <Text style={{ color: colors.danger, fontSize: 13 }}>
-              {errorMessage(create.error)}
-            </Text>
+            <Text style={{ color: colors.danger, fontSize: 13 }}>{errorMessage(create.error)}</Text>
           )}
         </View>
       )}

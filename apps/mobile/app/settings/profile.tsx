@@ -5,7 +5,7 @@ import * as Linking from 'expo-linking';
 import { Stack, router } from 'expo-router';
 import { randomUUID } from 'expo-crypto';
 import { useEffect, useState } from 'react';
-import { Alert, Image, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 
 import {
   ChoiceRow,
@@ -18,6 +18,7 @@ import { api } from '../../src/lib/api';
 import { errorMessage } from '../../src/lib/error-message';
 import { supabase } from '../../src/lib/supabase';
 import { useAuth } from '../../src/providers/auth-provider';
+import { useDialog } from '../../src/providers/dialog-provider';
 
 function decodeBase64(base64: string): ArrayBuffer {
   const binary = globalThis.atob(base64);
@@ -29,6 +30,7 @@ function decodeBase64(base64: string): ArrayBuffer {
 export default function ProfileSettingsScreen() {
   const colors = useColors();
   const { session, user, refreshUser } = useAuth();
+  const { confirm, showError } = useDialog();
   const [username, setUsername] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [bio, setBio] = useState('');
@@ -65,7 +67,9 @@ export default function ProfileSettingsScreen() {
       await work();
       setMessage(success);
     } catch (error) {
-      setMessage(errorMessage(error));
+      const detail = errorMessage(error);
+      setMessage(detail);
+      showError('Could not update profile', detail);
     } finally {
       setBusy(false);
     }
@@ -89,10 +93,13 @@ export default function ProfileSettingsScreen() {
     if (user === null) return;
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Photo access is off', 'Allow photo access in Settings to change your avatar.', [
-        { text: 'Not now', style: 'cancel' },
-        { text: 'Open Settings', onPress: () => void Linking.openSettings() },
-      ]);
+      const openSettings = await confirm({
+        title: 'Photo access is off',
+        message: 'Allow photo access in Settings to change your avatar.',
+        confirmLabel: 'Open Settings',
+        cancelLabel: 'Not now',
+      });
+      if (openSettings) await Linking.openSettings();
       return;
     }
     const picked = await ImagePicker.launchImageLibraryAsync({

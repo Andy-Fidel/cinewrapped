@@ -1,4 +1,6 @@
 import type {
+  ActivityHeatmapDay,
+  ActivityHeatmapSummary,
   MonthlyWatchCount,
   RankedStatistic,
   StatisticsSummary,
@@ -39,10 +41,17 @@ function localParts(date: Date, timezone: string) {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
+    hour: '2-digit',
+    hourCycle: 'h23',
   }).formatToParts(date);
-  const value = (type: 'year' | 'month' | 'day') =>
-    Number(parts.find((part) => part.type === type)?.value);
-  return { year: value('year'), month: value('month'), day: value('day') };
+  const value = (type: 'year' | 'month' | 'day' | 'hour') =>
+    Number(parts.find((part) => part.type === type)?.value ?? 0);
+  return {
+    year: value('year'),
+    month: value('month'),
+    day: value('day'),
+    hour: value('hour'),
+  };
 }
 
 function zonedMidnight(year: number, month: number, day: number, timezone: string): Date {
@@ -110,6 +119,33 @@ function longestStreak(viewings: ViewingRecord[], timezone: string): number {
   return longest;
 }
 
+function currentStreakCalc(viewings: ViewingRecord[], timezone: string, now = new Date()): number {
+  const activeDaysSet = new Set(viewings.map((v) => dateKey(v.watchedAt, timezone)));
+  const todayKey = dateKey(now, timezone);
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayKey = dateKey(yesterday, timezone);
+
+  let checkDate: Date | null = activeDaysSet.has(todayKey)
+    ? new Date(now)
+    : activeDaysSet.has(yesterdayKey)
+      ? yesterday
+      : null;
+  if (checkDate === null) return 0;
+
+  let streak = 0;
+  while (true) {
+    const key = dateKey(checkDate, timezone);
+    if (activeDaysSet.has(key)) {
+      streak += 1;
+      checkDate.setDate(checkDate.getDate() - 1);
+    } else {
+      break;
+    }
+  }
+  return streak;
+}
+
 function wrapCursor(cursor: string | undefined): { periodEnd: Date; id: string } | null {
   if (cursor === undefined) return null;
   try {
@@ -169,6 +205,173 @@ export class InsightsService {
         minutesWatched: rows.reduce((total, row) => total + this.minutes(row), 0),
       };
     });
+  }
+
+  public async activityHeatmap(
+    principal: AuthPrincipal,
+    year: number,
+    timezone: string,
+  ): Promise<ActivityHeatmapSummary> {
+    const user = await this.requireUser(principal.subject);
+    validateTimezone(timezone);
+    const periodStart = zonedMidnight(year, 1, 1, timezone);
+    const periodEnd = zonedMidnight(year + 1, 1, 1, timezone);
+
+    const allViewings = await this.prisma.viewing.findMany({
+      where: { userId: user.id, deletedAt: null },
+      include: { media: { include: { genres: { include: { genre: true } } } } },
+      orderBy: { watchedAt: 'desc' },
+    });
+
+    const yearViewings = allViewings.filter(
+      (v) => v.watchedAt >= periodStart && v.watchedAt < periodEnd,
+    );
+
+    const viewingsByDay = new Map<string, ViewingRecord[]>();
+    for (const v of yearViewings) {
+      const key = dateKey(v.watchedAt, timezone);
+      const list = viewingsByDay.get(key) ?? [];
+      list.push(v);
+      viewingsByDay.set(key, list);
+    }
+
+    const days: ActivityHeatmapDay[] = [];
+    const isLeap = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+    const totalDaysInYear = isLeap ? 366 : 365;
+
+    const weekdayCounts = [0, 0, 0, 0, 0, 0, 0]; // 0=Sun, 1=Mon, ..., 6=Sat
+
+    const d = new Date(Date.UTC(year, 0, 1));
+    for (let i = 0; i < totalDaysInYear; i++) {
+      const currentMonth = d.getUTCMonth() + 1;
+      const currentDay = d.getUTCDate();
+      const key = `${year}-${String(currentMonth).padStart(2, '0')}-${String(currentDay).padStart(2, '0')}`;
+      const dayViewings = viewingsByDay.get(key) ?? [];
+      const count = dayViewings.length;
+      const minutesWatched = dayViewings.reduce((sum, v) => sum + this.minutes(v), 0);
+
+      let intensity: 0 | 1 | 2 | 3 | 4 = 0;
+      if (count >= 4) intensity = 4;
+      else if (count === 3) intensity = 3;
+      else if (count === 2) intensity = 2;
+      else if (count === 1) intensity = 1;
+
+      const weekday = d.getUTCDay();
+      weekdayCounts[weekday] = (weekdayCounts[weekday] ?? 0) + count;
+
+      days.push({
+        date: key,
+        count,
+        minutesWatched,
+        intensity,
+        viewings: dayViewings.map((v) => ({
+          id: v.id,
+          mediaId: v.mediaId,
+          title: v.media.title,
+          posterUrl: v.media.posterUrl,
+          watchedAt: v.watchedAt.toISOString(),
+          mediaType: v.media.mediaType,
+        })),
+      });
+
+      d.setUTCDate(d.getUTCDate() + 1);
+    }
+
+    const weekdayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const weekdayFullNames = [
+      'Sunday',
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+    ];
+    const totalYearCount = yearViewings.length;
+
+    const weekdayDistribution = [1, 2, 3, 4, 5, 6, 0].map((idx) => {
+      const count = weekdayCounts[idx] ?? 0;
+      return {
+        day: weekdayNames[idx] ?? 'Mon',
+        fullDay: weekdayFullNames[idx] ?? 'Monday',
+        count,
+        percent: totalYearCount > 0 ? Math.round((count / totalYearCount) * 100) : 0,
+      };
+    });
+
+    const maxWeekdayIndex = weekdayCounts.reduce(
+      (bestIdx, count, idx, arr) => (count > (arr[bestIdx] ?? 0) ? idx : bestIdx),
+      5,
+    );
+
+    const activeDaysCount = viewingsByDay.size;
+    const currentStreakDays = currentStreakCalc(allViewings, timezone);
+    const longestStreakDays = longestStreak(allViewings, timezone);
+    const totalMinutesWatched = yearViewings.reduce((sum, v) => sum + this.minutes(v), 0);
+
+    // Circadian Rhythm
+    const hourlyCounts: number[] = Array<number>(24).fill(0);
+    let morningCount = 0;
+    let afternoonCount = 0;
+    let eveningCount = 0;
+    let nightCount = 0;
+
+    for (const v of yearViewings) {
+      const { hour } = localParts(v.watchedAt, timezone);
+      hourlyCounts[hour] = (hourlyCounts[hour] ?? 0) + 1;
+      if (hour >= 6 && hour < 12) morningCount += 1;
+      else if (hour >= 12 && hour < 18) afternoonCount += 1;
+      else if (hour >= 18 && hour < 23) eveningCount += 1;
+      else nightCount += 1;
+    }
+
+    const peakHour = hourlyCounts.reduce(
+      (bestHour, count, hour, arr) => (count > (arr[bestHour] ?? 0) ? hour : bestHour),
+      20,
+    );
+
+    const formatHourLabel = (h: number) => {
+      const period = h >= 12 ? 'PM' : 'AM';
+      const formatted = h % 12 === 0 ? 12 : h % 12;
+      return `${formatted}:00 ${period}`;
+    };
+
+    let persona = 'Prime Evening Cinephile';
+    const maxBucket = Math.max(morningCount, afternoonCount, eveningCount, nightCount);
+    if (maxBucket === nightCount && nightCount > 0) persona = 'Midnight Club Auteur';
+    else if (maxBucket === afternoonCount && afternoonCount > 0) persona = 'Afternoon Matinee Buff';
+    else if (maxBucket === morningCount && morningCount > 0) persona = 'Early Bird Cinephile';
+
+    const circadianRhythm = {
+      persona,
+      peakHourLabel: formatHourLabel(peakHour),
+      morningPercent: totalYearCount > 0 ? Math.round((morningCount / totalYearCount) * 100) : 0,
+      afternoonPercent:
+        totalYearCount > 0 ? Math.round((afternoonCount / totalYearCount) * 100) : 0,
+      eveningPercent: totalYearCount > 0 ? Math.round((eveningCount / totalYearCount) * 100) : 0,
+      nightPercent: totalYearCount > 0 ? Math.round((nightCount / totalYearCount) * 100) : 0,
+    };
+
+    return {
+      year,
+      totalViewings: yearViewings.length,
+      totalMinutesWatched,
+      activeDaysCount,
+      currentStreakDays,
+      longestStreakDays,
+      mostActiveWeekday: {
+        name: weekdayFullNames[maxWeekdayIndex] ?? 'Friday',
+        index: maxWeekdayIndex,
+        count: weekdayCounts[maxWeekdayIndex] ?? 0,
+        percent:
+          totalYearCount > 0
+            ? Math.round(((weekdayCounts[maxWeekdayIndex] ?? 0) / totalYearCount) * 100)
+            : 0,
+      },
+      weekdayDistribution,
+      circadianRhythm,
+      days,
+    };
   }
 
   public async taste(principal: AuthPrincipal, period: Period): Promise<TasteStatistics> {
@@ -357,7 +560,7 @@ export class InsightsService {
       });
     }
     const current = localParts(new Date(), timezone);
-    let startDate = current;
+    let startDate: { year: number; month: number; day: number } = current;
     let endDate: { year: number; month: number; day: number };
     if (type === 'WEEKLY') {
       const weekday = new Date(Date.UTC(current.year, current.month - 1, current.day)).getUTCDay();

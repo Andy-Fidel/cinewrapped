@@ -13,6 +13,7 @@ import {
   countryCodeSchema,
   normalizeUsername,
   recommendationFeedbackSchema,
+  unifiedSearchSchema,
   intelligentDiscoverySchema,
   identifySceneSchema,
   reviewAssistantSchema,
@@ -153,6 +154,29 @@ describe('shared validation', () => {
 
   it('rejects unknown recommendation feedback actions', () => {
     expect(() => recommendationFeedbackSchema.parse({ feedbackType: 'HIDE_FOREVER' })).toThrow();
+  });
+
+  it('parses advanced search filters and rejects an inverted runtime range', () => {
+    expect(
+      unifiedSearchSchema.parse({
+        q: 'arrival',
+        categories: 'MEDIA,PERSON',
+        mediaType: 'MOVIE',
+        decade: '2010',
+        minimumRating: '7.5',
+        friendsWatched: 'true',
+        unwatchedOnly: 'false',
+      }),
+    ).toMatchObject({
+      categories: ['MEDIA', 'PERSON'],
+      decade: 2010,
+      minimumRating: 7.5,
+      friendsWatched: true,
+      unwatchedOnly: false,
+    });
+    expect(() => unifiedSearchSchema.parse({ runtimeMinimum: 180, runtimeMaximum: 90 })).toThrow(
+      /Minimum runtime/u,
+    );
   });
 
   it('requires a valid member ID for friend requests', () => {

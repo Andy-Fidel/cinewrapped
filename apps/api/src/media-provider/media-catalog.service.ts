@@ -4,6 +4,7 @@ import type {
   GenreSummary,
   MediaDetails,
   MediaSummary,
+  SearchPersonSummary,
   StreamingAvailability,
   StreamingProviderSummary,
 } from '@cinewrapped/shared-types';
@@ -136,6 +137,42 @@ export class MediaCatalogService {
           filters.genreIds.every((genreId) => item.genreIds.includes(genreId)),
       )
       .slice(0, filters.limit);
+  }
+
+  public async searchPeople(
+    query: string,
+    language: string,
+    limit: number,
+  ): Promise<SearchPersonSummary[]> {
+    const people = await this.provider.searchPeople(query, language, 1);
+    return Promise.all(
+      people.slice(0, limit).map(async (person) => {
+        const [record, knownFor] = await Promise.all([
+          this.prisma.person.upsert({
+            where: {
+              externalProvider_externalId: {
+                externalProvider: 'TMDB',
+                externalId: person.externalId,
+              },
+            },
+            create: {
+              externalProvider: 'TMDB',
+              externalId: person.externalId,
+              name: person.name,
+              profileUrl: person.profileUrl,
+              lastSyncedAt: new Date(),
+            },
+            update: {
+              name: person.name,
+              profileUrl: person.profileUrl,
+              lastSyncedAt: new Date(),
+            },
+          }),
+          this.persistSummaries(person.knownFor),
+        ]);
+        return { id: record.id, name: record.name, profileUrl: record.profileUrl, knownFor };
+      }),
+    );
   }
 
   public async trending(

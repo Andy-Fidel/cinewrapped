@@ -11,13 +11,14 @@ import { randomUUID } from 'expo-crypto';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { BrandHeader, Button, ErrorText, Field, Screen, useColors } from '../../src/components/ui';
 import { api } from '../../src/lib/api';
 import { errorMessage } from '../../src/lib/error-message';
 import { supabase } from '../../src/lib/supabase';
 import { useAuth } from '../../src/providers/auth-provider';
+import { useDialog } from '../../src/providers/dialog-provider';
 import { useOnboardingStore } from '../../src/stores/onboarding-store';
 
 const steps = [
@@ -122,6 +123,7 @@ function decodeBase64(base64: string): ArrayBuffer {
 export default function OnboardingScreen() {
   const colors = useColors();
   const { user, refreshUser } = useAuth();
+  const { confirm, showError } = useDialog();
   const draft = useOnboardingStore();
   const [search, setSearch] = useState('');
   const [results, setResults] = useState<MediaSummary[]>([]);
@@ -235,7 +237,7 @@ export default function OnboardingScreen() {
     } catch (error) {
       const detail = errorMessage(error);
       setMessage(detail);
-      Alert.alert('Could not continue', detail);
+      showError('Could not continue', detail);
     } finally {
       setBusy(false);
     }
@@ -248,10 +250,13 @@ export default function OnboardingScreen() {
       const detail =
         'Allow photo access in Settings to choose an avatar. You can also continue without one.';
       setMessage(detail);
-      Alert.alert('Photo access is off', detail, [
-        { text: 'Not now', style: 'cancel' },
-        { text: 'Open Settings', onPress: () => void Linking.openSettings() },
-      ]);
+      const openSettings = await confirm({
+        title: 'Photo access is off',
+        message: detail,
+        confirmLabel: 'Open Settings',
+        cancelLabel: 'Not now',
+      });
+      if (openSettings) await Linking.openSettings();
       return;
     }
     setMessage(null);
@@ -283,7 +288,7 @@ export default function OnboardingScreen() {
     } catch (error) {
       const detail = errorMessage(error);
       setMessage(detail);
-      Alert.alert('Avatar upload failed', `${detail}\n\nYou can continue without an avatar.`);
+      showError('Avatar upload failed', `${detail}\n\nYou can continue without an avatar.`);
     } finally {
       setBusy(false);
     }

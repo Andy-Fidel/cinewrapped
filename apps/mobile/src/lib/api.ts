@@ -1,5 +1,6 @@
 import { ApiClient } from '@cinewrapped/api-client';
 
+import { withNetworkRetry } from './network-fetch';
 import { supabase } from './supabase';
 
 const apiBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL;
@@ -12,6 +13,7 @@ if (apiBaseUrl === undefined) {
 
 export const api = new ApiClient({
   baseUrl: apiBaseUrl,
+  fetchImplementation: withNetworkRetry(fetch),
   accessTokenProvider: {
     getAccessToken: async () =>
       (await supabase.auth.getSession()).data.session?.access_token ?? null,

@@ -158,6 +158,62 @@ export interface MediaSummary {
   averageProviderRating: number | null;
 }
 
+export type SearchSuggestionCategory = 'RECENT' | 'MEDIA' | 'USER' | 'PERSON' | 'LIST' | 'CLUB';
+
+export interface SearchSuggestion {
+  text: string;
+  category: SearchSuggestionCategory;
+}
+
+export interface SearchPersonSummary {
+  id: string;
+  name: string;
+  profileUrl: string | null;
+  knownFor: MediaSummary[];
+}
+
+export interface SearchListSummary {
+  id: string;
+  name: string;
+  description: string | null;
+  visibility: 'PUBLIC' | 'FRIENDS' | 'PRIVATE' | 'CLUB_ONLY';
+  itemCount: number;
+  owner: UserSummary;
+  updatedAt: string;
+}
+
+export interface SearchListDetails extends SearchListSummary {
+  items: Array<{
+    id: string;
+    position: number;
+    note: string | null;
+    createdAt: string;
+    media: MediaSummary;
+  }>;
+}
+
+export interface SearchResults {
+  media: MediaSummary[];
+  users: UserSummary[];
+  people: SearchPersonSummary[];
+  lists: SearchListSummary[];
+  clubs: ClubSummary[];
+  totalCount: number;
+}
+
+export interface SearchHistoryItem {
+  id: string;
+  query: string;
+  resultCount: number;
+  searchCount: number;
+  lastSearchedAt: string;
+}
+
+export interface TrendingSearch {
+  query: string;
+  searchCount: number;
+}
+
 export interface CreditSummary {
   id: string;
   personId: string;
@@ -235,6 +291,27 @@ export interface ReviewSummary {
   version: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface PublicReviewItem {
+  id: string;
+  mediaId: string;
+  title: string | null;
+  body: string;
+  containsSpoilers: boolean;
+  likeCount: number;
+  commentCount: number;
+  publishedAt: string | null;
+  createdAt: string;
+  ratingValue: number | null;
+  user: {
+    id: string;
+    handle: string;
+    displayName: string;
+    avatarUrl: string | null;
+  };
+  vibeTags?: string[];
+  quote?: string | null;
 }
 
 export interface LibraryItem {
@@ -546,6 +623,51 @@ export interface MonthlyWatchCount {
   viewingCount: number;
   uniqueTitles: number;
   minutesWatched: number;
+}
+
+export interface ActivityHeatmapDay {
+  date: string;
+  count: number;
+  minutesWatched: number;
+  intensity: 0 | 1 | 2 | 3 | 4;
+  viewings: Array<{
+    id: string;
+    mediaId: string;
+    title: string;
+    posterUrl: string | null;
+    watchedAt: string;
+    mediaType: 'MOVIE' | 'TV';
+  }>;
+}
+
+export interface ActivityHeatmapSummary {
+  year: number;
+  totalViewings: number;
+  totalMinutesWatched: number;
+  activeDaysCount: number;
+  currentStreakDays: number;
+  longestStreakDays: number;
+  mostActiveWeekday: {
+    name: string;
+    index: number;
+    count: number;
+    percent: number;
+  };
+  weekdayDistribution: Array<{
+    day: string;
+    fullDay: string;
+    count: number;
+    percent: number;
+  }>;
+  circadianRhythm: {
+    persona: string;
+    peakHourLabel: string;
+    morningPercent: number;
+    afternoonPercent: number;
+    eveningPercent: number;
+    nightPercent: number;
+  };
+  days: ActivityHeatmapDay[];
 }
 
 export interface TasteStatistics extends StatisticsPeriod {

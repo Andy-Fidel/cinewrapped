@@ -1,4 +1,9 @@
-import type { CalendarEventSummary, CalendarEventType } from '@cinewrapped/shared-types';
+import type {
+  ActivityHeatmapDay,
+  ActivityHeatmapSummary,
+  CalendarEventSummary,
+  CalendarEventType,
+} from '@cinewrapped/shared-types';
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { File, Paths } from 'expo-file-system';
@@ -12,19 +17,25 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
 
+import { AnnualHeatmap } from '../../src/components/annual-heatmap';
 import { FeatureGate } from '../../src/components/feature-gate';
-import { Screen, useColors } from '../../src/components/ui';
+import { MonthlyViewingCalendar } from '../../src/components/monthly-viewing-calendar';
+import { PosterImage, Screen, useColors } from '../../src/components/ui';
 import { api } from '../../src/lib/api';
 import { nextClockTime, nextWeekdayTime } from '../../src/lib/calendar-dates';
 import { errorMessage } from '../../src/lib/error-message';
+import { haptics } from '../../src/lib/haptics';
 import { useAuth } from '../../src/providers/auth-provider';
+import { useDialog } from '../../src/providers/dialog-provider';
 
+type CalendarMode = 'HISTORY' | 'PLANNER';
 type FilterType = 'ALL' | 'WATCH_PLAN' | 'RELEASE_REMINDER';
 
 interface QuickDateOption {
@@ -115,11 +126,23 @@ export default function CalendarScreen() {
   const colors = useColors();
   const queryClient = useQueryClient();
   const { session, user } = useAuth();
+  const { confirm, showError } = useDialog();
   const params = useLocalSearchParams<{
     eventType?: CalendarEventType;
     mediaId?: string;
     title?: string;
+    mode?: CalendarMode;
   }>();
+
+  // Mode switcher
+  const [mode, setMode] = useState<CalendarMode>(params.title || params.mediaId ? 'PLANNER' : 'HISTORY');
+
+  // Heatmap & Viewing History states
+  const currentYear = new Date().getFullYear();
+  const [selectedYear, setSelectedYear] = useState<number>(currentYear);
+  const [selectedDayKey, setSelectedDayKey] = useState<string | null>(null);
+  const [selectedDayActivity, setSelectedDayActivity] = useState<ActivityHeatmapDay | null>(null);
+  const [annualGoal, setAnnualGoal] = useState<number>(100);
 
   // Form states
   const [isPlanningOpen, setIsPlanningOpen] = useState(Boolean(params.title || params.mediaId));
@@ -130,17 +153,16 @@ export default function CalendarScreen() {
   const [eventType, setEventType] = useState<CalendarEventType>(
     params.eventType === 'RELEASE_REMINDER' ? 'RELEASE_REMINDER' : 'WATCH_PLAN',
   );
-  const [reminderOption, setReminderOption] = useState<number>(60); // 60 mins before
+  const [reminderOption, setReminderOption] = useState<number>(60);
   const [exportingId, setExportingId] = useState<string | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
 
   // Filtering states
   const [activeFilter, setActiveFilter] = useState<FilterType>('ALL');
-  const [selectedDayKey, setSelectedDayKey] = useState<string | null>(null);
 
   const quickDates = useMemo(() => getQuickDateOptions(), []);
 
-  // 1-year window query
+  // 1-year window query for planner
   const range = useMemo(() => {
     const from = new Date();
     from.setDate(from.getDate() - 1);
@@ -154,6 +176,17 @@ export default function CalendarScreen() {
     queryFn: () =>
       api.request<CalendarEventSummary[]>(
         `calendar?from=${encodeURIComponent(range.from)}&to=${encodeURIComponent(range.to)}`,
+      ),
+    enabled: session !== null,
+  });
+
+  // Query Heatmap Data
+  const userTimezone = user?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  const heatmap = useQuery({
+    queryKey: ['statistics', 'heatmap', selectedYear, userTimezone],
+    queryFn: () =>
+      api.request<ActivityHeatmapSummary>(
+        `statistics/heatmap?year=${selectedYear}&timezone=${encodeURIComponent(userTimezone)}`,
       ),
     enabled: session !== null,
   });
@@ -177,67 +210,53 @@ export default function CalendarScreen() {
       });
     },
     onSuccess: async () => {
+      haptics.clapperSnap();
       setTitle('');
       setNotes('');
       setLinkedMediaId(null);
       setIsPlanningOpen(false);
       await queryClient.invalidateQueries({ queryKey: ['calendar'] });
     },
+    onError: (error) => showError('Could not schedule event', errorMessage(error)),
   });
 
   const remove = useMutation({
-    mutationFn: (id: string) => api.request<{ id: string }>(`calendar/${id}`, { method: 'DELETE' }),
+    mutationFn: (id: string) => {
+      haptics.selection();
+      return api.request<{ id: string }>(`calendar/${id}`, { method: 'DELETE' });
+    },
     onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['calendar'] }),
+    onError: (error) => showError('Could not remove event', errorMessage(error)),
   });
 
-  // Calculate statistics
-  const stats = useMemo(() => {
-    const list = events.data ?? [];
-    const watchPlans = list.filter((e) => e.eventType === 'WATCH_PLAN').length;
-    const reminders = list.filter((e) => e.eventType === 'RELEASE_REMINDER').length;
-    const totalMinutes = list.reduce((acc, curr) => acc + (curr.durationMinutes || 120), 0);
-    return {
-      watchPlans,
-      reminders,
-      totalHours: (totalMinutes / 60).toFixed(1),
-    };
-  }, [events.data]);
+  // Export event to standard .ics file
+  const handleExportIcs = async (event: CalendarEventSummary) => {
+    try {
+      haptics.selection();
+      setExportingId(event.id);
+      setExportError(null);
+      const icsData = await api.requestText(`calendar/${event.id}/ics`);
 
-  // Rolling 14-day horizon for top calendar strip
-  const horizonDays = useMemo(() => {
-    const list: { key: string; dayName: string; dayNum: number; date: Date }[] = [];
-    const today = new Date();
-    for (let i = 0; i < 14; i++) {
-      const d = new Date(today);
-      d.setDate(today.getDate() + i);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
-        d.getDate(),
-      ).padStart(2, '0')}`;
-      list.push({
-        key,
-        dayName: i === 0 ? 'TODAY' : d.toLocaleDateString([], { weekday: 'short' }).toUpperCase(),
-        dayNum: d.getDate(),
-        date: d,
-      });
-    }
-    return list;
-  }, []);
+      const filename = `cinewrapped-${event.id.slice(0, 8)}.ics`;
+      const file = new File(Paths.cache, filename);
+      file.create();
+      file.write(icsData);
 
-  // Map of events by day key for indicator dots
-  const eventsByDayKey = useMemo(() => {
-    const map = new Map<string, { hasWatchPlan: boolean; hasReminder: boolean }>();
-    for (const event of events.data ?? []) {
-      const d = new Date(event.startsAt);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
-        d.getDate(),
-      ).padStart(2, '0')}`;
-      const entry = map.get(key) ?? { hasWatchPlan: false, hasReminder: false };
-      if (event.eventType === 'WATCH_PLAN') entry.hasWatchPlan = true;
-      if (event.eventType === 'RELEASE_REMINDER') entry.hasReminder = true;
-      map.set(key, entry);
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(file.uri, {
+          mimeType: 'text/calendar',
+          dialogTitle: `Export ${event.title}`,
+          UTI: 'com.apple.ical.ics',
+        });
+      } else {
+        await Linking.openURL(`data:text/calendar;charset=utf8,${encodeURIComponent(icsData)}`);
+      }
+    } catch (err) {
+      setExportError(errorMessage(err));
+    } finally {
+      setExportingId(null);
     }
-    return map;
-  }, [events.data]);
+  };
 
   // Filtered event list
   const filteredEvents = useMemo(() => {
@@ -245,855 +264,1013 @@ export default function CalendarScreen() {
     if (activeFilter !== 'ALL') {
       list = list.filter((e) => e.eventType === activeFilter);
     }
-    if (selectedDayKey !== null) {
-      list = list.filter((e) => {
-        const d = new Date(e.startsAt);
-        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
-          d.getDate(),
-        ).padStart(2, '0')}`;
-        return key === selectedDayKey;
-      });
-    }
     return list;
-  }, [events.data, activeFilter, selectedDayKey]);
+  }, [events.data, activeFilter]);
 
-  const handleExportIcs = async (event: CalendarEventSummary) => {
-    setExportingId(event.id);
-    setExportError(null);
-    try {
-      const contents = await api.requestText(`calendar/${event.id}.ics`);
-      const safeTitle = event.title.replace(/[^a-z0-9]+/giu, '-').replace(/^-|-$/gu, '') || 'event';
-      if (Platform.OS === 'web') {
-        await Linking.openURL(`data:text/calendar;charset=utf-8,${encodeURIComponent(contents)}`);
-        return;
-      }
-      if (!(await Sharing.isAvailableAsync())) throw new Error('File sharing is unavailable.');
-      const file = new File(Paths.cache, `cinewrapped-${safeTitle}.ics`);
-      file.write(contents);
-      await Sharing.shareAsync(file.uri, {
-        dialogTitle: `Export ${event.title}`,
-        mimeType: 'text/calendar',
-        UTI: 'public.calendar-event',
-      });
-    } catch (error) {
-      setExportError(errorMessage(error));
-    } finally {
-      setExportingId(null);
-    }
+  // Annual Pace Calculation
+  const paceStats = useMemo(() => {
+    const totalViewings = heatmap.data?.totalViewings ?? 0;
+    const now = new Date();
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+    const dayOfYear = Math.max(1, Math.floor((now.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24)));
+    const totalDays = ((now.getFullYear() % 4 === 0 && now.getFullYear() % 100 !== 0) || now.getFullYear() % 400 === 0) ? 366 : 365;
+
+    const projectedTotal = Math.round((totalViewings / dayOfYear) * totalDays);
+    const delta = projectedTotal - annualGoal;
+    const progressPercent = Math.min(100, Math.round((totalViewings / annualGoal) * 100));
+
+    return {
+      projectedTotal,
+      delta,
+      progressPercent,
+      isOnPace: delta >= 0,
+    };
+  }, [heatmap.data?.totalViewings, annualGoal]);
+
+  const handleShareYearPixels = async () => {
+    if (!heatmap.data) return;
+    haptics.selection();
+    const data = heatmap.data;
+    await Share.share({
+      message: `🎬 My ${data.year} Cinema Year in Pixels on CineWrapped!\n\n🍿 ${data.totalViewings} Movies & Episodes watched\n🔥 ${data.currentStreakDays}-day streak (Longest: ${data.longestStreakDays}d)\n👑 Peak Night: ${data.mostActiveWeekday.name}\n🌙 Persona: ${data.circadianRhythm.persona}\n\nTrack your cinema journey on CineWrapped!`,
+    });
   };
 
   if (session === null) return <Redirect href="/(auth)/login" />;
 
+  const heatmapData = heatmap.data;
+
   return (
-    <Screen>
-      <Stack.Screen
-        options={{
-          headerShown: true,
-          title: 'Schedule & Reminders',
-          headerStyle: { backgroundColor: colors.background },
-          headerTintColor: colors.textPrimary,
-        }}
-      />
-      <FeatureGate feature="CALENDAR_INTEGRATION">
-        {/* Cinema Hero Glance Header */}
-        <View style={styles.header}>
-          <View style={styles.headerTop}>
-            <View>
-              <Text style={[styles.eyebrow, { color: colors.brand }]}>CINEWRAPPED TIMELINE</Text>
-              <Text
-                accessibilityRole="header"
-                style={[styles.title, { color: colors.textPrimary }]}
-              >
-                Cinema Schedule
-              </Text>
-            </View>
+    <FeatureGate feature="CALENDAR_INTEGRATION">
+      <Screen>
+        <Stack.Screen
+          options={{
+            headerShown: true,
+            title: 'Calendar & Heatmap',
+            headerStyle: { backgroundColor: colors.background },
+            headerTintColor: colors.textPrimary,
+            headerRight: () =>
+              mode === 'HISTORY' && heatmapData ? (
+                <Pressable
+                  accessibilityLabel="Share Year in Pixels"
+                  accessibilityRole="button"
+                  onPress={() => void handleShareYearPixels()}
+                  style={{ marginRight: 8 }}
+                >
+                  <Ionicons name="share-outline" size={22} color={colors.textPrimary} />
+                </Pressable>
+              ) : null,
+          }}
+        />
+
+        {/* Mode Switcher Tabs */}
+        <View style={[styles.modeSwitcher, { backgroundColor: colors.surfaceRaised, borderColor: colors.border }]}>
+          <Pressable
+            accessibilityRole="tab"
+            onPress={() => {
+              haptics.selection();
+              setMode('HISTORY');
+            }}
+            style={[
+              styles.modeTab,
+              mode === 'HISTORY' && { backgroundColor: colors.surface, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 4 },
+            ]}
+          >
+            <Ionicons
+              name="calendar"
+              size={16}
+              color={mode === 'HISTORY' ? '#10B981' : colors.textSecondary}
+            />
+            <Text
+              style={[
+                styles.modeTabText,
+                { color: mode === 'HISTORY' ? colors.textPrimary : colors.textSecondary, fontWeight: mode === 'HISTORY' ? '800' : '600' },
+              ]}
+            >
+              Viewing History
+            </Text>
+          </Pressable>
+
+          <Pressable
+            accessibilityRole="tab"
+            onPress={() => {
+              haptics.selection();
+              setMode('PLANNER');
+            }}
+            style={[
+              styles.modeTab,
+              mode === 'PLANNER' && { backgroundColor: colors.surface, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 4 },
+            ]}
+          >
+            <Ionicons
+              name="time-outline"
+              size={16}
+              color={mode === 'PLANNER' ? colors.brand : colors.textSecondary}
+            />
+            <Text
+              style={[
+                styles.modeTabText,
+                { color: mode === 'PLANNER' ? colors.textPrimary : colors.textSecondary, fontWeight: mode === 'PLANNER' ? '800' : '600' },
+              ]}
+            >
+              Watch Planner
+            </Text>
+          </Pressable>
+        </View>
+
+        {/* ---------------- MODE 1: VIEWING HISTORY & HEATMAP ---------------- */}
+        {mode === 'HISTORY' ? (
+          <View style={styles.historyContainer}>
+            {heatmap.isPending ? (
+              <View style={styles.centerBox}>
+                <ActivityIndicator color="#10B981" />
+                <Text style={{ color: colors.textSecondary, marginTop: 8 }}>
+                  Loading viewing history…
+                </Text>
+              </View>
+            ) : heatmapData ? (
+              <>
+                {/* Streaks & Activity Stats Banner */}
+                <View style={styles.statsGrid}>
+                  <View style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                    <View style={[styles.statIconBox, { backgroundColor: 'rgba(239, 68, 68, 0.15)' }]}>
+                      <Ionicons name="flame" size={20} color="#EF4444" />
+                    </View>
+                    <Text style={[styles.statValue, { color: colors.textPrimary }]}>
+                      {heatmapData.currentStreakDays}d
+                    </Text>
+                    <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+                      CURRENT STREAK
+                    </Text>
+                  </View>
+
+                  <View style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                    <View style={[styles.statIconBox, { backgroundColor: 'rgba(245, 158, 11, 0.15)' }]}>
+                      <Ionicons name="flash" size={20} color="#F59E0B" />
+                    </View>
+                    <Text style={[styles.statValue, { color: colors.textPrimary }]}>
+                      {heatmapData.longestStreakDays}d
+                    </Text>
+                    <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+                      LONGEST STREAK
+                    </Text>
+                  </View>
+
+                  <View style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                    <View style={[styles.statIconBox, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
+                      <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+                    </View>
+                    <Text style={[styles.statValue, { color: colors.textPrimary }]}>
+                      {heatmapData.activeDaysCount}
+                    </Text>
+                    <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+                      ACTIVE DAYS
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Annual Pace & Goal Tracker Card */}
+                <View style={[styles.goalCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <View style={styles.goalHeaderRow}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <Ionicons name="trophy" size={18} color="#F59E0B" />
+                      <Text style={[styles.goalTitle, { color: colors.textPrimary }]}>
+                        {selectedYear} Cinema Pace & Goal
+                      </Text>
+                    </View>
+                    <View style={[styles.goalPaceBadge, { backgroundColor: paceStats.isOnPace ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)' }]}>
+                      <Text style={{ color: paceStats.isOnPace ? '#10B981' : '#F59E0B', fontSize: 11, fontWeight: '800' }}>
+                        {paceStats.isOnPace ? `🔥 +${paceStats.delta} Ahead of Pace` : `🎯 ${Math.abs(paceStats.delta)} to Catch Pace`}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.goalProgressRow}>
+                    <View style={[styles.goalTrack, { backgroundColor: colors.surfaceRaised }]}>
+                      <View style={[styles.goalFill, { width: `${paceStats.progressPercent}%`, backgroundColor: colors.brand }]} />
+                    </View>
+                    <Text style={[styles.goalProgressText, { color: colors.textPrimary }]}>
+                      {heatmapData.totalViewings} / {annualGoal}
+                    </Text>
+                  </View>
+                  <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
+                    On pace to finish with <Text style={{ fontWeight: '800', color: colors.textPrimary }}>{paceStats.projectedTotal} films</Text> by December 31.
+                  </Text>
+                </View>
+
+                {/* GitHub-style Annual Heatmap with Chromatic Palettes */}
+                <AnnualHeatmap
+                  data={heatmapData}
+                  onSelectDate={(day) => {
+                    setSelectedDayKey(day.date);
+                    setSelectedDayActivity(day);
+                  }}
+                  selectedDate={selectedDayKey}
+                />
+
+                {/* Circadian Cinema Clock (24-Hour Viewing Rhythm) */}
+                <View style={[styles.circadianCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <View style={styles.circadianHeader}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <Ionicons name="time" size={18} color="#8B5CF6" />
+                      <Text style={[styles.circadianTitle, { color: colors.textPrimary }]}>
+                        Circadian Cinema Clock
+                      </Text>
+                    </View>
+                    <View style={[styles.personaBadge, { backgroundColor: 'rgba(139, 92, 246, 0.15)' }]}>
+                      <Text style={styles.personaBadgeText}>
+                        🎭 {heatmapData.circadianRhythm.persona}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* 4 Quadrants Time-of-Day Bar */}
+                  <View style={styles.quadrantBarsWrap}>
+                    <View style={[styles.quadrantTrack, { backgroundColor: colors.surfaceRaised }]}>
+                      {heatmapData.circadianRhythm.morningPercent > 0 ? (
+                        <View style={[styles.quadrantSegment, { width: `${heatmapData.circadianRhythm.morningPercent}%`, backgroundColor: '#F59E0B' }]} />
+                      ) : null}
+                      {heatmapData.circadianRhythm.afternoonPercent > 0 ? (
+                        <View style={[styles.quadrantSegment, { width: `${heatmapData.circadianRhythm.afternoonPercent}%`, backgroundColor: '#06B6D4' }]} />
+                      ) : null}
+                      {heatmapData.circadianRhythm.eveningPercent > 0 ? (
+                        <View style={[styles.quadrantSegment, { width: `${heatmapData.circadianRhythm.eveningPercent}%`, backgroundColor: '#8B5CF6' }]} />
+                      ) : null}
+                      {heatmapData.circadianRhythm.nightPercent > 0 ? (
+                        <View style={[styles.quadrantSegment, { width: `${heatmapData.circadianRhythm.nightPercent}%`, backgroundColor: '#EC4899' }]} />
+                      ) : null}
+                    </View>
+
+                    {/* Quadrant Legend */}
+                    <View style={styles.quadrantLegendRow}>
+                      <View style={styles.legendItem}>
+                        <View style={[styles.legendDot, { backgroundColor: '#F59E0B' }]} />
+                        <Text style={[styles.legendLabel, { color: colors.textSecondary }]}>
+                          Morning ({heatmapData.circadianRhythm.morningPercent}%)
+                        </Text>
+                      </View>
+                      <View style={styles.legendItem}>
+                        <View style={[styles.legendDot, { backgroundColor: '#06B6D4' }]} />
+                        <Text style={[styles.legendLabel, { color: colors.textSecondary }]}>
+                          Matinee ({heatmapData.circadianRhythm.afternoonPercent}%)
+                        </Text>
+                      </View>
+                      <View style={styles.legendItem}>
+                        <View style={[styles.legendDot, { backgroundColor: '#8B5CF6' }]} />
+                        <Text style={[styles.legendLabel, { color: colors.textSecondary }]}>
+                          Evening ({heatmapData.circadianRhythm.eveningPercent}%)
+                        </Text>
+                      </View>
+                      <View style={styles.legendItem}>
+                        <View style={[styles.legendDot, { backgroundColor: '#EC4899' }]} />
+                        <Text style={[styles.legendLabel, { color: colors.textSecondary }]}>
+                          Night ({heatmapData.circadianRhythm.nightPercent}%)
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Interactive Monthly Calendar */}
+                <MonthlyViewingCalendar
+                  days={heatmapData.days}
+                  onSelectDate={(day, dateKey) => {
+                    setSelectedDayKey(dateKey);
+                    setSelectedDayActivity(day);
+                  }}
+                  selectedDate={selectedDayKey}
+                />
+
+                {/* Most Active Weekdays Breakdown */}
+                <View style={[styles.weekdayCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <View style={styles.weekdayHeaderRow}>
+                    <View style={styles.weekdayTitleWrap}>
+                      <Ionicons name="stats-chart" size={18} color="#10B981" />
+                      <Text style={[styles.weekdayTitle, { color: colors.textPrimary }]}>
+                        Most Active Weekdays
+                      </Text>
+                    </View>
+                    <View style={[styles.peakBadge, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
+                      <Text style={styles.peakBadgeText}>
+                        👑 Peak: {heatmapData.mostActiveWeekday.name}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Weekday Bars */}
+                  <View style={styles.weekdayBarsList}>
+                    {heatmapData.weekdayDistribution.map((item: ActivityHeatmapSummary['weekdayDistribution'][number]) => {
+                      const isPeak = item.fullDay === heatmapData.mostActiveWeekday.name && item.count > 0;
+                      return (
+                        <View key={item.day} style={styles.weekdayBarRow}>
+                          <Text style={[styles.dayLabel, { color: isPeak ? '#10B981' : colors.textSecondary }]}>
+                            {item.day}
+                          </Text>
+                          <View style={[styles.barTrack, { backgroundColor: colors.surfaceRaised }]}>
+                            <View
+                              style={[
+                                styles.barFill,
+                                {
+                                  width: `${Math.max(item.percent, item.count > 0 ? 8 : 0)}%`,
+                                  backgroundColor: isPeak ? '#10B981' : colors.brand,
+                                },
+                              ]}
+                            />
+                          </View>
+                          <Text style={[styles.barCount, { color: isPeak ? colors.textPrimary : colors.textSecondary }]}>
+                            {item.count} ({item.percent}%)
+                          </Text>
+                        </View>
+                      );
+                    })}
+                  </View>
+                </View>
+
+                {/* Selected Day Log Drawer with Retroactive 1-Tap Quick Logger */}
+                {selectedDayKey ? (
+                  <View
+                    style={[
+                      styles.selectedLogCard,
+                      { backgroundColor: colors.surface, borderColor: colors.border },
+                    ]}
+                  >
+                    <View style={styles.selectedLogHeader}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <Ionicons name="film" size={18} color="#10B981" />
+                        <Text style={[styles.selectedLogTitle, { color: colors.textPrimary }]}>
+                          Log for {new Date(`${selectedDayKey}T00:00:00.000Z`).toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' })}
+                        </Text>
+                      </View>
+                      <Pressable onPress={() => {
+                        setSelectedDayKey(null);
+                        setSelectedDayActivity(null);
+                      }}>
+                        <Ionicons name="close-circle" size={20} color={colors.textSecondary} />
+                      </Pressable>
+                    </View>
+
+                    {selectedDayActivity && selectedDayActivity.viewings.length > 0 ? (
+                      <View style={styles.viewingsList}>
+                        {selectedDayActivity.viewings.map((v: ActivityHeatmapDay['viewings'][number]) => (
+                          <Pressable
+                            accessibilityRole="button"
+                            key={v.id}
+                            onPress={() => router.push(`/media/${v.mediaId}`)}
+                            style={({ pressed }) => [
+                              styles.viewingItem,
+                              { backgroundColor: colors.surfaceRaised, opacity: pressed ? 0.8 : 1 },
+                            ]}
+                          >
+                            <View style={styles.viewingPosterWrap}>
+                              <PosterImage uri={v.posterUrl} size="fill" rounded={8} />
+                            </View>
+                            <View style={{ flex: 1, gap: 4 }}>
+                              <Text numberOfLines={1} style={[styles.viewingTitle, { color: colors.textPrimary }]}>
+                                {v.title}
+                              </Text>
+                              <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
+                                {v.mediaType === 'MOVIE' ? 'Movie' : 'TV Episode'} · Watched at {formatEventTime(v.watchedAt)}
+                              </Text>
+                            </View>
+                            <Ionicons name="chevron-forward" size={18} color={colors.textDisabled} />
+                          </Pressable>
+                        ))}
+                      </View>
+                    ) : (
+                      /* Retroactive Quick Logger Callout for Empty Past Day */
+                      <View style={styles.emptyDayLogWrap}>
+                        <Text style={{ color: colors.textSecondary, fontSize: 13 }}>
+                          No screenings logged on this day.
+                        </Text>
+                        <Pressable
+                          accessibilityRole="button"
+                          onPress={() => {
+                            haptics.selection();
+                            router.push('/(tabs)/discover');
+                          }}
+                          style={({ pressed }) => [
+                            styles.retroLogBtn,
+                            { backgroundColor: colors.brand, opacity: pressed ? 0.85 : 1 },
+                          ]}
+                        >
+                          <Ionicons name="add-circle" size={16} color={colors.onBrand} />
+                          <Text style={[styles.retroLogBtnText, { color: colors.onBrand }]}>
+                            Log a Movie for this Day
+                          </Text>
+                        </Pressable>
+                      </View>
+                    )}
+                  </View>
+                ) : null}
+              </>
+            ) : null}
+          </View>
+        ) : (
+          /* ---------------- MODE 2: WATCH PLANNER & SCHEDULING ---------------- */
+          <View style={styles.plannerContainer}>
+            {/* Quick Action Button to Open Add Form */}
             <Pressable
-              accessibilityLabel={isPlanningOpen ? 'Close planning form' : 'Plan movie night'}
               accessibilityRole="button"
-              onPress={() => setIsPlanningOpen((prev) => !prev)}
+              onPress={() => {
+                haptics.selection();
+                setIsPlanningOpen(!isPlanningOpen);
+              }}
               style={({ pressed }) => [
-                styles.planFab,
-                {
-                  backgroundColor: isPlanningOpen ? colors.surfaceRaised : colors.brand,
-                  opacity: pressed ? 0.85 : 1,
-                },
+                styles.addPlanButton,
+                { backgroundColor: colors.brand, opacity: pressed ? 0.85 : 1 },
               ]}
             >
               <Ionicons
                 name={isPlanningOpen ? 'close' : 'add'}
-                size={22}
-                color={isPlanningOpen ? colors.textPrimary : colors.onBrand}
+                size={20}
+                color={colors.onBrand}
               />
-              <Text
-                style={[
-                  styles.planFabText,
-                  { color: isPlanningOpen ? colors.textPrimary : colors.onBrand },
-                ]}
-              >
-                {isPlanningOpen ? 'Close' : 'Plan Event'}
+              <Text style={[styles.addPlanText, { color: colors.onBrand }]}>
+                {isPlanningOpen ? 'Close Scheduler' : 'Schedule Movie Night'}
               </Text>
             </Pressable>
-          </View>
 
-          {/* Quick Metrics Bar */}
-          <View style={styles.metricsRow}>
-            <View
-              style={[
-                styles.metricPill,
-                { backgroundColor: colors.surface, borderColor: colors.border },
-              ]}
-            >
-              <Ionicons name="film-outline" size={15} color="#F59E0B" />
-              <Text style={[styles.metricText, { color: colors.textPrimary }]}>
-                {stats.watchPlans} {stats.watchPlans === 1 ? 'Movie Night' : 'Movie Nights'}
-              </Text>
-            </View>
-            <View
-              style={[
-                styles.metricPill,
-                { backgroundColor: colors.surface, borderColor: colors.border },
-              ]}
-            >
-              <Ionicons name="notifications-outline" size={15} color="#A78BFA" />
-              <Text style={[styles.metricText, { color: colors.textPrimary }]}>
-                {stats.reminders} {stats.reminders === 1 ? 'Premiere' : 'Premieres'}
-              </Text>
-            </View>
-            <View
-              style={[
-                styles.metricPill,
-                { backgroundColor: colors.surface, borderColor: colors.border },
-              ]}
-            >
-              <Ionicons name="time-outline" size={15} color={colors.textSecondary} />
-              <Text style={[styles.metricText, { color: colors.textSecondary }]}>
-                {stats.totalHours} hrs planned
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Collapsible Glass Planning Card */}
-        {isPlanningOpen && (
-          <View
-            style={[
-              styles.planningCard,
-              { backgroundColor: colors.surface, borderColor: colors.brand },
-            ]}
-          >
-            <View style={styles.cardHeader}>
-              <View style={styles.cardHeaderLeft}>
-                <Ionicons name="calendar" size={18} color={colors.brand} />
-                <Text style={[styles.heading, { color: colors.textPrimary }]}>
-                  Schedule Screening
-                </Text>
-              </View>
-              <Text style={[styles.cardHeaderHint, { color: colors.textSecondary }]}>
-                Private Schedule
-              </Text>
-            </View>
-
-            {/* Event Type Toggle */}
-            <View accessibilityRole="radiogroup" style={styles.typeSelector}>
-              <Pressable
-                accessibilityRole="radio"
-                accessibilityState={{ checked: eventType === 'WATCH_PLAN' }}
-                onPress={() => setEventType('WATCH_PLAN')}
-                style={[
-                  styles.typeButton,
-                  eventType === 'WATCH_PLAN' && {
-                    backgroundColor: 'rgba(245, 158, 11, 0.15)',
-                    borderColor: '#F59E0B',
-                  },
-                  eventType !== 'WATCH_PLAN' && { borderColor: colors.border },
-                ]}
-              >
-                <Ionicons
-                  name="play-circle-outline"
-                  size={18}
-                  color={eventType === 'WATCH_PLAN' ? '#F59E0B' : colors.textSecondary}
-                />
-                <Text
-                  style={[
-                    styles.typeText,
-                    {
-                      color: eventType === 'WATCH_PLAN' ? colors.textPrimary : colors.textSecondary,
-                    },
-                  ]}
-                >
-                  Watch Plan
-                </Text>
-              </Pressable>
-
-              <Pressable
-                accessibilityRole="radio"
-                accessibilityState={{ checked: eventType === 'RELEASE_REMINDER' }}
-                onPress={() => setEventType('RELEASE_REMINDER')}
-                style={[
-                  styles.typeButton,
-                  eventType === 'RELEASE_REMINDER' && {
-                    backgroundColor: 'rgba(167, 139, 250, 0.15)',
-                    borderColor: '#A78BFA',
-                  },
-                  eventType !== 'RELEASE_REMINDER' && { borderColor: colors.border },
-                ]}
-              >
-                <Ionicons
-                  name="notifications-outline"
-                  size={18}
-                  color={eventType === 'RELEASE_REMINDER' ? '#A78BFA' : colors.textSecondary}
-                />
-                <Text
-                  style={[
-                    styles.typeText,
-                    {
-                      color:
-                        eventType === 'RELEASE_REMINDER'
-                          ? colors.textPrimary
-                          : colors.textSecondary,
-                    },
-                  ]}
-                >
-                  Premiere Alert
-                </Text>
-              </Pressable>
-            </View>
-
-            {/* Inputs */}
-            <TextInput
-              accessibilityLabel="Event title"
-              placeholder={
-                eventType === 'WATCH_PLAN'
-                  ? 'Movie or show title (e.g. Dune: Part Two)'
-                  : 'Premiere title to track (e.g. Blade Runner 2099)'
-              }
-              placeholderTextColor={colors.textDisabled}
-              value={title}
-              onChangeText={setTitle}
-              style={[
-                styles.input,
-                {
-                  color: colors.textPrimary,
-                  borderColor: colors.border,
-                  backgroundColor: colors.surfaceRaised,
-                },
-              ]}
-            />
-
-            <TextInput
-              accessibilityLabel="Event notes"
-              placeholder="Notes, snacks, streaming platform or who you're watching with..."
-              placeholderTextColor={colors.textDisabled}
-              value={notes}
-              onChangeText={setNotes}
-              style={[
-                styles.input,
-                styles.inputMultiline,
-                {
-                  color: colors.textPrimary,
-                  borderColor: colors.border,
-                  backgroundColor: colors.surfaceRaised,
-                },
-              ]}
-              multiline
-              numberOfLines={2}
-            />
-
-            {/* Quick Date Presets */}
-            <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>WHEN</Text>
-            <ScrollView
-              accessibilityRole="radiogroup"
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.quickDateRow}
-            >
-              {quickDates.map((opt, idx) => {
-                const isSelected = selectedQuickDateIndex === idx;
-                return (
-                  <Pressable
-                    accessibilityRole="radio"
-                    accessibilityState={{ checked: isSelected }}
-                    key={opt.label}
-                    onPress={() => setSelectedQuickDateIndex(idx)}
-                    style={[
-                      styles.quickDateChip,
-                      {
-                        backgroundColor: isSelected ? colors.brand : colors.surfaceRaised,
-                        borderColor: isSelected ? colors.brand : colors.border,
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.quickDateLabel,
-                        { color: isSelected ? colors.onBrand : colors.textPrimary },
-                      ]}
-                    >
-                      {opt.label}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.quickDateSub,
-                        { color: isSelected ? colors.onBrand : colors.textSecondary },
-                      ]}
-                    >
-                      {opt.sublabel}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-
-            {/* Reminder Interval Chips */}
-            <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>
-              ALERT REMINDER
-            </Text>
-            <View accessibilityRole="radiogroup" style={styles.reminderRow}>
-              {[
-                { label: '15m before', val: 15 },
-                { label: '1h before', val: 60 },
-                { label: '1 day before', val: 1440 },
-              ].map((rem) => {
-                const isSelected = reminderOption === rem.val;
-                return (
-                  <Pressable
-                    accessibilityRole="radio"
-                    accessibilityState={{ checked: isSelected }}
-                    key={rem.val}
-                    onPress={() => setReminderOption(rem.val)}
-                    style={[
-                      styles.reminderChip,
-                      {
-                        backgroundColor: isSelected ? colors.surfaceRaised : 'transparent',
-                        borderColor: isSelected ? colors.brand : colors.border,
-                      },
-                    ]}
-                  >
-                    <Ionicons
-                      name="alarm-outline"
-                      size={13}
-                      color={isSelected ? colors.brand : colors.textSecondary}
-                    />
-                    <Text
-                      style={[
-                        styles.reminderChipText,
-                        { color: isSelected ? colors.textPrimary : colors.textSecondary },
-                      ]}
-                    >
-                      {rem.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-
-            <Pressable
-              accessibilityRole="button"
-              disabled={title.trim() === '' || create.isPending}
-              onPress={() => create.mutate()}
-              style={({ pressed }) => [
-                styles.submitButton,
-                {
-                  backgroundColor: colors.brand,
-                  opacity: title.trim() === '' || create.isPending || pressed ? 0.65 : 1,
-                },
-              ]}
-            >
-              {create.isPending ? (
-                <ActivityIndicator color={colors.onBrand} />
-              ) : (
-                <View style={styles.submitButtonContent}>
-                  <Ionicons name="checkmark-circle-outline" size={20} color={colors.onBrand} />
-                  <Text style={[styles.submitButtonText, { color: colors.onBrand }]}>
-                    Save to Cinema Schedule
-                  </Text>
-                </View>
-              )}
-            </Pressable>
-
-            {create.isError ? (
-              <Text accessibilityRole="alert" style={{ color: colors.danger, fontSize: 13 }}>
-                {errorMessage(create.error)}
-              </Text>
-            ) : null}
-          </View>
-        )}
-
-        {/* 14-Day Horizon Bar */}
-        <View style={styles.horizonSection}>
-          <View style={styles.horizonHeader}>
-            <Text style={[styles.horizonTitle, { color: colors.textPrimary }]}>Date Horizon</Text>
-            {selectedDayKey !== null && (
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => setSelectedDayKey(null)}
-                hitSlop={8}
-              >
-                <Text style={[styles.clearFilterText, { color: colors.brand }]}>
-                  Show all dates
-                </Text>
-              </Pressable>
-            )}
-          </View>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.horizonScroller}
-          >
-            {horizonDays.map((item) => {
-              const isSelected = selectedDayKey === item.key;
-              const indicator = eventsByDayKey.get(item.key);
-              return (
-                <Pressable
-                  accessibilityLabel={`Filter schedule by ${item.dayName} ${item.dayNum}`}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: isSelected }}
-                  key={item.key}
-                  onPress={() => setSelectedDayKey(isSelected ? null : item.key)}
-                  style={[
-                    styles.dayPill,
-                    {
-                      backgroundColor: isSelected ? colors.brand : colors.surface,
-                      borderColor: isSelected ? colors.brand : colors.border,
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.dayPillName,
-                      { color: isSelected ? colors.onBrand : colors.textSecondary },
-                    ]}
-                  >
-                    {item.dayName}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.dayPillNum,
-                      { color: isSelected ? colors.onBrand : colors.textPrimary },
-                    ]}
-                  >
-                    {item.dayNum}
-                  </Text>
-                  <View style={styles.pipsRow}>
-                    {indicator?.hasWatchPlan && (
-                      <View
-                        style={[
-                          styles.pip,
-                          { backgroundColor: isSelected ? colors.onBrand : '#F59E0B' },
-                        ]}
-                      />
-                    )}
-                    {indicator?.hasReminder && (
-                      <View
-                        style={[
-                          styles.pip,
-                          { backgroundColor: isSelected ? colors.onBrand : '#A78BFA' },
-                        ]}
-                      />
-                    )}
-                  </View>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-        </View>
-
-        {/* Segmented Filter Pills */}
-        <View accessibilityRole="radiogroup" style={styles.filterBar}>
-          <Pressable
-            accessibilityRole="radio"
-            accessibilityState={{ checked: activeFilter === 'ALL' }}
-            onPress={() => setActiveFilter('ALL')}
-            style={[
-              styles.filterPill,
-              {
-                backgroundColor: activeFilter === 'ALL' ? colors.surfaceRaised : 'transparent',
-                borderColor: activeFilter === 'ALL' ? colors.brand : 'transparent',
-              },
-            ]}
-          >
-            <Text
-              style={[
-                styles.filterPillText,
-                { color: activeFilter === 'ALL' ? colors.textPrimary : colors.textSecondary },
-              ]}
-            >
-              All Schedule ({events.data?.length ?? 0})
-            </Text>
-          </Pressable>
-
-          <Pressable
-            accessibilityRole="radio"
-            accessibilityState={{ checked: activeFilter === 'WATCH_PLAN' }}
-            onPress={() => setActiveFilter('WATCH_PLAN')}
-            style={[
-              styles.filterPill,
-              {
-                backgroundColor:
-                  activeFilter === 'WATCH_PLAN' ? colors.surfaceRaised : 'transparent',
-                borderColor: activeFilter === 'WATCH_PLAN' ? '#F59E0B' : 'transparent',
-              },
-            ]}
-          >
-            <Ionicons
-              name="film"
-              size={13}
-              color={activeFilter === 'WATCH_PLAN' ? '#F59E0B' : colors.textSecondary}
-            />
-            <Text
-              style={[
-                styles.filterPillText,
-                {
-                  color: activeFilter === 'WATCH_PLAN' ? colors.textPrimary : colors.textSecondary,
-                },
-              ]}
-            >
-              Movie Nights ({stats.watchPlans})
-            </Text>
-          </Pressable>
-
-          <Pressable
-            accessibilityRole="radio"
-            accessibilityState={{ checked: activeFilter === 'RELEASE_REMINDER' }}
-            onPress={() => setActiveFilter('RELEASE_REMINDER')}
-            style={[
-              styles.filterPill,
-              {
-                backgroundColor:
-                  activeFilter === 'RELEASE_REMINDER' ? colors.surfaceRaised : 'transparent',
-                borderColor: activeFilter === 'RELEASE_REMINDER' ? '#A78BFA' : 'transparent',
-              },
-            ]}
-          >
-            <Ionicons
-              name="notifications"
-              size={13}
-              color={activeFilter === 'RELEASE_REMINDER' ? '#A78BFA' : colors.textSecondary}
-            />
-            <Text
-              style={[
-                styles.filterPillText,
-                {
-                  color:
-                    activeFilter === 'RELEASE_REMINDER' ? colors.textPrimary : colors.textSecondary,
-                },
-              ]}
-            >
-              Premieres ({stats.reminders})
-            </Text>
-          </Pressable>
-        </View>
-
-        {/* Events Agenda List */}
-        <View style={styles.list}>
-          {filteredEvents.map((event) => {
-            const isWatchPlan = event.eventType === 'WATCH_PLAN';
-            const dateParts = formatEventDate(event.startsAt);
-            const relativeCountdown = formatRelativeCountdown(event.startsAt);
-            const timeStr = formatEventTime(event.startsAt);
-
-            return (
+            {/* Quick Scheduler Form Card */}
+            {isPlanningOpen ? (
               <View
-                key={event.id}
                 style={[
-                  styles.eventCard,
-                  {
-                    backgroundColor: colors.surface,
-                    borderColor: isWatchPlan
-                      ? 'rgba(245, 158, 11, 0.35)'
-                      : 'rgba(167, 139, 250, 0.35)',
-                  },
+                  styles.formCard,
+                  { backgroundColor: colors.surface, borderColor: colors.border },
                 ]}
               >
-                {/* Left Date / Time Pill */}
-                <View
-                  style={[
-                    styles.dateBadge,
-                    {
-                      backgroundColor: colors.surfaceRaised,
-                      borderColor: isWatchPlan ? '#F59E0B' : '#A78BFA',
-                    },
-                  ]}
-                >
-                  <Text
+                <Text style={[styles.formTitle, { color: colors.textPrimary }]}>
+                  {linkedMediaId ? 'Schedule Watch Plan' : 'Add Custom Reminder'}
+                </Text>
+
+                <View style={styles.formGroup}>
+                  <Text style={[styles.formLabel, { color: colors.textSecondary }]}>TITLE</Text>
+                  <TextInput
+                    placeholder="Film or event title…"
+                    placeholderTextColor={colors.textDisabled}
                     style={[
-                      styles.dateBadgeDayName,
-                      { color: isWatchPlan ? '#F59E0B' : '#A78BFA' },
+                      styles.input,
+                      {
+                        backgroundColor: colors.surfaceRaised,
+                        color: colors.textPrimary,
+                        borderColor: colors.border,
+                      },
                     ]}
-                  >
-                    {dateParts.dayName}
-                  </Text>
-                  <Text style={[styles.dateBadgeDayNum, { color: colors.textPrimary }]}>
-                    {dateParts.dayNum}
-                  </Text>
-                  <Text style={[styles.dateBadgeMonth, { color: colors.textSecondary }]}>
-                    {dateParts.monthName}
-                  </Text>
+                    value={title}
+                    onChangeText={setTitle}
+                  />
                 </View>
 
-                {/* Main Content Info */}
-                <View style={styles.eventContent}>
-                  {/* Category Pill & Countdown */}
-                  <View style={styles.tagRow}>
-                    <View
-                      style={[
-                        styles.eventTypeTag,
-                        {
-                          backgroundColor: isWatchPlan
-                            ? 'rgba(245, 158, 11, 0.15)'
-                            : 'rgba(167, 139, 250, 0.15)',
-                        },
-                      ]}
-                    >
-                      <Ionicons
-                        name={isWatchPlan ? 'play' : 'notifications'}
-                        size={11}
-                        color={isWatchPlan ? '#F59E0B' : '#A78BFA'}
-                      />
-                      <Text
+                {/* Quick Date Shortcuts */}
+                <View style={styles.formGroup}>
+                  <Text style={[styles.formLabel, { color: colors.textSecondary }]}>WHEN</Text>
+                  <View style={styles.quickDateRow}>
+                    {quickDates.map((opt, idx) => (
+                      <Pressable
+                        key={idx}
+                        onPress={() => {
+                          haptics.selection();
+                          setSelectedQuickDateIndex(idx);
+                        }}
                         style={[
-                          styles.eventTypeText,
-                          { color: isWatchPlan ? '#F59E0B' : '#A78BFA' },
+                          styles.quickDateChip,
+                          {
+                            backgroundColor:
+                              selectedQuickDateIndex === idx
+                                ? colors.brand
+                                : colors.surfaceRaised,
+                            borderColor: colors.border,
+                          },
                         ]}
                       >
-                        {isWatchPlan ? 'MOVIE NIGHT' : 'PREMIERE'}
+                        <Text
+                          style={[
+                            styles.quickDateLabel,
+                            {
+                              color:
+                                selectedQuickDateIndex === idx
+                                  ? colors.onBrand
+                                  : colors.textPrimary,
+                            },
+                          ]}
+                        >
+                          {opt.label}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.quickDateSublabel,
+                            {
+                              color:
+                                selectedQuickDateIndex === idx
+                                  ? colors.onBrand
+                                  : colors.textSecondary,
+                            },
+                          ]}
+                        >
+                          {opt.sublabel}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </View>
+
+                {/* Notes Input */}
+                <View style={styles.formGroup}>
+                  <Text style={[styles.formLabel, { color: colors.textSecondary }]}>
+                    NOTES (OPTIONAL)
+                  </Text>
+                  <TextInput
+                    placeholder="E.g. popcorn, watch with Alex…"
+                    placeholderTextColor={colors.textDisabled}
+                    style={[
+                      styles.input,
+                      {
+                        backgroundColor: colors.surfaceRaised,
+                        color: colors.textPrimary,
+                        borderColor: colors.border,
+                      },
+                    ]}
+                    value={notes}
+                    onChangeText={setNotes}
+                  />
+                </View>
+
+                {/* Submit Button */}
+                <Pressable
+                  accessibilityRole="button"
+                  disabled={!title.trim() || create.isPending}
+                  onPress={() => create.mutate()}
+                  style={({ pressed }) => [
+                    styles.submitButton,
+                    {
+                      backgroundColor: colors.brand,
+                      opacity: pressed || !title.trim() || create.isPending ? 0.7 : 1,
+                    },
+                  ]}
+                >
+                  {create.isPending ? (
+                    <ActivityIndicator size="small" color={colors.onBrand} />
+                  ) : (
+                    <Text style={[styles.submitText, { color: colors.onBrand }]}>
+                      Confirm Plan
+                    </Text>
+                  )}
+                </Pressable>
+              </View>
+            ) : null}
+
+            {/* Filter Pills */}
+            <View style={styles.filterRow}>
+              {(['ALL', 'WATCH_PLAN', 'RELEASE_REMINDER'] as FilterType[]).map((f) => (
+                <Pressable
+                  key={f}
+                  onPress={() => {
+                    haptics.selection();
+                    setActiveFilter(f);
+                  }}
+                  style={[
+                    styles.filterChip,
+                    {
+                      backgroundColor:
+                        activeFilter === f ? colors.brand : colors.surfaceRaised,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      {
+                        color:
+                          activeFilter === f ? colors.onBrand : colors.textSecondary,
+                        fontWeight: activeFilter === f ? '700' : '500',
+                      },
+                    ]}
+                  >
+                    {f === 'ALL'
+                      ? 'All'
+                      : f === 'WATCH_PLAN'
+                        ? 'Watch Plans'
+                        : 'Release Reminders'}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+
+            {/* Upcoming Event Cards */}
+            <View style={styles.eventsList}>
+              {filteredEvents.map((event) => {
+                const dateInfo = formatEventDate(event.startsAt);
+                const countdown = formatRelativeCountdown(event.startsAt);
+
+                return (
+                  <View
+                    key={event.id}
+                    style={[
+                      styles.eventCard,
+                      {
+                        backgroundColor: colors.surface,
+                        borderColor: colors.border,
+                      },
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.eventDateBox,
+                        { backgroundColor: colors.surfaceRaised },
+                      ]}
+                    >
+                      <Text style={[styles.eventDayName, { color: colors.brand }]}>
+                        {dateInfo.dayName}
+                      </Text>
+                      <Text style={[styles.eventDayNum, { color: colors.textPrimary }]}>
+                        {dateInfo.dayNum}
+                      </Text>
+                      <Text style={[styles.eventMonthName, { color: colors.textSecondary }]}>
+                        {dateInfo.monthName}
                       </Text>
                     </View>
 
-                    {relativeCountdown && (
-                      <View
-                        style={[styles.countdownTag, { backgroundColor: colors.surfaceRaised }]}
-                      >
-                        <Text style={[styles.countdownText, { color: colors.textSecondary }]}>
-                          {relativeCountdown}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-
-                  <Text style={[styles.eventTitle, { color: colors.textPrimary }]}>
-                    {event.title}
-                  </Text>
-
-                  <View style={styles.metaRow}>
-                    <Ionicons name="time-outline" size={13} color={colors.textSecondary} />
-                    <Text style={[styles.metaText, { color: colors.textSecondary }]}>
-                      {timeStr} · {event.durationMinutes}m
-                    </Text>
-                    {event.reminderMinutes.length > 0 && (
-                      <>
-                        <Text style={{ color: colors.textDisabled }}>•</Text>
-                        <Ionicons name="alarm-outline" size={13} color={colors.textSecondary} />
-                        <Text style={[styles.metaText, { color: colors.textSecondary }]}>
-                          Alert {event.reminderMinutes[0]}m prior
-                        </Text>
-                      </>
-                    )}
-                  </View>
-
-                  {event.notes ? (
-                    <Text numberOfLines={2} style={[styles.notes, { color: colors.textSecondary }]}>
-                      {event.notes}
-                    </Text>
-                  ) : null}
-
-                  {/* If linked to TMDB media, show rich preview */}
-                  {event.media && (
-                    <Pressable
-                      onPress={() => router.push(`/media/${event.media?.id}`)}
-                      style={[
-                        styles.mediaSnippet,
-                        { backgroundColor: colors.surfaceRaised, borderColor: colors.border },
-                      ]}
-                    >
-                      {event.media.posterUrl ? (
-                        <Image
-                          source={{ uri: event.media.posterUrl }}
-                          style={styles.snippetPoster}
-                          resizeMode="cover"
-                        />
-                      ) : (
-                        <View style={[styles.snippetPoster, { backgroundColor: colors.surface }]}>
-                          <Ionicons name="film" size={14} color={colors.textDisabled} />
-                        </View>
-                      )}
-                      <View style={styles.snippetCopy}>
+                    <View style={styles.eventInfo}>
+                      <View style={styles.eventHeaderRow}>
                         <Text
                           numberOfLines={1}
-                          style={[styles.snippetTitle, { color: colors.textPrimary }]}
+                          style={[styles.eventTitle, { color: colors.textPrimary }]}
                         >
-                          {event.media.title}
-                        </Text>
-                        <Text style={[styles.snippetMeta, { color: colors.textSecondary }]}>
-                          {event.media.releaseYear ?? 'TBA'} ·{' '}
-                          {event.media.mediaType === 'MOVIE' ? 'Movie' : 'TV Series'}
+                          {event.title}
                         </Text>
                       </View>
-                      <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
-                    </Pressable>
-                  )}
+
+                      <Text style={[styles.eventTime, { color: colors.textSecondary }]}>
+                        🕒 {formatEventTime(event.startsAt)}
+                        {countdown ? ` · ${countdown}` : ''}
+                      </Text>
+
+                      {event.notes ? (
+                        <Text
+                          numberOfLines={1}
+                          style={[styles.eventNotes, { color: colors.textSecondary }]}
+                        >
+                          📝 {event.notes}
+                        </Text>
+                      ) : null}
+
+                      {/* Export & Actions Row */}
+                      <View style={styles.eventActionsRow}>
+                        <Pressable
+                          accessibilityRole="button"
+                          onPress={() => void handleExportIcs(event)}
+                          style={[styles.actionChip, { backgroundColor: colors.surfaceRaised }]}
+                        >
+                          <Ionicons name="download-outline" size={14} color={colors.brand} />
+                          <Text style={[styles.actionChipText, { color: colors.brand }]}>
+                            {exportingId === event.id ? 'Exporting…' : 'Export .ics'}
+                          </Text>
+                        </Pressable>
+
+                        <Pressable
+                          accessibilityRole="button"
+                          onPress={async () => {
+                            const confirmed = await confirm({
+                              title: 'Delete Event',
+                              message: `Remove "${event.title}" from your calendar?`,
+                              confirmLabel: 'Remove',
+                              destructive: true,
+                            });
+                            if (confirmed) remove.mutate(event.id);
+                          }}
+                          style={[styles.actionChip, { backgroundColor: colors.surfaceRaised }]}
+                        >
+                          <Ionicons name="trash-outline" size={14} color={colors.danger} />
+                        </Pressable>
+                      </View>
+                    </View>
+                  </View>
+                );
+              })}
+
+              {filteredEvents.length === 0 ? (
+                <View style={[styles.emptyBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <Ionicons name="calendar-outline" size={32} color={colors.textDisabled} />
+                  <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+                    No scheduled events in this filter.
+                  </Text>
                 </View>
-
-                {/* Right Action Icons (Export .ics & Remove) */}
-                <View style={styles.actionCol}>
-                  <Pressable
-                    accessibilityLabel={`Export ${event.title} to calendar`}
-                    accessibilityRole="button"
-                    hitSlop={8}
-                    disabled={exportingId === event.id}
-                    onPress={() => void handleExportIcs(event)}
-                    style={styles.actionButton}
-                  >
-                    {exportingId === event.id ? (
-                      <ActivityIndicator color={colors.textSecondary} size="small" />
-                    ) : (
-                      <Ionicons name="download-outline" color={colors.textSecondary} size={19} />
-                    )}
-                  </Pressable>
-
-                  <Pressable
-                    accessibilityLabel={`Remove ${event.title}`}
-                    accessibilityRole="button"
-                    hitSlop={8}
-                    onPress={() => remove.mutate(event.id)}
-                    style={styles.actionButton}
-                  >
-                    <Ionicons name="trash-outline" color={colors.danger} size={19} />
-                  </Pressable>
-                </View>
-              </View>
-            );
-          })}
-
-          {events.isPending ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator color={colors.brand} />
-              <Text style={{ color: colors.textSecondary, marginTop: 8 }}>
-                Loading cinema schedule…
-              </Text>
+              ) : null}
             </View>
-          ) : null}
-
-          {events.isError ? (
-            <Text style={{ color: colors.danger, textAlign: 'center' }}>
-              {errorMessage(events.error)}
-            </Text>
-          ) : null}
-
-          {exportError === null ? null : (
-            <Text accessibilityRole="alert" style={{ color: colors.danger, textAlign: 'center' }}>
-              {exportError}
-            </Text>
-          )}
-
-          {/* Cinematic Empty State */}
-          {!events.isPending && filteredEvents.length === 0 ? (
-            <View
-              style={[
-                styles.emptyCard,
-                { backgroundColor: colors.surface, borderColor: colors.border },
-              ]}
-            >
-              <View
-                style={[
-                  styles.emptyIconCircle,
-                  { backgroundColor: colors.surfaceRaised, borderColor: colors.border },
-                ]}
-              >
-                <Ionicons name="film-outline" size={32} color={colors.brand} />
-              </View>
-              <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>
-                {selectedDayKey !== null
-                  ? 'No events on this day'
-                  : activeFilter !== 'ALL'
-                    ? 'No events in this category'
-                    : 'Your cinema schedule is clear'}
-              </Text>
-              <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-                {selectedDayKey !== null
-                  ? 'Select another date or plan a screening for this day.'
-                  : 'Schedule an upcoming movie night or set a premiere reminder to never miss a release.'}
-              </Text>
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => {
-                  setSelectedDayKey(null);
-                  setActiveFilter('ALL');
-                  setIsPlanningOpen(true);
-                }}
-                style={[styles.emptyActionBtn, { backgroundColor: colors.brand }]}
-              >
-                <Ionicons name="calendar-outline" size={18} color={colors.onBrand} />
-                <Text style={[styles.emptyActionText, { color: colors.onBrand }]}>
-                  Plan a Movie Night
-                </Text>
-              </Pressable>
-            </View>
-          ) : null}
-        </View>
-      </FeatureGate>
-    </Screen>
+          </View>
+        )}
+      </Screen>
+    </FeatureGate>
   );
 }
 
 const styles = StyleSheet.create({
-  header: { gap: 12, marginBottom: 8, marginTop: 12 },
-  headerTop: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  eyebrow: { fontSize: 11, fontWeight: '800', letterSpacing: 1.4 },
-  title: { fontSize: 26, fontWeight: '800', letterSpacing: -0.4 },
-  planFab: {
-    alignItems: 'center',
-    borderRadius: 20,
-    flexDirection: 'row',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  planFabText: { fontSize: 13, fontWeight: '700' },
-  metricsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  metricPill: {
-    alignItems: 'center',
-    borderRadius: 8,
+  modeSwitcher: {
+    borderRadius: 14,
     borderWidth: 1,
     flexDirection: 'row',
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    marginVertical: 10,
+    padding: 3,
   },
-  metricText: { fontSize: 12, fontWeight: '600' },
-
-  // Planning Sheet
-  planningCard: {
-    borderRadius: 18,
-    borderWidth: 1.5,
-    gap: 12,
-    marginTop: 6,
-    padding: 16,
-  },
-  cardHeader: {
+  modeTab: {
     alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  cardHeaderLeft: { alignItems: 'center', flexDirection: 'row', gap: 8 },
-  heading: { fontSize: 16, fontWeight: '800' },
-  cardHeaderHint: { fontSize: 11, fontWeight: '600' },
-  typeSelector: { flexDirection: 'row', gap: 10 },
-  typeButton: {
-    alignItems: 'center',
-    borderRadius: 10,
-    borderWidth: 1,
+    borderRadius: 11,
     flex: 1,
     flexDirection: 'row',
-    gap: 8,
+    gap: 6,
     justifyContent: 'center',
     paddingVertical: 10,
   },
-  typeText: { fontSize: 13, fontWeight: '700' },
+  modeTabText: {
+    fontSize: 13,
+  },
+  historyContainer: {
+    gap: 16,
+    paddingBottom: 24,
+  },
+  plannerContainer: {
+    gap: 14,
+    paddingBottom: 24,
+  },
+  centerBox: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+  },
+
+  // Stats Grid
+  statsGrid: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  statCard: {
+    alignItems: 'center',
+    borderRadius: 16,
+    borderWidth: 1,
+    flex: 1,
+    gap: 4,
+    padding: 12,
+  },
+  statIconBox: {
+    alignItems: 'center',
+    borderRadius: 10,
+    height: 32,
+    justifyContent: 'center',
+    width: 32,
+  },
+  statValue: {
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  statLabel: {
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+
+  // Goal & Pace Card
+  goalCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    gap: 10,
+    padding: 16,
+  },
+  goalHeaderRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  goalTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  goalPaceBadge: {
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  goalProgressRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12,
+  },
+  goalTrack: {
+    borderRadius: 999,
+    flex: 1,
+    height: 8,
+    overflow: 'hidden',
+  },
+  goalFill: {
+    borderRadius: 999,
+    height: '100%',
+  },
+  goalProgressText: {
+    fontSize: 13,
+    fontWeight: '800',
+  },
+
+  // Circadian Rhythm Card
+  circadianCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    gap: 12,
+    padding: 16,
+  },
+  circadianHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  circadianTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  personaBadge: {
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  personaBadgeText: {
+    color: '#8B5CF6',
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  quadrantBarsWrap: {
+    gap: 10,
+  },
+  quadrantTrack: {
+    borderRadius: 999,
+    flexDirection: 'row',
+    height: 10,
+    overflow: 'hidden',
+  },
+  quadrantSegment: {
+    height: '100%',
+  },
+  quadrantLegendRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  legendItem: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 5,
+  },
+  legendDot: {
+    borderRadius: 3,
+    height: 6,
+    width: 6,
+  },
+  legendLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+
+  // Weekdays Breakdown
+  weekdayCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    gap: 12,
+    padding: 16,
+  },
+  weekdayHeaderRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  weekdayTitleWrap: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+  },
+  weekdayTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  peakBadge: {
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  peakBadgeText: {
+    color: '#10B981',
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  weekdayBarsList: {
+    gap: 8,
+  },
+  weekdayBarRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10,
+  },
+  dayLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    width: 30,
+  },
+  barTrack: {
+    borderRadius: 999,
+    flex: 1,
+    height: 8,
+    overflow: 'hidden',
+  },
+  barFill: {
+    borderRadius: 999,
+    height: '100%',
+  },
+  barCount: {
+    fontSize: 11,
+    fontWeight: '600',
+    textAlign: 'right',
+    width: 60,
+  },
+
+  // Selected Log Card
+  selectedLogCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    gap: 12,
+    padding: 16,
+  },
+  selectedLogHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  selectedLogTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  viewingsList: {
+    gap: 10,
+  },
+  viewingItem: {
+    alignItems: 'center',
+    borderRadius: 12,
+    flexDirection: 'row',
+    gap: 12,
+    padding: 10,
+  },
+  viewingPosterWrap: {
+    height: 52,
+    width: 36,
+  },
+  viewingTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  emptyDayLogWrap: {
+    alignItems: 'flex-start',
+    gap: 10,
+    paddingVertical: 4,
+  },
+  retroLogBtn: {
+    alignItems: 'center',
+    borderRadius: 10,
+    flexDirection: 'row',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  retroLogBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+
+  // Planner Styles
+  addPlanButton: {
+    alignItems: 'center',
+    borderRadius: 14,
+    flexDirection: 'row',
+    gap: 8,
+    justifyContent: 'center',
+    minHeight: 46,
+    paddingHorizontal: 16,
+  },
+  addPlanText: {
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  formCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    gap: 14,
+    padding: 16,
+  },
+  formTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  formGroup: {
+    gap: 6,
+  },
+  formLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+  },
   input: {
     borderRadius: 10,
     borderWidth: 1,
@@ -1101,166 +1278,118 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
-  inputMultiline: { minHeight: 56, textAlignVertical: 'top' },
-  sectionSubtitle: { fontSize: 11, fontWeight: '800', letterSpacing: 1, marginTop: 4 },
-  quickDateRow: { gap: 8, paddingVertical: 4 },
+  quickDateRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
   quickDateChip: {
     borderRadius: 10,
     borderWidth: 1,
-    gap: 2,
-    minWidth: 86,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
-  quickDateLabel: { fontSize: 13, fontWeight: '700' },
-  quickDateSub: { fontSize: 11 },
-  reminderRow: { flexDirection: 'row', gap: 8 },
-  reminderChip: {
-    alignItems: 'center',
-    borderRadius: 8,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+  quickDateLabel: {
+    fontSize: 12,
+    fontWeight: '800',
   },
-  reminderChipText: { fontSize: 12, fontWeight: '600' },
+  quickDateSublabel: {
+    fontSize: 10,
+  },
   submitButton: {
     alignItems: 'center',
     borderRadius: 12,
+    height: 44,
     justifyContent: 'center',
-    marginTop: 4,
-    minHeight: 46,
-    paddingHorizontal: 16,
   },
-  submitButtonContent: { alignItems: 'center', flexDirection: 'row', gap: 8 },
-  submitButtonText: { fontSize: 15, fontWeight: '700' },
-
-  // Horizon
-  horizonSection: { gap: 8, marginTop: 8 },
-  horizonHeader: {
-    alignItems: 'center',
+  submitText: {
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  filterRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: 8,
   },
-  horizonTitle: { fontSize: 14, fontWeight: '700' },
-  clearFilterText: { fontSize: 12, fontWeight: '700' },
-  horizonScroller: { gap: 8, paddingVertical: 4 },
-  dayPill: {
-    alignItems: 'center',
-    borderRadius: 12,
-    borderWidth: 1,
-    gap: 2,
-    minWidth: 54,
-    paddingHorizontal: 8,
-    paddingVertical: 10,
+  filterChip: {
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
   },
-  dayPillName: { fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
-  dayPillNum: { fontSize: 18, fontWeight: '800' },
-  pipsRow: { flexDirection: 'row', gap: 3, height: 6, marginTop: 2 },
-  pip: { borderRadius: 3, height: 5, width: 5 },
-
-  // Filter Bar
-  filterBar: { flexDirection: 'row', gap: 6, marginTop: 6 },
-  filterPill: {
-    alignItems: 'center',
-    borderRadius: 20,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+  filterChipText: {
+    fontSize: 12,
   },
-  filterPillText: { fontSize: 12, fontWeight: '700' },
-
-  // Agenda List
-  list: { gap: 12, marginTop: 8 },
+  eventsList: {
+    gap: 10,
+  },
   eventCard: {
     borderRadius: 16,
-    borderWidth: 1.2,
+    borderWidth: 1,
     flexDirection: 'row',
     gap: 12,
-    padding: 14,
+    padding: 12,
   },
-  dateBadge: {
+  eventDateBox: {
     alignItems: 'center',
     borderRadius: 12,
-    borderWidth: 1.5,
-    height: 70,
+    height: 64,
     justifyContent: 'center',
     width: 54,
   },
-  dateBadgeDayName: { fontSize: 10, fontWeight: '800' },
-  dateBadgeDayNum: { fontSize: 20, fontWeight: '800' },
-  dateBadgeMonth: { fontSize: 10, fontWeight: '700' },
-  eventContent: { flex: 1, gap: 4 },
-  tagRow: { alignItems: 'center', flexDirection: 'row', gap: 6 },
-  eventTypeTag: {
+  eventDayName: {
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  eventDayNum: {
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  eventMonthName: {
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  eventInfo: {
+    flex: 1,
+    gap: 4,
+  },
+  eventHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  eventTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  eventTime: {
+    fontSize: 12,
+  },
+  eventNotes: {
+    fontSize: 12,
+  },
+  eventActionsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 4,
+  },
+  actionChip: {
     alignItems: 'center',
     borderRadius: 6,
     flexDirection: 'row',
     gap: 4,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
-  eventTypeText: { fontSize: 9, fontWeight: '800', letterSpacing: 0.5 },
-  countdownTag: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
-  countdownText: { fontSize: 10, fontWeight: '600' },
-  eventTitle: { fontSize: 16, fontWeight: '800', lineHeight: 20 },
-  metaRow: { alignItems: 'center', flexDirection: 'row', gap: 5 },
-  metaText: { fontSize: 12, fontWeight: '500' },
-  notes: { fontSize: 12, lineHeight: 16, marginTop: 2 },
-  mediaSnippet: {
-    alignItems: 'center',
-    borderRadius: 8,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 6,
-    padding: 6,
+  actionChipText: {
+    fontSize: 11,
+    fontWeight: '700',
   },
-  snippetPoster: {
+  emptyBox: {
     alignItems: 'center',
-    borderRadius: 4,
-    height: 36,
-    justifyContent: 'center',
-    width: 24,
-  },
-  snippetCopy: { flex: 1 },
-  snippetTitle: { fontSize: 12, fontWeight: '700' },
-  snippetMeta: { fontSize: 10 },
-  actionCol: { alignItems: 'center', gap: 14, justifyContent: 'center' },
-  actionButton: { padding: 4 },
-
-  // Empty State
-  loadingContainer: { alignItems: 'center', paddingVertical: 24 },
-  emptyCard: {
-    alignItems: 'center',
-    borderRadius: 18,
+    borderRadius: 16,
     borderWidth: 1,
     gap: 8,
-    padding: 24,
-    textAlign: 'center',
+    padding: 32,
   },
-  emptyIconCircle: {
-    alignItems: 'center',
-    borderRadius: 30,
-    borderWidth: 1,
-    height: 60,
-    justifyContent: 'center',
-    marginBottom: 4,
-    width: 60,
+  emptyText: {
+    fontSize: 13,
   },
-  emptyTitle: { fontSize: 16, fontWeight: '800', textAlign: 'center' },
-  emptySubtitle: { fontSize: 13, lineHeight: 18, maxWidth: 280, textAlign: 'center' },
-  emptyActionBtn: {
-    alignItems: 'center',
-    borderRadius: 12,
-    flexDirection: 'row',
-    gap: 6,
-    marginTop: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  emptyActionText: { fontSize: 14, fontWeight: '700' },
 });

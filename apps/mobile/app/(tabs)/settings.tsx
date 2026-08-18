@@ -7,12 +7,29 @@ import { BrandHeader, Button, Screen, useColors } from '../../src/components/ui'
 import { useAuth } from '../../src/providers/auth-provider';
 import { useTheme } from '../../src/providers/theme-provider';
 import { useFeatureFlags } from '../../src/providers/feature-flags-provider';
+import { useDialog } from '../../src/providers/dialog-provider';
 
 export default function SettingsScreen() {
   const colors = useColors();
   const { user, signOut } = useAuth();
   const { preference: themePreference, setPreference: setThemePreference } = useTheme();
   const { isEnabled } = useFeatureFlags();
+  const { confirm, showError } = useDialog();
+
+  const handleSignOut = async () => {
+    const accepted = await confirm({
+      title: 'Sign out of CineWrapped?',
+      message: 'You will need to sign in again to access your profile and private data.',
+      confirmLabel: 'Sign Out',
+      destructive: true,
+    });
+    if (!accepted) return;
+    try {
+      await signOut();
+    } catch (error) {
+      showError('Could not sign out', error instanceof Error ? error.message : 'Please try again.');
+    }
+  };
 
   return (
     <Screen>
@@ -171,7 +188,7 @@ export default function SettingsScreen() {
         />
       </View>
 
-      <Button label="Sign Out" variant="danger" onPress={() => void signOut()} />
+      <Button label="Sign Out" variant="danger" onPress={() => void handleSignOut()} />
     </Screen>
   );
 }

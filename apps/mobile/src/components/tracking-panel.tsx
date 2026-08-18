@@ -6,12 +6,16 @@ import type {
   ReviewSummary,
   WatchStatus,
 } from '@cinewrapped/shared-types';
+import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { api } from '../lib/api';
 import { errorMessage } from '../lib/error-message';
+import { haptics } from '../lib/haptics';
+import { useAuth } from '../providers/auth-provider';
+import { ReviewShareCardModal } from './review-share-card-modal';
 import { Button, useColors } from './ui';
 
 const statuses: Array<{ value: WatchStatus; label: string }> = [
@@ -23,6 +27,22 @@ const statuses: Array<{ value: WatchStatus; label: string }> = [
   { value: 'REWATCHING', label: 'Rewatching' },
 ];
 
+const VIBE_TAGS = [
+  { id: 'masterpiece', label: '🔥 Masterpiece' },
+  { id: 'mind_bending', label: '🤯 Mind-Bending' },
+  { id: 'popcorn_fun', label: '🍿 Popcorn Fun' },
+  { id: 'tearjerker', label: '💔 Tearjerker' },
+  { id: 'stellar_acting', label: '🎭 Stellar Acting' },
+  { id: 'visual_art', label: '🎨 Visual Art' },
+  { id: 'slow_burn', label: '🕯️ Slow Burn' },
+];
+
+const VIEWING_FORMATS = [
+  { id: 'THEATER', label: '🎟️ In Theaters' },
+  { id: 'STREAM_4K', label: '📺 4K Stream' },
+  { id: 'PHYSICAL', label: '💿 Criterion / Disc' },
+];
+
 function operationId(): string {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/gu, (character) => {
     const value = Math.floor(Math.random() * 16);
@@ -31,34 +51,59 @@ function operationId(): string {
   });
 }
 
-export function TrackingPanel({ mediaId }: { mediaId: string }) {
+interface TrackingPanelProps {
+  mediaId: string;
+  mediaTitle?: string;
+  posterUrl?: string | null;
+  releaseDate?: string | null;
+  genres?: Array<{ id: string; name: string }>;
+}
+
+export function TrackingPanel({
+  mediaId,
+  mediaTitle = 'Movie',
+  posterUrl = null,
+  releaseDate = null,
+  genres = [],
+}: TrackingPanelProps) {
   const colors = useColors();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [reviewBody, setReviewBody] = useState<string | null>(null);
+  const [favoriteQuote, setFavoriteQuote] = useState<string>('');
+  const [selectedVibeTags, setSelectedVibeTags] = useState<string[]>([]);
+  const [selectedFormat, setSelectedFormat] = useState<string | null>(null);
   const [spoilers, setSpoilers] = useState<boolean | null>(null);
   const [assistantStyle, setAssistantStyle] = useState<ReviewAssistantStyle>('SHORT');
   const [assistedDraft, setAssistedDraft] = useState(false);
   const [draftApproved, setDraftApproved] = useState(false);
   const [shareReviewActivity, setShareReviewActivity] = useState(false);
   const [reviewNotice, setReviewNotice] = useState<string | null>(null);
+  const [isShareCardOpen, setIsShareCardOpen] = useState(false);
+
   const tracking = useQuery({
     queryKey: ['tracking-state', mediaId],
     queryFn: () => api.request<MediaTrackingState>(`library/media/${mediaId}`),
   });
+
   const privacy = useQuery({
     queryKey: ['privacy-settings'],
     queryFn: () => api.request<PrivacySettingsSummary>('users/me/privacy'),
   });
+
   const refresh = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['tracking-state', mediaId] }),
+      queryClient.invalidateQueries({ queryKey: ['media-reviews', mediaId] }),
       queryClient.invalidateQueries({ queryKey: ['library'] }),
       queryClient.invalidateQueries({ queryKey: ['watchlists'] }),
     ]);
   };
+
   const statusMutation = useMutation({
-    mutationFn: (status: WatchStatus) =>
-      api.request(`library/media/${mediaId}/status`, {
+    mutationFn: (status: WatchStatus) => {
+      haptics.clapperSnap();
+      return api.request(`library/media/${mediaId}/status`, {
         method: 'PUT',
         body: {
           status,
@@ -66,28 +111,38 @@ export function TrackingPanel({ mediaId }: { mediaId: string }) {
             ? {}
             : { expectedVersion: tracking.data.library.version }),
         },
-      }),
+      });
+    },
     onSuccess: refresh,
   });
+
   const watchedMutation = useMutation({
-    mutationFn: () =>
-      api.request(`library/media/${mediaId}/viewings`, {
+    mutationFn: () => {
+      haptics.clapperSnap();
+      return api.request(`library/media/${mediaId}/viewings`, {
         method: 'POST',
         body: {
           clientOperationId: operationId(),
           watchedAt: new Date().toISOString(),
           completed: true,
         },
-      }),
+      });
+    },
     onSuccess: refresh,
   });
+
   const watchlistMutation = useMutation({
-    mutationFn: () => api.request('watchlist/items', { method: 'POST', body: { mediaId } }),
+    mutationFn: () => {
+      haptics.heartReact();
+      return api.request('watchlist/items', { method: 'POST', body: { mediaId } });
+    },
     onSuccess: refresh,
   });
+
   const ratingMutation = useMutation({
-    mutationFn: (ratingValue: number) =>
-      api.request(`media/${mediaId}/rating`, {
+    mutationFn: (ratingValue: number) => {
+      haptics.ratingStep();
+      return api.request(`media/${mediaId}/rating`, {
         method: 'PUT',
         body: {
           ratingValue,
@@ -96,20 +151,35 @@ export function TrackingPanel({ mediaId }: { mediaId: string }) {
             ? {}
             : { expectedVersion: tracking.data.rating.version }),
         },
-      }),
+      });
+    },
     onSuccess: refresh,
   });
+
+  const toggleVibeTag = (tagId: string) => {
+    haptics.selection();
+    setSelectedVibeTags((prev) =>
+      prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId],
+    );
+  };
+
   const reviewMutation = useMutation({
     mutationFn: async () => {
       const existing = tracking.data?.latestReview;
-      const body = reviewBody ?? existing?.body ?? '';
+      let finalBody = reviewBody ?? existing?.body ?? '';
+
+      // Format with Quote if entered
+      if (favoriteQuote.trim()) {
+        finalBody = `« ${favoriteQuote.trim()} »\n\n${finalBody}`;
+      }
+
       const containsSpoilers = spoilers ?? existing?.containsSpoilers ?? false;
       const review =
         existing === null || existing === undefined
           ? await api.request<ReviewSummary>(`media/${mediaId}/reviews`, {
               method: 'POST',
               body: {
-                body,
+                body: finalBody,
                 containsSpoilers,
                 status: 'PUBLISHED',
                 visibility: 'PUBLIC',
@@ -118,7 +188,7 @@ export function TrackingPanel({ mediaId }: { mediaId: string }) {
           : await api.request<ReviewSummary>(`reviews/${existing.id}`, {
               method: 'PATCH',
               body: {
-                body,
+                body: finalBody,
                 containsSpoilers,
                 status: 'PUBLISHED',
                 expectedVersion: existing.version,
@@ -141,7 +211,9 @@ export function TrackingPanel({ mediaId }: { mediaId: string }) {
       return { review, sharingEnabled, sharingFailed };
     },
     onSuccess: async ({ sharingEnabled, sharingFailed }) => {
+      haptics.celebration();
       setReviewBody(null);
+      setFavoriteQuote('');
       setSpoilers(null);
       setAssistedDraft(false);
       setDraftApproved(false);
@@ -153,10 +225,15 @@ export function TrackingPanel({ mediaId }: { mediaId: string }) {
             ? 'Review published and shared to your Social feed.'
             : 'Review published. Social sharing remains off in your privacy settings.',
       );
-      await Promise.all([refresh(), queryClient.invalidateQueries({ queryKey: ['social-feed'] })]);
+      await Promise.all([
+        refresh(),
+        queryClient.invalidateQueries({ queryKey: ['social-feed'] }),
+        queryClient.invalidateQueries({ queryKey: ['media-reviews', mediaId] }),
+      ]);
     },
     onError: (error) => setReviewNotice(errorMessage(error)),
   });
+
   const assistantMutation = useMutation({
     mutationFn: () =>
       api.request<ReviewAssistantResult>('ai/reviews/assist', {
@@ -191,6 +268,8 @@ export function TrackingPanel({ mediaId }: { mediaId: string }) {
   return (
     <View style={[styles.panel, { borderColor: colors.border, backgroundColor: colors.surface }]}>
       <Text style={[styles.heading, { color: colors.textPrimary }]}>Your activity</Text>
+
+      {/* Watch Status Chips */}
       <View style={styles.chips}>
         {statuses.map((status) => {
           const selected = state.library?.status === status.value;
@@ -209,62 +288,157 @@ export function TrackingPanel({ mediaId }: { mediaId: string }) {
                 },
               ]}
             >
-              <Text style={{ color: selected ? colors.onBrand : colors.textPrimary }}>
+              <Text style={{ color: selected ? colors.onBrand : colors.textPrimary, fontWeight: selected ? '800' : '600' }}>
                 {status.label}
               </Text>
             </Pressable>
           );
         })}
       </View>
-      <Button
-        label={
-          state.watchlists.some((list) => list.isDefault) ? 'In watchlist' : 'Add to watchlist'
-        }
-        variant="secondary"
-        disabled={state.watchlists.some((list) => list.isDefault)}
-        loading={watchlistMutation.isPending}
-        onPress={() => watchlistMutation.mutate()}
-      />
-      <Button
-        label="Log watched now"
-        loading={watchedMutation.isPending}
-        onPress={() => watchedMutation.mutate()}
-      />
-      <Text style={[styles.label, { color: colors.textPrimary }]}>Your rating</Text>
-      <View style={styles.ratingRow}>
-        {[1, 2, 3, 4, 5].map((value) => {
-          const selected = state.rating?.ratingValue === value && state.rating.ratingScale === 5;
-          return (
-            <Pressable
-              accessibilityLabel={`${value} out of 5`}
-              accessibilityRole="button"
-              key={value}
-              onPress={() => ratingMutation.mutate(value)}
-              style={[
-                styles.rating,
-                { backgroundColor: selected ? colors.brand : colors.surfaceRaised },
-              ]}
-            >
-              <Text style={{ color: selected ? colors.onBrand : colors.textPrimary }}>{value}</Text>
-            </Pressable>
-          );
-        })}
+
+      <View style={{ flexDirection: 'row', gap: 10 }}>
+        <View style={{ flex: 1 }}>
+          <Button
+            label={
+              state.watchlists.some((list) => list.isDefault) ? 'In watchlist' : 'Add to watchlist'
+            }
+            variant="secondary"
+            disabled={state.watchlists.some((list) => list.isDefault)}
+            loading={watchlistMutation.isPending}
+            onPress={() => watchlistMutation.mutate()}
+          />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Button
+            label="Log watched"
+            loading={watchedMutation.isPending}
+            onPress={() => watchedMutation.mutate()}
+          />
+        </View>
       </View>
-      <Text style={[styles.label, { color: colors.textPrimary }]}>Your review</Text>
-      <TextInput
-        accessibilityLabel="Review"
-        multiline
-        onChangeText={(value) => {
-          setReviewBody(value);
-          setReviewNotice(null);
-          if (assistedDraft) setDraftApproved(false);
-        }}
-        placeholder="What did you think?"
-        placeholderTextColor={colors.textDisabled}
-        style={[styles.review, { borderColor: colors.border, color: colors.textPrimary }]}
-        value={currentReviewBody}
-      />
-      <Text style={[styles.label, { color: colors.textPrimary }]}>Review assistant</Text>
+
+      {/* 5-Star Rating Section */}
+      <View style={{ gap: 6 }}>
+        <Text style={[styles.label, { color: colors.textPrimary }]}>Your Rating</Text>
+        <View style={styles.ratingRow}>
+          {[1, 2, 3, 4, 5].map((value) => {
+            const isSelected =
+              (state.rating?.ratingValue ?? 0) >= value && state.rating?.ratingScale === 5;
+            return (
+              <Pressable
+                accessibilityLabel={`${value} out of 5 stars`}
+                accessibilityRole="button"
+                key={value}
+                onPress={() => ratingMutation.mutate(value)}
+                style={({ pressed }) => [
+                  styles.ratingStarBtn,
+                  { backgroundColor: colors.surfaceRaised, opacity: pressed ? 0.7 : 1 },
+                ]}
+              >
+                <Ionicons
+                  name={isSelected ? 'star' : 'star-outline'}
+                  size={24}
+                  color={isSelected ? '#F59E0B' : colors.textDisabled}
+                />
+                <Text style={{ color: isSelected ? '#F59E0B' : colors.textSecondary, fontSize: 11, fontWeight: '700' }}>
+                  {value}★
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
+
+      {/* Cinema Vibe Tags */}
+      <View style={{ gap: 6 }}>
+        <Text style={[styles.label, { color: colors.textPrimary }]}>Cinema Vibe Tags</Text>
+        <View style={styles.chips}>
+          {VIBE_TAGS.map((tag) => {
+            const isSelected = selectedVibeTags.includes(tag.id);
+            return (
+              <Pressable
+                key={tag.id}
+                onPress={() => toggleVibeTag(tag.id)}
+                style={[
+                  styles.chip,
+                  {
+                    backgroundColor: isSelected ? 'rgba(245, 158, 11, 0.15)' : colors.surfaceRaised,
+                    borderColor: isSelected ? '#F59E0B' : colors.border,
+                  },
+                ]}
+              >
+                <Text style={{ color: isSelected ? '#F59E0B' : colors.textSecondary, fontWeight: isSelected ? '800' : '500', fontSize: 12 }}>
+                  {tag.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
+
+      {/* Viewing Format Experience */}
+      <View style={{ gap: 6 }}>
+        <Text style={[styles.label, { color: colors.textPrimary }]}>Viewing Format</Text>
+        <View style={styles.chips}>
+          {VIEWING_FORMATS.map((fmt) => {
+            const isSelected = selectedFormat === fmt.id;
+            return (
+              <Pressable
+                key={fmt.id}
+                onPress={() => {
+                  haptics.selection();
+                  setSelectedFormat(isSelected ? null : fmt.id);
+                }}
+                style={[
+                  styles.chip,
+                  {
+                    backgroundColor: isSelected ? colors.brand : colors.surfaceRaised,
+                    borderColor: isSelected ? colors.brand : colors.border,
+                  },
+                ]}
+              >
+                <Text style={{ color: isSelected ? colors.onBrand : colors.textSecondary, fontWeight: isSelected ? '800' : '500', fontSize: 12 }}>
+                  {fmt.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
+
+      {/* Favorite Quote Pullout Input */}
+      <View style={{ gap: 6 }}>
+        <Text style={[styles.label, { color: colors.textPrimary }]}>Favorite Dialogue / Quote (Optional)</Text>
+        <TextInput
+          accessibilityLabel="Favorite Quote"
+          onChangeText={setFavoriteQuote}
+          placeholder="« Add your favorite line from the movie… »"
+          placeholderTextColor={colors.textDisabled}
+          style={[styles.quoteInput, { borderColor: colors.border, color: colors.textPrimary, backgroundColor: colors.surfaceRaised }]}
+          value={favoriteQuote}
+        />
+      </View>
+
+      {/* Review Body Input */}
+      <View style={{ gap: 6 }}>
+        <Text style={[styles.label, { color: colors.textPrimary }]}>Your Review</Text>
+        <TextInput
+          accessibilityLabel="Review"
+          multiline
+          onChangeText={(value) => {
+            setReviewBody(value);
+            setReviewNotice(null);
+            if (assistedDraft) setDraftApproved(false);
+          }}
+          placeholder="What did you think of the cinematography, story, and performances?"
+          placeholderTextColor={colors.textDisabled}
+          style={[styles.review, { borderColor: colors.border, color: colors.textPrimary, backgroundColor: colors.surfaceRaised }]}
+          value={currentReviewBody}
+        />
+      </View>
+
+      {/* Review Assistant */}
+      <Text style={[styles.label, { color: colors.textPrimary }]}>AI Review Assistant</Text>
       <View style={styles.chips}>
         {(['SHORT', 'DETAILED', 'FUNNY', 'SPOILER_FREE', 'SOCIAL_CAPTION'] as const).map(
           (style) => {
@@ -283,7 +457,7 @@ export function TrackingPanel({ mediaId }: { mediaId: string }) {
                   },
                 ]}
               >
-                <Text style={{ color: selected ? colors.onBrand : colors.textPrimary }}>
+                <Text style={{ color: selected ? colors.onBrand : colors.textPrimary, fontSize: 12 }}>
                   {style.replaceAll('_', ' ').toLowerCase()}
                 </Text>
               </Pressable>
@@ -291,6 +465,7 @@ export function TrackingPanel({ mediaId }: { mediaId: string }) {
           },
         )}
       </View>
+
       <Button
         disabled={currentReviewBody.trim().length < 3}
         label="Rewrite from my notes"
@@ -298,6 +473,7 @@ export function TrackingPanel({ mediaId }: { mediaId: string }) {
         onPress={() => assistantMutation.mutate()}
         variant="secondary"
       />
+
       {assistedDraft ? (
         <View style={[styles.assistantNotice, { backgroundColor: colors.surfaceRaised }]}>
           <Text style={{ color: colors.textPrimary, fontWeight: '700' }}>
@@ -318,15 +494,23 @@ export function TrackingPanel({ mediaId }: { mediaId: string }) {
           </Pressable>
         </View>
       ) : null}
+
       <Pressable
         accessibilityRole="checkbox"
         accessibilityState={{ checked: containsSpoilers }}
         onPress={() => setSpoilers((value) => !(value ?? containsSpoilers))}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 }}
       >
-        <Text style={{ color: colors.textSecondary }}>
-          {containsSpoilers ? '☑' : '☐'} Contains spoilers
+        <Ionicons
+          name={containsSpoilers ? 'checkbox' : 'square-outline'}
+          size={20}
+          color={containsSpoilers ? '#EF4444' : colors.textSecondary}
+        />
+        <Text style={{ color: containsSpoilers ? '#EF4444' : colors.textSecondary, fontWeight: '600' }}>
+          Contains spoilers (Will activate Spoiler Shield for readers)
         </Text>
       </Pressable>
+
       {privacy.data?.shareReviewActivity === true ? (
         <View style={[styles.shareNotice, { backgroundColor: colors.surfaceRaised }]}>
           <Text style={{ color: colors.textPrimary, fontWeight: '700' }}>Social sharing is on</Text>
@@ -340,23 +524,44 @@ export function TrackingPanel({ mediaId }: { mediaId: string }) {
           accessibilityState={{ checked: shareReviewActivity }}
           disabled={privacy.isPending}
           onPress={() => setShareReviewActivity((value) => !value)}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 }}
         >
+          <Ionicons
+            name={shareReviewActivity ? 'checkbox' : 'square-outline'}
+            size={20}
+            color={colors.brand}
+          />
           <Text style={{ color: colors.textSecondary }}>
-            {shareReviewActivity ? '☑' : '☐'} Also share published reviews to Social
+            Also share published review to Social feed
           </Text>
         </Pressable>
       )}
+
       <Button
         disabled={currentReviewBody.trim().length === 0 || (assistedDraft && !draftApproved)}
         label={existingReview === null ? 'Publish review' : 'Update review'}
         loading={reviewMutation.isPending}
         onPress={() => reviewMutation.mutate()}
       />
+
+      {/* Visual Letterboxd Share Card Generator Button */}
+      {currentReviewBody.trim().length > 0 ? (
+        <Button
+          label="📸 Letterboxd-Style Share Card"
+          variant="secondary"
+          onPress={() => {
+            haptics.selection();
+            setIsShareCardOpen(true);
+          }}
+        />
+      ) : null}
+
       {reviewNotice === null ? null : (
         <Text accessibilityRole="alert" style={{ color: colors.textSecondary, lineHeight: 19 }}>
           {reviewNotice}
         </Text>
       )}
+
       {[
         statusMutation,
         watchedMutation,
@@ -369,28 +574,64 @@ export function TrackingPanel({ mediaId }: { mediaId: string }) {
           That change could not be saved. Refresh and try again.
         </Text>
       ) : null}
+
+      {/* Review Share Card Modal */}
+      {isShareCardOpen ? (
+        <ReviewShareCardModal
+          media={{
+            id: mediaId,
+            title: mediaTitle,
+            posterUrl,
+            releaseDate,
+            genres,
+          }}
+          onClose={() => setIsShareCardOpen(false)}
+          review={{
+            body: currentReviewBody,
+            ratingValue: state.rating?.ratingValue ?? null,
+            quote: favoriteQuote.trim() || null,
+            vibeTags: selectedVibeTags,
+            user: {
+              displayName: user?.displayName,
+              handle: user?.username,
+              avatarUrl: user?.avatarUrl,
+            },
+          }}
+          visible={isShareCardOpen}
+        />
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  panel: { borderRadius: 16, borderWidth: 1, gap: 14, padding: 16 },
-  heading: { fontSize: 21, fontWeight: '700' },
-  label: { fontSize: 15, fontWeight: '700' },
+  panel: { borderRadius: 18, borderWidth: 1, gap: 14, padding: 16 },
+  heading: { fontSize: 20, fontWeight: '800' },
+  label: { fontSize: 13, fontWeight: '800', letterSpacing: 0.3 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { borderRadius: 999, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 8 },
-  ratingRow: { flexDirection: 'row', gap: 9 },
-  rating: {
+  ratingRow: { flexDirection: 'row', gap: 8 },
+  ratingStarBtn: {
     alignItems: 'center',
-    borderRadius: 22,
-    height: 44,
+    borderRadius: 12,
+    flex: 1,
+    gap: 4,
     justifyContent: 'center',
-    width: 44,
+    paddingVertical: 10,
   },
-  review: {
+  quoteInput: {
     borderRadius: 10,
     borderWidth: 1,
-    minHeight: 112,
+    fontStyle: 'italic',
+    fontSize: 13,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  review: {
+    borderRadius: 12,
+    borderWidth: 1,
+    fontSize: 14,
+    minHeight: 100,
     padding: 12,
     textAlignVertical: 'top',
   },

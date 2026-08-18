@@ -1,17 +1,19 @@
 import type { PublicProfile, RelationshipState } from '@cinewrapped/shared-types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Redirect, Stack, useLocalSearchParams } from 'expo-router';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { Button, ErrorText, Screen, useColors } from '../../src/components/ui';
 import { errorMessage } from '../../src/lib/error-message';
 import { api } from '../../src/lib/api';
 import { useAuth } from '../../src/providers/auth-provider';
+import { useDialog } from '../../src/providers/dialog-provider';
 
 export default function MemberProfileScreen() {
   const colors = useColors();
   const queryClient = useQueryClient();
   const { session, user } = useAuth();
+  const { confirm } = useDialog();
   const { username } = useLocalSearchParams<{ username: string }>();
   const profile = useQuery({
     queryKey: ['public-profile', username],
@@ -59,19 +61,16 @@ export default function MemberProfileScreen() {
   const busy = relationship.isPending || friendRequest.isPending;
   const toggleRelationship = (path: string, active: boolean) =>
     relationship.mutate({ path, method: active ? 'DELETE' : 'PUT' });
-  const block = () =>
-    Alert.alert(
-      `Block ${member.displayName}?`,
-      'You will no longer see each other in search, profiles, or feeds. Existing follows are removed.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Block',
-          style: 'destructive',
-          onPress: () => relationship.mutate({ path: `blocks/${member.id}`, method: 'PUT' }),
-        },
-      ],
-    );
+  const block = async () => {
+    const accepted = await confirm({
+      title: `Block ${member.displayName}?`,
+      message:
+        'You will no longer see each other in search, profiles, or feeds. Existing follows are removed.',
+      confirmLabel: 'Block',
+      destructive: true,
+    });
+    if (accepted) relationship.mutate({ path: `blocks/${member.id}`, method: 'PUT' });
+  };
   return (
     <Screen>
       <Stack.Screen
@@ -132,7 +131,7 @@ export default function MemberProfileScreen() {
             onPress={() => toggleRelationship(`mutes/${member.id}`, member.relationship.muted)}
             variant="secondary"
           />
-          <Button disabled={busy} label="Block" onPress={block} variant="danger" />
+          <Button disabled={busy} label="Block" onPress={() => void block()} variant="danger" />
         </View>
       )}
       {relationship.isError || friendRequest.isError ? (

@@ -425,6 +425,7 @@ model User {
   calendarEvents            CalendarEvent[]
   soundtrackSaves           SoundtrackSave[]
   sceneIdentifications      SceneIdentification[]
+  searchHistory             SearchHistory[]
   outgoingFollows           Follow[]                  @relation("FollowFollower")
   incomingFollows           Follow[]                  @relation("FollowFollowing")
   friendshipsAsA            Friendship[]              @relation("FriendshipUserA")
@@ -992,6 +993,26 @@ model SceneIdentification {
   @@index([matchedMediaId, createdAt(sort: Desc)])
   @@index([deletedAt])
   @@map("scene_identifications")
+}
+
+model SearchHistory {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @db.Uuid
+  query           String   @db.VarChar(120)
+  normalizedQuery String   @db.VarChar(120)
+  filtersJson     Json     @default("{}") @db.JsonB
+  resultCount     Int      @default(0)
+  searchCount     Int      @default(1)
+  lastSearchedAt  DateTime @default(now()) @db.Timestamptz(3)
+  createdAt       DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime @updatedAt @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, normalizedQuery])
+  @@index([userId, lastSearchedAt(sort: Desc), id(sort: Desc)])
+  @@index([lastSearchedAt(sort: Desc), normalizedQuery])
+  @@map("search_history")
 }
 
 model JournalAttachment {

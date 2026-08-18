@@ -25,6 +25,13 @@ export interface ProviderCreditSummary {
   position: number | null;
 }
 
+export interface ProviderPersonSummary {
+  externalId: string;
+  name: string;
+  profileUrl: string | null;
+  knownFor: ProviderMediaSummary[];
+}
+
 export interface ProviderSeasonSummary {
   externalId: string;
   seasonNumber: number;
@@ -72,10 +79,13 @@ export interface ProviderDiscoveryFilters {
   mediaType: 'MOVIE' | 'TV';
   genreExternalIds: string[];
   originalLanguage?: string;
+  productionCountry?: string;
   releaseYearMinimum?: number;
   releaseYearMaximum?: number;
+  runtimeMinimum?: number;
   runtimeMaximum?: number;
   minimumRating?: number;
+  minimumPopularity?: number;
   maximumPopularity?: number;
   watchRegion?: string;
   watchProviderExternalIds?: string[];
@@ -83,6 +93,7 @@ export interface ProviderDiscoveryFilters {
 
 export interface MediaProvider {
   searchMedia(query: string, language: string, page: number): Promise<ProviderMediaSummary[]>;
+  searchPeople(query: string, language: string, page: number): Promise<ProviderPersonSummary[]>;
   getTrending(
     window: 'DAY' | 'WEEK',
     mediaType: 'MOVIE' | 'TV' | undefined,

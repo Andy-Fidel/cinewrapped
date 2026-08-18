@@ -9,7 +9,9 @@ import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'rea
 import { FeatureGate } from '../../src/components/feature-gate';
 import { BrandHeader, Screen, useColors } from '../../src/components/ui';
 import { api } from '../../src/lib/api';
+import { errorMessage } from '../../src/lib/error-message';
 import { useAuth } from '../../src/providers/auth-provider';
+import { useDialog } from '../../src/providers/dialog-provider';
 
 async function openExternal(url: string) {
   try {
@@ -22,6 +24,7 @@ async function openExternal(url: string) {
 export default function SavedSoundtracksScreen() {
   const colors = useColors();
   const { session } = useAuth();
+  const { confirm, showError } = useDialog();
   const client = useQueryClient();
   const saved = useQuery({
     queryKey: ['saved-soundtracks'],
@@ -39,7 +42,17 @@ export default function SavedSoundtracksScreen() {
         client.invalidateQueries({ queryKey: ['soundtracks'] }),
       ]);
     },
+    onError: (error) => showError('Could not remove soundtrack', errorMessage(error)),
   });
+  const removeSoundtrack = async (album: SavedSoundtrackSummary) => {
+    const accepted = await confirm({
+      title: 'Remove saved soundtrack?',
+      message: `${album.title} by ${album.artistName} will be removed from your saved soundtracks.`,
+      confirmLabel: 'Remove',
+      destructive: true,
+    });
+    if (accepted) remove.mutate(album.id);
+  };
   if (session === null) return <Redirect href="/(auth)/login" />;
   return (
     <FeatureGate feature="SOUNDTRACKS">
@@ -116,7 +129,7 @@ export default function SavedSoundtracksScreen() {
                   accessibilityLabel="Remove saved soundtrack"
                   accessibilityRole="button"
                   disabled={remove.isPending && remove.variables === album.id}
-                  onPress={() => remove.mutate(album.id)}
+                  onPress={() => void removeSoundtrack(album)}
                   style={styles.remove}
                 >
                   {remove.isPending && remove.variables === album.id ? (

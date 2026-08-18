@@ -68,6 +68,18 @@ export class InsightsController {
     return this.ok(await this.insights.monthly(principal, query.year, query.timezone), request.id);
   }
 
+  @Get('statistics/heatmap')
+  public async heatmap(
+    @CurrentPrincipal() principal: AuthPrincipal,
+    @Query(new ZodValidationPipe(monthlyQuerySchema)) query: z.output<typeof monthlyQuerySchema>,
+    @Req() request: FastifyRequest,
+  ) {
+    return this.ok(
+      await this.insights.activityHeatmap(principal, query.year, query.timezone),
+      request.id,
+    );
+  }
+
   @Get('statistics/taste')
   public async taste(
     @CurrentPrincipal() principal: AuthPrincipal,

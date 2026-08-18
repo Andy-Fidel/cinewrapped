@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import { Redirect, Stack, router, useLocalSearchParams } from 'expo-router';
-import { Alert, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { FeatureGate } from '../../src/components/feature-gate';
 import { JournalForm, type JournalFormValue } from '../../src/components/journal-form';
@@ -12,11 +12,14 @@ import { api } from '../../src/lib/api';
 import { errorMessage } from '../../src/lib/error-message';
 import { createPrivateObjectUrl, deletePrivateObject } from '../../src/lib/private-storage';
 import { removeJournalAttachment, uploadJournalImage } from '../../src/lib/journal-attachments';
+import { haptics } from '../../src/lib/haptics';
 import { useAuth } from '../../src/providers/auth-provider';
+import { useDialog } from '../../src/providers/dialog-provider';
 
 export default function JournalEntryScreen() {
   const colors = useColors();
   const { session, user } = useAuth();
+  const { confirm, showError, showInfo } = useDialog();
   const queryClient = useQueryClient();
   const { entryId } = useLocalSearchParams<{ entryId: string }>();
   const entry = useQuery({
@@ -25,8 +28,9 @@ export default function JournalEntryScreen() {
     enabled: session !== null && typeof entryId === 'string',
   });
   const update = useMutation({
-    mutationFn: (value: JournalFormValue) =>
-      api.request<JournalEntrySummary>(`journal/${entryId}`, {
+    mutationFn: (value: JournalFormValue) => {
+      haptics.clapperSnap();
+      return api.request<JournalEntrySummary>(`journal/${entryId}`, {
         method: 'PATCH',
         body: {
           expectedVersion: entry.data?.version,
@@ -39,19 +43,25 @@ export default function JournalEntryScreen() {
           moodBefore: value.moodBefore,
           moodAfter: value.moodAfter,
         },
-      }),
+      });
+    },
     onSuccess: async (next) => {
+      haptics.celebration();
       queryClient.setQueryData(['journal-entry', entryId], next);
       await queryClient.invalidateQueries({ queryKey: ['journal'] });
-      Alert.alert(
+      showInfo(
         'Journal saved',
         next.status === 'DRAFT' ? 'Your draft is safe.' : 'Your entry is complete.',
       );
     },
-    onError: (error) => Alert.alert('Could not save journal entry', errorMessage(error)),
+    onError: (error) => {
+      haptics.error();
+      showError('Could not save journal entry', errorMessage(error));
+    },
   });
   const remove = useMutation({
     mutationFn: async () => {
+      haptics.warning();
       const result = await api.request<{ deleted: boolean; attachmentPaths: string[] }>(
         `journal/${entryId}`,
         { method: 'DELETE' },
@@ -66,7 +76,7 @@ export default function JournalEntryScreen() {
       await queryClient.invalidateQueries({ queryKey: ['journal'] });
       router.replace('/journal');
     },
-    onError: (error) => Alert.alert('Could not delete journal entry', errorMessage(error)),
+    onError: (error) => showError('Could not delete journal entry', errorMessage(error)),
   });
 
   if (session === null) return <Redirect href="/(auth)/login" />;
@@ -75,14 +85,13 @@ export default function JournalEntryScreen() {
     if (user === null || entry.data === undefined) return;
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert(
-        'Photo access is off',
-        'Allow photo access in Settings to attach journal photos.',
-        [
-          { text: 'Not now', style: 'cancel' },
-          { text: 'Open Settings', onPress: () => void Linking.openSettings() },
-        ],
-      );
+      const openSettings = await confirm({
+        title: 'Photo access is off',
+        message: 'Allow photo access in Settings to attach journal photos.',
+        confirmLabel: 'Open Settings',
+        cancelLabel: 'Not now',
+      });
+      if (openSettings) await Linking.openSettings();
       return;
     }
     const picked = await ImagePicker.launchImageLibraryAsync({
@@ -101,7 +110,7 @@ export default function JournalEntryScreen() {
       queryClient.setQueryData(['journal-entry', entryId], next);
       await queryClient.invalidateQueries({ queryKey: ['journal'] });
     } catch (error) {
-      Alert.alert('Could not add photo', errorMessage(error));
+      showError('Could not add photo', errorMessage(error));
     }
   };
 
@@ -109,8 +118,35 @@ export default function JournalEntryScreen() {
     try {
       await Linking.openURL(await createPrivateObjectUrl('journal-attachments', path, 300));
     } catch (error) {
-      Alert.alert('Could not open attachment', errorMessage(error));
+      showError('Could not open attachment', errorMessage(error));
     }
+  };
+
+  const deleteAttachment = async (attachment: JournalEntrySummary['attachments'][number]) => {
+    if (entry.data === undefined) return;
+    const accepted = await confirm({
+      title: 'Remove attachment?',
+      message: `${attachment.fileName} will be permanently removed from this journal entry.`,
+      confirmLabel: 'Remove',
+      destructive: true,
+    });
+    if (!accepted) return;
+    try {
+      await removeJournalAttachment(entry.data.id, attachment);
+      await entry.refetch();
+    } catch (error) {
+      showError('Could not remove attachment', errorMessage(error));
+    }
+  };
+
+  const deleteEntry = async () => {
+    const accepted = await confirm({
+      title: 'Delete journal entry?',
+      message: 'This permanently removes the entry and all of its private attachments.',
+      confirmLabel: 'Delete',
+      destructive: true,
+    });
+    if (accepted) remove.mutate();
   };
 
   return (
@@ -212,13 +248,7 @@ export default function JournalEntryScreen() {
                   <Pressable
                     accessibilityLabel={`Remove ${attachment.fileName}`}
                     accessibilityRole="button"
-                    onPress={() =>
-                      void removeJournalAttachment(entry.data.id, attachment)
-                        .then(() => entry.refetch())
-                        .catch((error) =>
-                          Alert.alert('Could not remove attachment', errorMessage(error)),
-                        )
-                    }
+                    onPress={() => void deleteAttachment(attachment)}
                   >
                     <Ionicons color={colors.danger} name="trash-outline" size={18} />
                   </Pressable>
@@ -229,16 +259,7 @@ export default function JournalEntryScreen() {
               label="Delete journal entry"
               variant="danger"
               loading={remove.isPending}
-              onPress={() =>
-                Alert.alert(
-                  'Delete journal entry?',
-                  'This removes the entry and all of its private attachments.',
-                  [
-                    { text: 'Cancel', style: 'cancel' },
-                    { text: 'Delete', style: 'destructive', onPress: () => remove.mutate() },
-                  ],
-                )
-              }
+              onPress={() => void deleteEntry()}
             />
           </>
         )}

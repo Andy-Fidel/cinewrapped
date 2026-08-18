@@ -345,6 +345,63 @@ export const recommendationFeedbackSchema = z.object({
   feedbackType: z.enum(['VIEWED', 'SAVED', 'DISMISSED', 'SELECTED']),
 });
 
+const searchListValue = (value: unknown) =>
+  typeof value === 'string'
+    ? value
+        .split(',')
+        .map((entry) => entry.trim())
+        .filter(Boolean)
+    : value;
+const searchCategoryListSchema = z.preprocess(
+  searchListValue,
+  z.array(z.enum(['MEDIA', 'USER', 'PERSON', 'LIST', 'CLUB'])).max(5),
+);
+const searchUuidListSchema = z.preprocess(searchListValue, z.array(uuidSchema).max(20));
+
+const searchBooleanSchema = z.preprocess(
+  (value) => (value === 'true' ? true : value === 'false' ? false : value),
+  z.boolean(),
+);
+
+export const unifiedSearchSchema = z
+  .object({
+    q: z.string().trim().max(120).default(''),
+    language: languageTagSchema.default('en-US'),
+    countryCode: countryCodeSchema.default('US'),
+    categories: searchCategoryListSchema.default(['MEDIA', 'USER', 'PERSON', 'LIST', 'CLUB']),
+    mediaType: z.enum(['MOVIE', 'TV']).optional(),
+    genreIds: searchUuidListSchema.optional(),
+    releaseYear: z.coerce.number().int().min(1870).max(2200).optional(),
+    decade: z.coerce.number().int().min(1870).max(2200).multipleOf(10).optional(),
+    runtimeMinimum: z.coerce.number().int().min(1).max(1_000).optional(),
+    runtimeMaximum: z.coerce.number().int().min(1).max(1_000).optional(),
+    originalLanguage: z.string().trim().min(2).max(16).optional(),
+    productionCountry: countryCodeSchema.optional(),
+    streamingProviderIds: searchUuidListSchema.optional(),
+    minimumRating: z.coerce.number().min(0).max(10).optional(),
+    minimumPopularity: z.coerce.number().min(0).max(1_000_000).optional(),
+    friendsWatched: searchBooleanSchema.default(false),
+    friendsRatedHighly: searchBooleanSchema.default(false),
+    unwatchedOnly: searchBooleanSchema.default(false),
+    limit: z.coerce.number().int().min(1).max(20).default(8),
+  })
+  .refine(
+    (value) =>
+      value.runtimeMinimum === undefined ||
+      value.runtimeMaximum === undefined ||
+      value.runtimeMinimum <= value.runtimeMaximum,
+    { message: 'Minimum runtime cannot exceed maximum runtime.', path: ['runtimeMaximum'] },
+  );
+
+export const searchSuggestionsSchema = z.object({
+  q: z.string().trim().min(1).max(120),
+  limit: z.coerce.number().int().min(1).max(12).default(8),
+});
+
+export const searchHistoryQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(30),
+});
+
 export const intelligentDiscoverySchema = z.object({
   query: z.string().trim().min(3).max(500),
   language: languageTagSchema.default('en-US'),

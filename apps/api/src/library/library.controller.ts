@@ -234,6 +234,15 @@ export class LibraryController {
     return this.ok({ deleted: true }, request.id);
   }
 
+  @Get('media/:mediaId/reviews')
+  public async listMediaReviews(
+    @CurrentPrincipal() principal: AuthPrincipal,
+    @Param('mediaId', new ZodValidationPipe(uuidSchema)) mediaId: string,
+    @Req() request: FastifyRequest,
+  ) {
+    return this.ok(await this.libraryService.listMediaReviews(principal, mediaId), request.id);
+  }
+
   @Post('media/:mediaId/reviews')
   public async createReview(
     @CurrentPrincipal() principal: AuthPrincipal,

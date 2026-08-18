@@ -11,6 +11,7 @@ import type {
   ProviderDiscoveryFilters,
   ProviderMediaDetails,
   ProviderMediaSummary,
+  ProviderPersonSummary,
   ProviderEpisodeSummary,
   ProviderStreamingAvailability,
 } from './media-provider.types.js';
@@ -34,6 +35,16 @@ const mediaResultSchema = z.object({
 });
 
 const mediaListSchema = z.object({ results: z.array(mediaResultSchema) });
+const personSearchSchema = z.object({
+  results: z.array(
+    z.object({
+      id: z.number().int().positive(),
+      name: z.string(),
+      profile_path: z.string().nullable().optional(),
+      known_for: z.array(mediaResultSchema).default([]),
+    }),
+  ),
+});
 const personSchema = z.object({
   id: z.number().int().positive(),
   name: z.string(),
@@ -255,6 +266,30 @@ export class TmdbMediaProvider implements MediaProvider {
     });
   }
 
+  public async searchPeople(
+    query: string,
+    language: string,
+    page = 1,
+  ): Promise<ProviderPersonSummary[]> {
+    const key = `tmdb:people:${language}:${page}:${query.trim().toLowerCase()}`;
+    return this.cache.remember(key, 300, async () => {
+      const data = await this.request(
+        '/search/person',
+        { query, language, include_adult: 'false', page: String(page) },
+        personSearchSchema,
+      );
+      return data.results.slice(0, 20).map((person) => ({
+        externalId: String(person.id),
+        name: person.name,
+        profileUrl: imageUrl(person.profile_path, 'w185'),
+        knownFor: person.known_for
+          .map(normalizeSummary)
+          .filter((item): item is ProviderMediaSummary => item !== null)
+          .slice(0, 3),
+      }));
+    });
+  }
+
   public async getTrending(
     window: 'DAY' | 'WEEK',
     mediaType: 'MOVIE' | 'TV' | undefined,
@@ -297,6 +332,9 @@ export class TmdbMediaProvider implements MediaProvider {
     if (filters.originalLanguage !== undefined) {
       parameters.with_original_language = filters.originalLanguage;
     }
+    if (filters.productionCountry !== undefined) {
+      parameters.with_origin_country = filters.productionCountry;
+    }
     if (filters.releaseYearMinimum !== undefined) {
       parameters[
         filters.mediaType === 'MOVIE' ? 'primary_release_date.gte' : 'first_air_date.gte'
@@ -310,11 +348,17 @@ export class TmdbMediaProvider implements MediaProvider {
     if (filters.runtimeMaximum !== undefined) {
       parameters['with_runtime.lte'] = String(filters.runtimeMaximum);
     }
+    if (filters.runtimeMinimum !== undefined) {
+      parameters['with_runtime.gte'] = String(filters.runtimeMinimum);
+    }
     if (filters.minimumRating !== undefined) {
       parameters['vote_average.gte'] = String(filters.minimumRating);
     }
     if (filters.maximumPopularity !== undefined) {
       parameters['popularity.lte'] = String(filters.maximumPopularity);
+    }
+    if (filters.minimumPopularity !== undefined) {
+      parameters['popularity.gte'] = String(filters.minimumPopularity);
     }
     if (filters.watchRegion !== undefined) parameters.watch_region = filters.watchRegion;
     if (filters.watchProviderExternalIds?.length) {

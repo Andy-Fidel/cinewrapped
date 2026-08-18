@@ -12,11 +12,13 @@ import { api } from '../../src/lib/api';
 import { errorMessage } from '../../src/lib/error-message';
 import { supabase } from '../../src/lib/supabase';
 import { useAuth } from '../../src/providers/auth-provider';
+import { useDialog } from '../../src/providers/dialog-provider';
 
 export default function SecuritySettingsScreen() {
   const colors = useColors();
   const queryClient = useQueryClient();
   const { session } = useAuth();
+  const { confirm, showError, showInfo } = useDialog();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordMessage, setPasswordMessage] = useState<string | null>(null);
@@ -30,6 +32,7 @@ export default function SecuritySettingsScreen() {
     mutationFn: (sessionId: string) =>
       api.request(`auth/sessions/${encodeURIComponent(sessionId)}`, { method: 'DELETE' }),
     onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['sessions'] }),
+    onError: (error) => showError('Could not revoke session', errorMessage(error)),
   });
   const revokeOthers = useMutation({
     mutationFn: () =>
@@ -38,11 +41,13 @@ export default function SecuritySettingsScreen() {
         idempotencyKey: `revoke-${randomUUID()}`,
       }),
     onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['sessions'] }),
+    onError: (error) => showError('Could not sign out other devices', errorMessage(error)),
   });
 
   const changePassword = async () => {
     if (password !== confirmPassword) {
       setPasswordMessage('The passwords do not match.');
+      showError('Passwords do not match', 'Enter the same new password in both fields.');
       return;
     }
     setChangingPassword(true);
@@ -52,10 +57,32 @@ export default function SecuritySettingsScreen() {
       setPassword('');
       setConfirmPassword('');
       setPasswordMessage('Password updated.');
+      showInfo('Password updated', 'Your new password is ready to use.');
     } else {
       setPasswordMessage(error.message);
+      showError('Could not update password', error.message);
     }
     setChangingPassword(false);
+  };
+
+  const revokeSession = async (sessionId: string) => {
+    const accepted = await confirm({
+      title: 'Revoke this session?',
+      message: 'That device will be signed out of CineWrapped immediately.',
+      confirmLabel: 'Revoke',
+      destructive: true,
+    });
+    if (accepted) revoke.mutate(sessionId);
+  };
+
+  const revokeOtherSessions = async () => {
+    const accepted = await confirm({
+      title: 'Sign out other devices?',
+      message: 'Every other active CineWrapped session will be revoked.',
+      confirmLabel: 'Sign Out Devices',
+      destructive: true,
+    });
+    if (accepted) revokeOthers.mutate();
   };
 
   return (
@@ -139,7 +166,7 @@ export default function SecuritySettingsScreen() {
                       variant="secondary"
                       loading={isRevoking}
                       disabled={revoke.isPending || revokeOthers.isPending}
-                      onPress={() => revoke.mutate(sessionItem.id)}
+                      onPress={() => void revokeSession(sessionItem.id)}
                     />
                   </View>
                 )}
@@ -152,7 +179,7 @@ export default function SecuritySettingsScreen() {
           variant="secondary"
           loading={revokeOthers.isPending}
           disabled={revoke.isPending}
-          onPress={() => revokeOthers.mutate()}
+          onPress={() => void revokeOtherSessions()}
         />
       </SettingsCard>
 

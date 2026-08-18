@@ -5,7 +5,7 @@ import type {
 } from '@cinewrapped/shared-types';
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Redirect, Stack } from 'expo-router';
+import { Redirect, Stack, router } from 'expo-router';
 import { type PropsWithChildren, useState } from 'react';
 import {
   ActivityIndicator,
@@ -162,7 +162,41 @@ export default function GamificationScreen() {
               </Section>
 
               {/* Challenges Section */}
-              <Section title="Active Challenges">
+              <Section title="Active Challenges & Trivia">
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => router.push('/trivia')}
+                  style={({ pressed }) => [
+                    styles.triviaHighlightCard,
+                    {
+                      backgroundColor: colors.surface,
+                      borderColor: '#F59E0B',
+                      opacity: pressed ? 0.85 : 1,
+                    },
+                  ]}
+                >
+                  <View style={[styles.triviaIconBox, { backgroundColor: 'rgba(245, 158, 11, 0.15)' }]}>
+                    <Ionicons name="sparkles" size={22} color="#F59E0B" />
+                  </View>
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Text style={{ color: '#F59E0B', fontSize: 10, fontWeight: '800', letterSpacing: 0.8 }}>
+                        FEATURED QUIZ
+                      </Text>
+                      <View style={[styles.pointsBadge, { backgroundColor: colors.surfaceRaised }]}>
+                        <Text style={{ color: colors.brand, fontSize: 10, fontWeight: '800' }}>+150 PTS</Text>
+                      </View>
+                    </View>
+                    <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: '800' }}>
+                      Christopher Nolan Retrospective
+                    </Text>
+                    <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
+                      3 questions · Unlock Golden Projector Trophy
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={colors.textDisabled} />
+                </Pressable>
+
                 <View style={styles.itemsList}>
                   {data.challenges.map((challenge) => {
                     const isJoining = join.isPending && join.variables === challenge.id;
@@ -469,6 +503,22 @@ const styles = StyleSheet.create({
     width: 36,
   },
   metricValue: { fontSize: 20, fontWeight: '900' },
+  triviaHighlightCard: {
+    alignItems: 'center',
+    borderRadius: 16,
+    borderWidth: 1.5,
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 12,
+    padding: 14,
+  },
+  triviaIconBox: {
+    alignItems: 'center',
+    borderRadius: 12,
+    height: 44,
+    justifyContent: 'center',
+    width: 44,
+  },
   itemsList: { gap: 12 },
   item: { borderRadius: 16, borderWidth: 1, gap: 10, padding: 16 },
   itemHeader: {

@@ -72,6 +72,49 @@ describe('TmdbMediaProvider', () => {
     ).rejects.toMatchObject({ code: 'MEDIA_PROVIDER_INVALID_RESPONSE' });
   });
 
+  it('searches people and preserves their known movie and TV credits', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() =>
+        Promise.resolve(
+          new Response(
+            JSON.stringify({
+              results: [
+                {
+                  id: 10,
+                  name: 'Amy Adams',
+                  profile_path: '/amy.jpg',
+                  known_for: [
+                    {
+                      id: 329865,
+                      media_type: 'movie',
+                      title: 'Arrival',
+                      release_date: '2016-11-11',
+                      genre_ids: [18],
+                    },
+                  ],
+                },
+              ],
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          ),
+        ),
+      ),
+    );
+
+    const result = await new TmdbMediaProvider(environment, cache).searchPeople(
+      'Amy Adams',
+      'en-US',
+    );
+
+    expect(result[0]).toMatchObject({
+      externalId: '10',
+      name: 'Amy Adams',
+      profileUrl: 'https://image.tmdb.org/t/p/w185/amy.jpg',
+      knownFor: [expect.objectContaining({ title: 'Arrival', mediaType: 'MOVIE' })],
+    });
+  });
+
   it('normalizes details, credits, trailers, seasons, and country ratings', async () => {
     vi.stubGlobal(
       'fetch',

@@ -1,4 +1,4 @@
-import type { JournalEntryStatus, JournalEntrySummary } from '@cinewrapped/shared-types';
+import type { JournalEntrySummary } from '@cinewrapped/shared-types';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { Redirect, Stack, router } from 'expo-router';
@@ -44,9 +44,7 @@ export default function JournalScreen() {
     const completed = list.filter((e) => e.status === 'COMPLETED').length;
     const drafts = list.filter((e) => e.status === 'DRAFT').length;
     const totalStubs = list.reduce((acc, curr) => acc + (curr.attachments?.length ?? 0), 0);
-    const totalCompanions = new Set(
-      list.flatMap((e) => e.companionNames ?? []),
-    ).size;
+    const totalCompanions = new Set(list.flatMap((e) => e.companionNames ?? [])).size;
 
     return {
       total: list.length,
@@ -82,7 +80,10 @@ export default function JournalScreen() {
                 <Ionicons name="lock-closed" size={10} color={colors.brand} />
                 <Text style={[styles.eyebrow, { color: colors.brand }]}>PRIVATE FILM VAULT</Text>
               </View>
-              <Text accessibilityRole="header" style={[styles.title, { color: colors.textPrimary }]}>
+              <Text
+                accessibilityRole="header"
+                style={[styles.title, { color: colors.textPrimary }]}
+              >
                 Film Diary & Scrapbook
               </Text>
             </View>
@@ -102,7 +103,8 @@ export default function JournalScreen() {
           </View>
 
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-            Your private sanctuary for film memories, tickets, venues, and reflections. Never shared with the social feed.
+            Your private sanctuary for film memories, tickets, venues, and reflections. Never shared
+            with the social feed.
           </Text>
 
           {/* Scrapbook Metrics Bar */}
@@ -163,10 +165,7 @@ export default function JournalScreen() {
 
         {/* Search Bar */}
         <View
-          style={[
-            styles.search,
-            { backgroundColor: colors.surface, borderColor: colors.border },
-          ]}
+          style={[styles.search, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
           <Ionicons color={colors.textSecondary} name="search-outline" size={18} />
           <TextInput
@@ -246,7 +245,10 @@ export default function JournalScreen() {
               entry.moodAfter ||
               (entry.attachments && entry.attachments.length > 0);
 
-            const topQuote = entry.memorableQuotes && entry.memorableQuotes.length > 0 ? entry.memorableQuotes[0] : null;
+            const topQuote =
+              entry.memorableQuotes && entry.memorableQuotes.length > 0
+                ? entry.memorableQuotes[0]
+                : null;
 
             return (
               <Pressable
@@ -264,7 +266,11 @@ export default function JournalScreen() {
               >
                 {/* Left Poster Thumbnail */}
                 {entry.media?.posterUrl ? (
-                  <Image source={{ uri: entry.media.posterUrl }} style={styles.poster} resizeMode="cover" />
+                  <Image
+                    source={{ uri: entry.media.posterUrl }}
+                    style={styles.poster}
+                    resizeMode="cover"
+                  />
                 ) : (
                   <View
                     style={[
@@ -281,7 +287,10 @@ export default function JournalScreen() {
                 <View style={styles.cardCopy}>
                   {/* Title & Status Badge */}
                   <View style={styles.cardTitleRow}>
-                    <Text numberOfLines={1} style={[styles.cardTitle, { color: colors.textPrimary }]}>
+                    <Text
+                      numberOfLines={1}
+                      style={[styles.cardTitle, { color: colors.textPrimary }]}
+                    >
                       {entry.title || entry.media?.title || 'Untitled Memory'}
                     </Text>
 
@@ -296,10 +305,7 @@ export default function JournalScreen() {
                       ]}
                     >
                       <Text
-                        style={[
-                          styles.statusBadgeText,
-                          { color: isDraft ? '#F59E0B' : '#10B981' },
-                        ]}
+                        style={[styles.statusBadgeText, { color: isDraft ? '#F59E0B' : '#10B981' }]}
                       >
                         {isDraft ? 'DRAFT' : 'COMPLETE'}
                       </Text>
@@ -308,7 +314,8 @@ export default function JournalScreen() {
 
                   {/* Movie Year & Date Info */}
                   <Text style={[styles.dateMeta, { color: colors.textSecondary }]}>
-                    {entry.media?.title} ({entry.media?.releaseYear ?? 'TBA'}) · Watched {watchedDate}
+                    {entry.media?.title} ({entry.media?.releaseYear ?? 'TBA'}) · Watched{' '}
+                    {watchedDate}
                   </Text>
 
                   {/* Atmosphere Chips (Location, Companions, Moods, Stubs) */}
@@ -317,7 +324,10 @@ export default function JournalScreen() {
                       {entry.viewingLocation && (
                         <View style={[styles.tagChip, { backgroundColor: colors.surfaceRaised }]}>
                           <Ionicons name="location-sharp" size={10} color="#F59E0B" />
-                          <Text numberOfLines={1} style={[styles.tagChipText, { color: colors.textPrimary }]}>
+                          <Text
+                            numberOfLines={1}
+                            style={[styles.tagChipText, { color: colors.textPrimary }]}
+                          >
                             {entry.viewingLocation}
                           </Text>
                         </View>
@@ -326,9 +336,14 @@ export default function JournalScreen() {
                       {entry.companionNames && entry.companionNames.length > 0 && (
                         <View style={[styles.tagChip, { backgroundColor: colors.surfaceRaised }]}>
                           <Ionicons name="people" size={10} color="#A78BFA" />
-                          <Text numberOfLines={1} style={[styles.tagChipText, { color: colors.textPrimary }]}>
+                          <Text
+                            numberOfLines={1}
+                            style={[styles.tagChipText, { color: colors.textPrimary }]}
+                          >
                             with {entry.companionNames.slice(0, 2).join(', ')}
-                            {entry.companionNames.length > 2 ? ` +${entry.companionNames.length - 2}` : ''}
+                            {entry.companionNames.length > 2
+                              ? ` +${entry.companionNames.length - 2}`
+                              : ''}
                           </Text>
                         </View>
                       )}
@@ -336,10 +351,13 @@ export default function JournalScreen() {
                       {(entry.moodBefore || entry.moodAfter) && (
                         <View style={[styles.tagChip, { backgroundColor: colors.surfaceRaised }]}>
                           <Ionicons name="happy-outline" size={10} color={colors.brand} />
-                          <Text numberOfLines={1} style={[styles.tagChipText, { color: colors.textPrimary }]}>
+                          <Text
+                            numberOfLines={1}
+                            style={[styles.tagChipText, { color: colors.textPrimary }]}
+                          >
                             {entry.moodBefore && entry.moodAfter
                               ? `${entry.moodBefore} → ${entry.moodAfter}`
-                              : entry.moodAfter ?? entry.moodBefore}
+                              : (entry.moodAfter ?? entry.moodBefore)}
                           </Text>
                         </View>
                       )}
@@ -348,7 +366,8 @@ export default function JournalScreen() {
                         <View style={[styles.tagChip, { backgroundColor: colors.surfaceRaised }]}>
                           <Ionicons name="ticket" size={10} color="#EC4899" />
                           <Text style={[styles.tagChipText, { color: colors.textPrimary }]}>
-                            {entry.attachments.length} {entry.attachments.length === 1 ? 'stub' : 'stubs'}
+                            {entry.attachments.length}{' '}
+                            {entry.attachments.length === 1 ? 'stub' : 'stubs'}
                           </Text>
                         </View>
                       )}
@@ -357,8 +376,16 @@ export default function JournalScreen() {
 
                   {/* Top Memorable Quote Snippet */}
                   {topQuote && (
-                    <View style={[styles.quoteBox, { backgroundColor: colors.surfaceRaised, borderColor: colors.border }]}>
-                      <Text numberOfLines={1} style={[styles.quoteText, { color: colors.textSecondary }]}>
+                    <View
+                      style={[
+                        styles.quoteBox,
+                        { backgroundColor: colors.surfaceRaised, borderColor: colors.border },
+                      ]}
+                    >
+                      <Text
+                        numberOfLines={1}
+                        style={[styles.quoteText, { color: colors.textSecondary }]}
+                      >
                         “{topQuote}”
                       </Text>
                     </View>
@@ -366,7 +393,10 @@ export default function JournalScreen() {
 
                   {/* Private Notes Excerpt */}
                   {entry.notes ? (
-                    <Text numberOfLines={2} style={[styles.preview, { color: colors.textSecondary }]}>
+                    <Text
+                      numberOfLines={2}
+                      style={[styles.preview, { color: colors.textSecondary }]}
+                    >
                       {entry.notes}
                     </Text>
                   ) : null}
@@ -398,7 +428,12 @@ export default function JournalScreen() {
           <View
             style={[styles.empty, { backgroundColor: colors.surface, borderColor: colors.border }]}
           >
-            <View style={[styles.emptyIconCircle, { backgroundColor: colors.surfaceRaised, borderColor: colors.border }]}>
+            <View
+              style={[
+                styles.emptyIconCircle,
+                { backgroundColor: colors.surfaceRaised, borderColor: colors.border },
+              ]}
+            >
               <Ionicons color={colors.brand} name="book-outline" size={32} />
             </View>
             <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>
