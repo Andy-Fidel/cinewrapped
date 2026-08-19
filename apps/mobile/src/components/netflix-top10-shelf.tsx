@@ -6,20 +6,67 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { haptics } from '../lib/haptics';
 import { NetflixQuickPreviewModal } from './netflix-quick-preview-modal';
-import { PosterImage, useColors } from './ui';
+import { PosterImage, Skeleton, useColors } from './ui';
 
 interface NetflixTop10ShelfProps {
   items: RecommendationSummary[];
   title?: string;
+  loading?: boolean;
+}
+
+export function NetflixTop10ShelfSkeleton({
+  title = 'Top 10 in CineWrapped Today',
+}: {
+  title?: string | undefined;
+}) {
+  const colors = useColors();
+  return (
+    <View style={styles.container}>
+      <View style={styles.headerRow}>
+        <View style={styles.titleWrap}>
+          <View style={styles.top10Square}>
+            <Text style={styles.top10SquareText}>TOP</Text>
+            <Text style={styles.top10SquareNum}>10</Text>
+          </View>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+            {title}
+          </Text>
+        </View>
+      </View>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {[1, 2, 3, 4].map((num) => (
+          <View key={num} style={styles.itemCard}>
+            <View style={styles.rankNumberContainer}>
+              <Text style={[styles.rankNumber, { color: 'rgba(150, 150, 150, 0.2)' }]}>
+                {num}
+              </Text>
+            </View>
+            <View style={styles.posterWrap}>
+              <Skeleton width={100} height={145} rounded={8} />
+            </View>
+          </View>
+        ))}
+      </ScrollView>
+    </View>
+  );
 }
 
 export function NetflixTop10Shelf({
   items,
   title = 'Top 10 in CineWrapped Today',
+  loading = false,
 }: NetflixTop10ShelfProps) {
   const colors = useColors();
   const [selectedMedia, setSelectedMedia] = useState<MediaSummary | null>(null);
   const [selectedScore, setSelectedScore] = useState<number | undefined>(undefined);
+
+  if (loading) {
+    return <NetflixTop10ShelfSkeleton title={title} />;
+  }
 
   const top10List = items.slice(0, 10);
   if (top10List.length === 0) return null;

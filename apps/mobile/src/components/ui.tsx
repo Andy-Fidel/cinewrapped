@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
-import { type PropsWithChildren, type ReactNode, useState } from 'react';
+import { type PropsWithChildren, type ReactNode, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Animated,
   Image,
   Pressable,
   ScrollView,
@@ -38,23 +39,36 @@ export function Screen({
   );
 }
 
+import { BrandLogo } from './brand-logo';
+
+export { BrandLogo } from './brand-logo';
+
 export function BrandHeader({
   title,
   body,
   eyebrow = 'CINEWRAPPED',
   action,
+  showLogo = true,
 }: {
   title: string;
-  body?: string;
-  eyebrow?: string;
+  body?: string | undefined;
+  eyebrow?: string | undefined;
   action?: ReactNode;
+  showLogo?: boolean | undefined;
 }) {
   const colors = useColors();
   return (
     <View style={styles.header}>
       <View style={styles.headerTopRow}>
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.eyebrow, { color: colors.brand }]}>{eyebrow}</Text>
+        <View style={{ flex: 1, gap: 4 }}>
+          {showLogo ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+              <BrandLogo size="sm" variant="mark" />
+              {eyebrow ? <Text style={[styles.eyebrow, { color: colors.brand }]}>{eyebrow}</Text> : null}
+            </View>
+          ) : eyebrow ? (
+            <Text style={[styles.eyebrow, { color: colors.brand }]}>{eyebrow}</Text>
+          ) : null}
           <Text accessibilityRole="header" style={[styles.title, { color: colors.textPrimary }]}>
             {title}
           </Text>
@@ -396,6 +410,76 @@ export function Button({
         <Text style={[styles.buttonText, { color: foreground }]}>{label}</Text>
       )}
     </Pressable>
+  );
+}
+
+export function Skeleton({
+  width,
+  height,
+  rounded = 10,
+  style,
+}: {
+  width?: number | string | undefined;
+  height?: number | string | undefined;
+  rounded?: number | undefined;
+  style?: StyleProp<ViewStyle> | undefined;
+}) {
+  const colors = useColors();
+  const opacity = useRef(new Animated.Value(0.35)).current;
+
+  useEffect(() => {
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, {
+          toValue: 0.75,
+          duration: 900,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacity, {
+          toValue: 0.35,
+          duration: 900,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    pulse.start();
+    return () => pulse.stop();
+  }, [opacity]);
+
+  return (
+    <Animated.View
+      style={[
+        {
+          width: width as any,
+          height: height as any,
+          borderRadius: rounded,
+          backgroundColor: colors.surfaceRaised,
+          opacity,
+        },
+        style,
+      ]}
+    />
+  );
+}
+
+export function SkeletonText({
+  lines = 2,
+  style,
+}: {
+  lines?: number | undefined;
+  style?: StyleProp<ViewStyle> | undefined;
+}) {
+  return (
+    <View style={[{ gap: 6 }, style]}>
+      {Array.from({ length: lines }).map((_, i) => (
+        <Skeleton
+          key={i}
+          height={14}
+          width={i === lines - 1 && lines > 1 ? '65%' : '100%'}
+          rounded={4}
+        />
+      ))}
+    </View>
   );
 }
 

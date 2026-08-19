@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { SettingsCard, SettingsLink } from '../../src/components/settings-controls';
-import { BrandHeader, Button, Screen, useColors } from '../../src/components/ui';
+import { BrandHeader, BrandLogo, Button, Screen, useColors } from '../../src/components/ui';
 import { useAuth } from '../../src/providers/auth-provider';
 import { useTheme } from '../../src/providers/theme-provider';
 import { useFeatureFlags } from '../../src/providers/feature-flags-provider';
@@ -186,6 +186,13 @@ export default function SettingsScreen() {
           detail="Change your password and manage signed-in devices"
           onPress={() => router.push('/settings/security')}
         />
+      </View>
+
+      <View style={{ alignItems: 'center', marginVertical: 18, gap: 6 }}>
+        <BrandLogo size="md" variant="full" />
+        <Text style={{ fontSize: 12, color: colors.textSecondary, fontWeight: '600' }}>
+          v0.1.0 · Crafted for cinephiles
+        </Text>
       </View>
 
       <Button label="Sign Out" variant="danger" onPress={() => void handleSignOut()} />

@@ -7,6 +7,7 @@ import { z } from 'zod';
 
 import {
   BrandHeader,
+  BrandLogo,
   Button,
   ErrorText,
   Field,
@@ -56,15 +57,9 @@ export default function LoginScreen() {
       <View style={styles.screenContent}>
         {/* Brand Hero Crest */}
         <View style={styles.heroHeader}>
-          <View
-            style={[
-              styles.logoBadge,
-              { backgroundColor: colors.surfaceRaised, borderColor: colors.border },
-            ]}
-          >
-            <Ionicons name="film" size={28} color={colors.brand} />
-          </View>
+          <BrandLogo size="xl" variant="full" style={{ marginBottom: 8 }} />
           <BrandHeader
+            showLogo={false}
             title="Welcome Back"
             body="Track every watch, then see the story your taste tells."
           />

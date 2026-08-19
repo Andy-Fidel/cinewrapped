@@ -5,7 +5,39 @@ import React from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { haptics } from '../lib/haptics';
-import { PosterImage, useColors } from './ui';
+import { useTheme } from '../providers/theme-provider';
+import { PosterImage, Skeleton, useColors } from './ui';
+
+export function NetflixHeroBillboardSkeleton() {
+  const colors = useColors();
+  const { resolvedTheme } = useTheme();
+  const isLight = resolvedTheme === 'light';
+
+  return (
+    <View
+      style={[
+        styles.billboardContainer,
+        isLight && [
+          styles.billboardContainerLight,
+          { backgroundColor: '#0F172A', borderColor: colors.border },
+        ],
+      ]}
+    >
+      <View style={styles.imageWrapper}>
+        <Skeleton width="100%" height="100%" rounded={20} />
+      </View>
+      <View style={styles.contentOverlay}>
+        <Skeleton width={140} height={24} rounded={12} />
+        <Skeleton width="80%" height={32} rounded={8} style={{ marginVertical: 8 }} />
+        <Skeleton width="60%" height={16} rounded={6} />
+        <View style={[styles.actionSuiteRow, { marginTop: 14 }]}>
+          <Skeleton width={120} height={42} rounded={12} />
+          <Skeleton width={42} height={42} rounded={12} />
+        </View>
+      </View>
+    </View>
+  );
+}
 
 interface NetflixHeroBillboardProps {
   featured: RecommendationSummary;
@@ -19,8 +51,10 @@ export function NetflixHeroBillboard({
   isInWatchlist = false,
 }: NetflixHeroBillboardProps) {
   const colors = useColors();
-  const media = featured.media;
+  const { resolvedTheme } = useTheme();
+  const isLight = resolvedTheme === 'light';
 
+  const media = featured.media;
   const resonancePercent = Math.min(99, Math.max(88, Math.round(featured.score * 100)));
   const releaseYear = media.releaseYear ? String(media.releaseYear) : '';
   const runtimeLabel = media.runtimeMinutes
@@ -28,8 +62,16 @@ export function NetflixHeroBillboard({
     : '';
 
   return (
-    <View style={styles.billboardContainer}>
-      {/* Cinematic Ambient Backdrop with Double-Layered Vignette */}
+    <View
+      style={[
+        styles.billboardContainer,
+        isLight && [
+          styles.billboardContainerLight,
+          { backgroundColor: '#0F172A', borderColor: colors.border },
+        ],
+      ]}
+    >
+      {/* Cinematic Ambient Backdrop with Double-Layered Dark Vignette */}
       <View style={styles.imageWrapper}>
         <Image
           source={{
@@ -42,13 +84,21 @@ export function NetflixHeroBillboard({
           resizeMode="cover"
         />
 
-        {/* Ambient Darkened Gradient Vignettes */}
+        {/* Ambient Darkened Gradient Vignettes - Keeps text 100% readable in both Light & Dark modes */}
         <View style={styles.topCurtain} />
-        <View style={[styles.bottomFog, { backgroundColor: colors.background }]} />
+        <View
+          style={[
+            styles.bottomFog,
+            {
+              backgroundColor: isLight ? '#0B0F19' : colors.background,
+              opacity: isLight ? 0.94 : 0.98,
+            },
+          ]}
+        />
       </View>
 
       {/* Floating Glassmorphic Spotlight Pedestal */}
-      <View style={styles.contentOverlay}>
+      <View style={[styles.contentOverlay, isLight && styles.contentOverlayLight]}>
         {/* CineWrapped Curator Spotlight Badge */}
         <View style={styles.spotlightBadgeRow}>
           <View style={styles.curatorPill}>
@@ -191,6 +241,19 @@ const styles = StyleSheet.create({
     position: 'relative',
     width: '100%',
   },
+  billboardContainerLight: {
+    borderRadius: 20,
+    borderWidth: 1,
+    elevation: 8,
+    height: 410,
+    marginHorizontal: 0,
+    marginTop: 4,
+    overflow: 'hidden',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+  },
   imageWrapper: {
     ...StyleSheet.absoluteFillObject,
   },
@@ -210,7 +273,6 @@ const styles = StyleSheet.create({
     bottom: 0,
     height: 220,
     left: 0,
-    opacity: 0.98,
     position: 'absolute',
     right: 0,
   },
@@ -221,6 +283,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     position: 'absolute',
     right: 0,
+  },
+  contentOverlayLight: {
+    bottom: 12,
+    paddingHorizontal: 16,
   },
   spotlightBadgeRow: {
     alignItems: 'center',
@@ -245,13 +311,13 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
   },
   resonancePill: {
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
     borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 3,
   },
   resonanceText: {
-    color: '#E2E8F0',
+    color: '#F1F5F9',
     fontSize: 11,
     fontWeight: '700',
   },
@@ -282,20 +348,20 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   specItem: {
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    backgroundColor: 'rgba(255, 255, 255, 0.16)',
     borderRadius: 4,
     paddingHorizontal: 6,
     paddingVertical: 2,
   },
   specText: {
-    color: 'rgba(255, 255, 255, 0.85)',
+    color: 'rgba(255, 255, 255, 0.95)',
     fontSize: 11,
     fontWeight: '700',
   },
   goldRatingItem: {
     alignItems: 'center',
-    backgroundColor: 'rgba(245, 158, 11, 0.15)',
-    borderColor: 'rgba(245, 158, 11, 0.3)',
+    backgroundColor: 'rgba(245, 158, 11, 0.2)',
+    borderColor: 'rgba(245, 158, 11, 0.4)',
     borderWidth: 1,
     flexDirection: 'row',
     gap: 3,
@@ -308,7 +374,7 @@ const styles = StyleSheet.create({
   miniPosterCard: {
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: 'rgba(255, 255, 255, 0.3)',
     elevation: 8,
     height: 90,
     shadowColor: '#000000',
@@ -318,7 +384,7 @@ const styles = StyleSheet.create({
     width: 60,
   },
   synopsisText: {
-    color: 'rgba(255, 255, 255, 0.75)',
+    color: 'rgba(255, 255, 255, 0.82)',
     fontSize: 12,
     lineHeight: 16,
   },
@@ -346,8 +412,8 @@ const styles = StyleSheet.create({
   },
   glassCapsuleBtn: {
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.14)',
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    borderColor: 'rgba(255, 255, 255, 0.25)',
     borderRadius: 10,
     borderWidth: 1,
     flex: 1.1,
@@ -357,8 +423,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   glassCapsuleBtnActive: {
-    backgroundColor: 'rgba(16, 185, 129, 0.15)',
-    borderColor: 'rgba(16, 185, 129, 0.4)',
+    backgroundColor: 'rgba(16, 185, 129, 0.25)',
+    borderColor: 'rgba(16, 185, 129, 0.5)',
   },
   glassCapsuleText: {
     color: '#FFFFFF',
@@ -367,8 +433,8 @@ const styles = StyleSheet.create({
   },
   glassIconBtn: {
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.14)',
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    borderColor: 'rgba(255, 255, 255, 0.25)',
     borderRadius: 10,
     borderWidth: 1,
     height: 42,

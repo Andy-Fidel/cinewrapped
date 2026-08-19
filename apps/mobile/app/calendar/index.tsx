@@ -25,11 +25,16 @@ import {
 } from 'react-native';
 
 import { AnnualHeatmap } from '../../src/components/annual-heatmap';
+import { CalendarSyncModal } from '../../src/components/calendar-sync-modal';
 import { FeatureGate } from '../../src/components/feature-gate';
 import { MonthlyViewingCalendar } from '../../src/components/monthly-viewing-calendar';
 import { PosterImage, Screen, useColors } from '../../src/components/ui';
 import { api } from '../../src/lib/api';
 import { nextClockTime, nextWeekdayTime } from '../../src/lib/calendar-dates';
+import {
+  openAppleCalendar,
+  openGoogleCalendar,
+} from '../../src/lib/calendar-integration';
 import { errorMessage } from '../../src/lib/error-message';
 import { haptics } from '../../src/lib/haptics';
 import { useAuth } from '../../src/providers/auth-provider';
@@ -156,6 +161,7 @@ export default function CalendarScreen() {
   const [reminderOption, setReminderOption] = useState<number>(60);
   const [exportingId, setExportingId] = useState<string | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [selectedSyncEvent, setSelectedSyncEvent] = useState<CalendarEventSummary | null>(null);
 
   // Filtering states
   const [activeFilter, setActiveFilter] = useState<FilterType>('ALL');
@@ -209,13 +215,17 @@ export default function CalendarScreen() {
         },
       });
     },
-    onSuccess: async () => {
+    onSuccess: async (createdEvent) => {
       haptics.clapperSnap();
       setTitle('');
       setNotes('');
       setLinkedMediaId(null);
       setIsPlanningOpen(false);
       await queryClient.invalidateQueries({ queryKey: ['calendar'] });
+      // Prompt user to sync to Google / Apple Calendar immediately
+      if (createdEvent) {
+        setSelectedSyncEvent(createdEvent);
+      }
     },
     onError: (error) => showError('Could not schedule event', errorMessage(error)),
   });
@@ -913,20 +923,63 @@ export default function CalendarScreen() {
                         </Text>
                       ) : null}
 
-                      {/* Export & Actions Row */}
+                      {/* Integrated Calendar Actions */}
                       <View style={styles.eventActionsRow}>
+                        {/* Apple / iOS Calendar */}
                         <Pressable
+                          accessibilityLabel="Add to Apple Calendar"
                           accessibilityRole="button"
-                          onPress={() => void handleExportIcs(event)}
-                          style={[styles.actionChip, { backgroundColor: colors.surfaceRaised }]}
+                          onPress={() => {
+                            haptics.selection();
+                            void openAppleCalendar(event);
+                          }}
+                          style={[styles.calendarActionBtn, { backgroundColor: colors.surfaceRaised }]}
                         >
-                          <Ionicons name="download-outline" size={14} color={colors.brand} />
-                          <Text style={[styles.actionChipText, { color: colors.brand }]}>
-                            {exportingId === event.id ? 'Exporting…' : 'Export .ics'}
+                          <Ionicons name="logo-apple" size={13} color={colors.textPrimary} />
+                          <Text style={[styles.calendarActionText, { color: colors.textPrimary }]}>
+                            iOS Cal
                           </Text>
                         </Pressable>
 
+                        {/* Google Calendar */}
                         <Pressable
+                          accessibilityLabel="Add to Google Calendar"
+                          accessibilityRole="button"
+                          onPress={() => {
+                            haptics.selection();
+                            void openGoogleCalendar({
+                              id: event.id,
+                              title: event.title,
+                              startsAt: event.startsAt,
+                              durationMinutes: event.durationMinutes,
+                              notes: event.notes,
+                              mediaTitle: event.media?.title,
+                            });
+                          }}
+                          style={[styles.calendarActionBtn, { backgroundColor: 'rgba(66, 133, 244, 0.12)' }]}
+                        >
+                          <Ionicons name="logo-google" size={12} color="#4285F4" />
+                          <Text style={[styles.calendarActionText, { color: '#4285F4' }]}>
+                            Google Cal
+                          </Text>
+                        </Pressable>
+
+                        {/* More Sync / .ICS Options */}
+                        <Pressable
+                          accessibilityLabel="More export options"
+                          accessibilityRole="button"
+                          onPress={() => setSelectedSyncEvent(event)}
+                          style={[styles.calendarActionBtn, { backgroundColor: colors.surfaceRaised }]}
+                        >
+                          <Ionicons name="share-outline" size={13} color={colors.brand} />
+                          <Text style={[styles.calendarActionText, { color: colors.brand }]}>
+                            Sync
+                          </Text>
+                        </Pressable>
+
+                        {/* Delete Action */}
+                        <Pressable
+                          accessibilityLabel="Delete event"
                           accessibilityRole="button"
                           onPress={async () => {
                             const confirmed = await confirm({
@@ -937,9 +990,9 @@ export default function CalendarScreen() {
                             });
                             if (confirmed) remove.mutate(event.id);
                           }}
-                          style={[styles.actionChip, { backgroundColor: colors.surfaceRaised }]}
+                          style={[styles.deleteActionBtn, { backgroundColor: colors.surfaceRaised }]}
                         >
-                          <Ionicons name="trash-outline" size={14} color={colors.danger} />
+                          <Ionicons name="trash-outline" size={13} color={colors.danger} />
                         </Pressable>
                       </View>
                     </View>
@@ -958,6 +1011,13 @@ export default function CalendarScreen() {
             </View>
           </View>
         )}
+
+        {/* 1-Tap Google & Apple Calendar Sync Modal */}
+        <CalendarSyncModal
+          event={selectedSyncEvent}
+          onClose={() => setSelectedSyncEvent(null)}
+          visible={selectedSyncEvent !== null}
+        />
       </Screen>
     </FeatureGate>
   );
@@ -1369,6 +1429,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     marginTop: 4,
+  },
+  calendarActionBtn: {
+    alignItems: 'center',
+    borderRadius: 8,
+    flexDirection: 'row',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+  },
+  calendarActionText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  deleteActionBtn: {
+    alignItems: 'center',
+    borderRadius: 8,
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 5,
   },
   actionChip: {
     alignItems: 'center',

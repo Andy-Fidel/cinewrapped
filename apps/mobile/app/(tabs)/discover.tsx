@@ -27,6 +27,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Carousel3D } from '../../src/components/carousel-3d';
 import { MediaCard } from '../../src/components/media-card';
+import {
+  TrendingBentoGrid,
+  TrendingBentoGridSkeleton,
+} from '../../src/components/trending-bento-grid';
 import { Button, useColors } from '../../src/components/ui';
 import { api } from '../../src/lib/api';
 import { useAuth } from '../../src/providers/auth-provider';
@@ -526,26 +530,26 @@ export default function DiscoverScreen() {
   const appliedFilters = filterCount(filters);
   const searching = debouncedQuery.length >= 2 || appliedFilters > 0;
 
-  const genres = useQuery({
+  const genres = useQuery<GenreSummary[]>({
     queryKey: ['genres'],
     queryFn: () => api.request<GenreSummary[]>('genres'),
     staleTime: 24 * 60 * 60 * 1_000,
   });
-  const providers = useQuery({
+  const providers = useQuery<StreamingProviderSummary[]>({
     queryKey: ['streaming-providers'],
     queryFn: () => api.request<StreamingProviderSummary[]>('streaming-providers'),
     staleTime: 24 * 60 * 60 * 1_000,
   });
-  const history = useQuery({
+  const history = useQuery<SearchHistoryItem[]>({
     queryKey: ['search-history'],
     queryFn: () => api.request<SearchHistoryItem[]>('search/history?limit=30'),
   });
-  const trendingSearches = useQuery({
+  const trendingSearches = useQuery<TrendingSearch[]>({
     queryKey: ['trending-searches'],
     queryFn: () => api.request<TrendingSearch[]>('search/trending'),
     staleTime: 10 * 60 * 1_000,
   });
-  const suggestions = useQuery({
+  const suggestions = useQuery<SearchSuggestion[]>({
     queryKey: ['search-suggestions', suggestionQuery],
     queryFn: () =>
       api.request<SearchSuggestion[]>(
@@ -554,7 +558,7 @@ export default function DiscoverScreen() {
     enabled: suggestionsOpen && suggestionQuery.length >= 1,
     staleTime: 60 * 1_000,
   });
-  const search = useQuery({
+  const search = useQuery<SearchResults>({
     queryKey: [
       'unified-search',
       debouncedQuery,
@@ -576,7 +580,7 @@ export default function DiscoverScreen() {
     enabled: searching,
     staleTime: 2 * 60 * 1_000,
   });
-  const featured = useQuery({
+  const featured = useQuery<MediaSummary[]>({
     queryKey: ['media-featured', user?.preferredLanguage],
     queryFn: () =>
       api.request<MediaSummary[]>(
@@ -584,7 +588,7 @@ export default function DiscoverScreen() {
       ),
     staleTime: 10 * 60 * 1_000,
   });
-  const trending = useQuery({
+  const trending = useQuery<MediaSummary[]>({
     queryKey: ['media-trending', user?.preferredLanguage],
     queryFn: () =>
       api.request<MediaSummary[]>(
@@ -592,7 +596,7 @@ export default function DiscoverScreen() {
       ),
     staleTime: 10 * 60 * 1_000,
   });
-  const preferences = useQuery({
+  const preferences = useQuery<UserPreferences>({
     queryKey: ['preferences', user?.id ?? 'anonymous'],
     queryFn: () => api.request<UserPreferences>('users/me/preferences'),
     enabled: user !== null,
@@ -854,8 +858,11 @@ export default function DiscoverScreen() {
           <SectionTitle>Trending this week</SectionTitle>
         )}
 
-        {(searching ? search : trending).isPending ? (
+        {searching && search.isPending ? (
           <ActivityIndicator color={colors.brand} style={styles.loading} />
+        ) : null}
+        {!searching && trending.isPending ? (
+          <TrendingBentoGridSkeleton />
         ) : null}
         {(searching ? search : trending).isError ? (
           <Pressable
@@ -886,16 +893,20 @@ export default function DiscoverScreen() {
 
         {mediaResults.length > 0 ? (
           <View style={styles.resultSection}>
-            {searching && result && result.media.length > 0 ? (
-              <SectionTitle>Titles</SectionTitle>
-            ) : null}
-            <View style={styles.mediaGrid}>
-              {mediaResults.map((media) => (
-                <View key={media.id} style={styles.mediaCell}>
-                  <MediaCard media={media} />
+            {searching ? (
+              <>
+                {result && result.media.length > 0 ? <SectionTitle>Titles</SectionTitle> : null}
+                <View style={styles.mediaGrid}>
+                  {mediaResults.map((media) => (
+                    <View key={media.id} style={styles.mediaCell}>
+                      <MediaCard media={media} />
+                    </View>
+                  ))}
                 </View>
-              ))}
-            </View>
+              </>
+            ) : (
+              <TrendingBentoGrid mediaList={mediaResults} />
+            )}
           </View>
         ) : null}
         {result?.users.length ? (

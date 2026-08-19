@@ -177,6 +177,7 @@ export default function MediaDetailScreen() {
   const { session, user } = useAuth();
   const { mediaId } = useLocalSearchParams<{ mediaId: string }>();
   const [showTrailer, setShowTrailer] = useState(false);
+  const [whereToWatchExpanded, setWhereToWatchExpanded] = useState(true);
 
   const details = useQuery({
     queryKey: ['media-details', mediaId],
@@ -531,145 +532,184 @@ export default function MediaDetailScreen() {
             <SoundtracksPanel mediaId={media.id} countryCode={user?.countryCode ?? 'US'} />
           ) : null}
 
-          {/* Streaming Availability Section with Direct App Deep Links */}
-          <View style={styles.streamingSectionHeader}>
-            <View style={styles.streamingTitleRow}>
-              <Ionicons name="play-outline" size={20} color={colors.brand} />
-              <Text style={[styles.heading, { color: colors.textPrimary, marginTop: 0 }]}>
-                Where to Watch
-              </Text>
-            </View>
-            <View style={[styles.countryBadge, { backgroundColor: colors.surfaceRaised }]}>
-              <Text style={[styles.countryBadgeText, { color: colors.brand }]}>
-                🌍 {media.streamingAvailability?.countryCode ?? user?.countryCode ?? 'US'}
-              </Text>
-            </View>
-          </View>
+          {/* Where to Watch Collapsible Accordion Section */}
+          <View style={[styles.accordionContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Pressable
+              accessibilityLabel="Where to Watch streaming availability"
+              accessibilityRole="button"
+              accessibilityState={{ expanded: whereToWatchExpanded }}
+              onPress={() => {
+                haptics.selection();
+                setWhereToWatchExpanded((prev) => !prev);
+              }}
+              style={({ pressed }) => [
+                styles.accordionHeader,
+                {
+                  borderBottomColor: whereToWatchExpanded ? colors.border : 'transparent',
+                  borderBottomWidth: whereToWatchExpanded ? 1 : 0,
+                  opacity: pressed ? 0.85 : 1,
+                },
+              ]}
+            >
+              <View style={styles.accordionHeaderLeft}>
+                <View style={[styles.streamingIconCircle, { backgroundColor: 'rgba(222, 54, 65, 0.12)' }]}>
+                  <Ionicons name="play" size={16} color={colors.brand} />
+                </View>
+                <View>
+                  <Text style={[styles.accordionTitle, { color: colors.textPrimary }]}>
+                    Where to Watch
+                  </Text>
+                  <Text style={[styles.accordionSubtitle, { color: colors.textSecondary }]}>
+                    {media.streamingAvailability?.items.length
+                      ? `${media.streamingAvailability.items.length} provider${media.streamingAvailability.items.length === 1 ? '' : 's'} available`
+                      : 'Streaming & rental availability'}
+                  </Text>
+                </View>
+              </View>
 
-          {media.streamingAvailability?.items.length ? (
-            <View style={styles.providers}>
-              {media.streamingAvailability.items.map((item) => {
-                const key = item.providerName.trim().toLowerCase();
-                const providerConfig = Object.entries(PROVIDER_CONFIGS).find(([name]) =>
-                  key.includes(name),
-                )?.[1];
-                const brandAccent = providerConfig?.brandColor ?? colors.brand;
+              <View style={styles.accordionHeaderRight}>
+                <View style={[styles.countryBadge, { backgroundColor: colors.surfaceRaised }]}>
+                  <Text style={[styles.countryBadgeText, { color: colors.brand }]}>
+                    🌍 {media.streamingAvailability?.countryCode ?? user?.countryCode ?? 'US'}
+                  </Text>
+                </View>
+                <Ionicons
+                  name={whereToWatchExpanded ? 'chevron-up' : 'chevron-down'}
+                  size={20}
+                  color={colors.textSecondary}
+                />
+              </View>
+            </Pressable>
 
-                return (
-                  <Pressable
-                    accessibilityRole="link"
-                    disabled={item.providerUrl === null}
-                    key={`${item.providerId}-${item.monetizationType}`}
-                    onPress={() => void openStreamingProvider(item.providerName, item.providerUrl)}
-                    style={({ pressed }) => [
-                      styles.providerCard,
-                      {
-                        backgroundColor: colors.surface,
-                        borderColor: colors.border,
-                        opacity: pressed ? 0.85 : 1,
-                      },
-                    ]}
-                  >
-                    {/* Brand indicator strip */}
-                    <View style={[styles.providerBrandStrip, { backgroundColor: brandAccent }]} />
+            {whereToWatchExpanded && (
+              <View style={styles.accordionContent}>
+                {media.streamingAvailability?.items.length ? (
+                  <View style={styles.providers}>
+                    {media.streamingAvailability.items.map((item) => {
+                      const key = item.providerName.trim().toLowerCase();
+                      const providerConfig = Object.entries(PROVIDER_CONFIGS).find(([name]) =>
+                        key.includes(name),
+                      )?.[1];
+                      const brandAccent = providerConfig?.brandColor ?? colors.brand;
 
-                    {item.logoUrl === null ? (
-                      <View
-                        style={[
-                          styles.providerLogoFallback,
-                          { backgroundColor: colors.surfaceRaised },
-                        ]}
-                      >
-                        <Ionicons name="tv-outline" size={22} color={colors.textSecondary} />
-                      </View>
-                    ) : (
-                      <Image
-                        source={{ uri: item.logoUrl }}
-                        resizeMode="contain"
-                        style={styles.providerLogo}
-                      />
-                    )}
-
-                    <View style={styles.providerInfo}>
-                      <Text style={[styles.providerName, { color: colors.textPrimary }]}>
-                        {item.providerName}
-                      </Text>
-                      <View style={styles.providerTagRow}>
-                        <View
-                          style={[
-                            styles.monetizationBadge,
+                      return (
+                        <Pressable
+                          accessibilityRole="link"
+                          disabled={item.providerUrl === null}
+                          key={`${item.providerId}-${item.monetizationType}`}
+                          onPress={() => void openStreamingProvider(item.providerName, item.providerUrl)}
+                          style={({ pressed }) => [
+                            styles.providerCard,
                             {
-                              backgroundColor:
-                                item.monetizationType === 'FLATRATE'
-                                  ? 'rgba(16, 185, 129, 0.15)'
-                                  : colors.surfaceRaised,
+                              backgroundColor: colors.surfaceRaised,
+                              borderColor: colors.border,
+                              opacity: pressed ? 0.85 : 1,
                             },
                           ]}
                         >
-                          <Text
+                          {/* Brand indicator strip */}
+                          <View style={[styles.providerBrandStrip, { backgroundColor: brandAccent }]} />
+
+                          {item.logoUrl === null ? (
+                            <View
+                              style={[
+                                styles.providerLogoFallback,
+                                { backgroundColor: colors.surface },
+                              ]}
+                            >
+                              <Ionicons name="tv-outline" size={22} color={colors.textSecondary} />
+                            </View>
+                          ) : (
+                            <Image
+                              source={{ uri: item.logoUrl }}
+                              resizeMode="contain"
+                              style={styles.providerLogo}
+                            />
+                          )}
+
+                          <View style={styles.providerInfo}>
+                            <Text style={[styles.providerName, { color: colors.textPrimary }]}>
+                              {item.providerName}
+                            </Text>
+                            <View style={styles.providerTagRow}>
+                              <View
+                                style={[
+                                  styles.monetizationBadge,
+                                  {
+                                    backgroundColor:
+                                      item.monetizationType === 'FLATRATE'
+                                        ? 'rgba(16, 185, 129, 0.15)'
+                                        : colors.surface,
+                                  },
+                                ]}
+                              >
+                                <Text
+                                  style={[
+                                    styles.monetizationText,
+                                    {
+                                      color:
+                                        item.monetizationType === 'FLATRATE'
+                                          ? '#10B981'
+                                          : colors.textSecondary,
+                                    },
+                                  ]}
+                                >
+                                  {item.monetizationType === 'FLATRATE'
+                                    ? 'Included'
+                                    : item.monetizationType}
+                                </Text>
+                              </View>
+                            </View>
+                          </View>
+
+                          {/* Launch Action Button */}
+                          <View
                             style={[
-                              styles.monetizationText,
+                              styles.launchPill,
                               {
-                                color:
+                                backgroundColor:
                                   item.monetizationType === 'FLATRATE'
-                                    ? '#10B981'
-                                    : colors.textSecondary,
+                                    ? colors.brand
+                                    : colors.surface,
                               },
                             ]}
                           >
-                            {item.monetizationType === 'FLATRATE'
-                              ? 'Included'
-                              : item.monetizationType}
-                          </Text>
-                        </View>
-                      </View>
-                    </View>
-
-                    {/* Launch Action Button */}
-                    <View
-                      style={[
-                        styles.launchPill,
-                        {
-                          backgroundColor:
-                            item.monetizationType === 'FLATRATE'
-                              ? colors.brand
-                              : colors.surfaceRaised,
-                        },
-                      ]}
-                    >
-                      <Ionicons
-                        name="play"
-                        size={12}
-                        color={
-                          item.monetizationType === 'FLATRATE' ? colors.onBrand : colors.textPrimary
-                        }
-                      />
-                      <Text
-                        style={[
-                          styles.launchText,
-                          {
-                            color:
-                              item.monetizationType === 'FLATRATE'
-                                ? colors.onBrand
-                                : colors.textPrimary,
-                          },
-                        ]}
-                      >
-                        Watch
-                      </Text>
-                    </View>
-                  </Pressable>
-                );
-              })}
-            </View>
-          ) : (
-            <View style={[styles.emptyStreamingCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <Ionicons name="tv-outline" size={28} color={colors.textDisabled} />
-              <Text style={[styles.emptyStreamingText, { color: colors.textSecondary }]}>
-                No streaming options currently reported for this region.
-              </Text>
-            </View>
-          )}
+                            <Ionicons
+                              name="play"
+                              size={12}
+                              color={
+                                item.monetizationType === 'FLATRATE' ? colors.onBrand : colors.textPrimary
+                              }
+                            />
+                            <Text
+                              style={[
+                                styles.launchText,
+                                {
+                                  color:
+                                    item.monetizationType === 'FLATRATE'
+                                      ? colors.onBrand
+                                      : colors.textPrimary,
+                                },
+                              ]}
+                            >
+                              Watch
+                            </Text>
+                          </View>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                ) : (
+                  <View style={styles.emptyStreamingWrap}>
+                    <Ionicons name="tv-outline" size={26} color={colors.textDisabled} />
+                    <Text style={[styles.emptyStreamingText, { color: colors.textSecondary }]}>
+                      No streaming options currently reported for this region.
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
 
           {/* Cast Section */}
           {media.cast.length === 0 ? null : (
@@ -863,16 +903,55 @@ const styles = StyleSheet.create({
   },
   heading: { fontSize: 18, fontWeight: '800', marginTop: 4 },
 
-  // Streaming Section
-  streamingSectionHeader: {
+  // Where to Watch Collapsible Accordion Section
+  accordionContainer: {
+    borderRadius: 18,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  accordionHeader: {
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 4,
+    padding: 16,
   },
-  streamingTitleRow: { alignItems: 'center', flexDirection: 'row', gap: 8 },
-  countryBadge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
-  countryBadgeText: { fontSize: 11, fontWeight: '700' },
+  accordionHeaderLeft: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12,
+  },
+  streamingIconCircle: {
+    alignItems: 'center',
+    borderRadius: 20,
+    height: 38,
+    justifyContent: 'center',
+    width: 38,
+  },
+  accordionTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  accordionSubtitle: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  accordionHeaderRight: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+  },
+  countryBadge: {
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  countryBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  accordionContent: {
+    padding: 14,
+  },
   providers: { gap: 10 },
   providerCard: {
     alignItems: 'center',
@@ -917,12 +996,10 @@ const styles = StyleSheet.create({
   },
   launchText: { fontSize: 12, fontWeight: '700' },
 
-  emptyStreamingCard: {
+  emptyStreamingWrap: {
     alignItems: 'center',
-    borderRadius: 14,
-    borderWidth: 1,
     gap: 8,
-    padding: 24,
+    paddingVertical: 18,
   },
   emptyStreamingText: { fontSize: 13, textAlign: 'center' },
 

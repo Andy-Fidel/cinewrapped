@@ -11,9 +11,20 @@ import { router } from 'expo-router';
 import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { BrandLogo } from '../../src/components/brand-logo';
+import {
+  HomeBentoRecommendations,
+  HomeBentoRecommendationsSkeleton,
+} from '../../src/components/home-bento-recommendations';
 import { MediaCard } from '../../src/components/media-card';
-import { NetflixHeroBillboard } from '../../src/components/netflix-hero-billboard';
-import { NetflixTop10Shelf } from '../../src/components/netflix-top10-shelf';
+import {
+  NetflixHeroBillboard,
+  NetflixHeroBillboardSkeleton,
+} from '../../src/components/netflix-hero-billboard';
+import {
+  NetflixTop10Shelf,
+  NetflixTop10ShelfSkeleton,
+} from '../../src/components/netflix-top10-shelf';
 import { useColors } from '../../src/components/ui';
 import { api } from '../../src/lib/api';
 import { useAuth } from '../../src/providers/auth-provider';
@@ -97,7 +108,9 @@ export default function HomeScreen() {
         ListHeaderComponent={
           <View style={styles.header}>
             {/* Netflix Cinematic Hero Billboard */}
-            {recommendations.data && recommendations.data.length > 0 && recommendations.data[0] ? (
+            {recommendations.isPending ? (
+              <NetflixHeroBillboardSkeleton />
+            ) : recommendations.data && recommendations.data.length > 0 && recommendations.data[0] ? (
               <NetflixHeroBillboard
                 featured={recommendations.data[0]}
                 onAddToWatchlist={() => {
@@ -109,7 +122,9 @@ export default function HomeScreen() {
             ) : null}
 
             {/* Netflix-Style Top 10 Shelf with Giant Outlined Numbers */}
-            {recommendations.data && recommendations.data.length > 0 ? (
+            {recommendations.isPending ? (
+              <NetflixTop10ShelfSkeleton />
+            ) : recommendations.data && recommendations.data.length > 0 ? (
               <NetflixTop10Shelf
                 items={recommendations.data}
                 title="Top 10 in CineWrapped Today"
@@ -119,14 +134,9 @@ export default function HomeScreen() {
             {/* Prestige Cinephile Header: 'Picks for You' */}
             <View style={[styles.greetingCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <View style={styles.greetingHeaderTop}>
-                {/* Eyebrow with Glow Pill & Radar Dot */}
+                {/* Eyebrow with CineWrapped Brand Logo & Status Tag */}
                 <View style={styles.eyebrowPillRow}>
-                  <View style={[styles.curatedPill, { backgroundColor: 'rgba(99, 102, 241, 0.15)', borderColor: 'rgba(99, 102, 241, 0.35)' }]}>
-                    <View style={styles.pulseDot} />
-                    <Text style={[styles.curatedPillText, { color: colors.brand }]}>
-                      CURATED RADAR
-                    </Text>
-                  </View>
+                  <BrandLogo size="sm" variant="full" />
                   <View style={[styles.algoTag, { backgroundColor: colors.surfaceRaised }]}>
                     <Ionicons name="sparkles" size={11} color="#F59E0B" />
                     <Text style={[styles.algoTagText, { color: colors.textSecondary }]}>
@@ -400,6 +410,20 @@ export default function HomeScreen() {
               <Ionicons name="chevron-forward" size={18} color={colors.textDisabled} />
             </Pressable>
 
+            {/* Personalized Bento Grid Recommendations Matrix */}
+            {recommendations.isPending ? (
+              <HomeBentoRecommendationsSkeleton />
+            ) : recommendations.data && recommendations.data.length > 0 ? (
+              <HomeBentoRecommendations
+                items={recommendations.data}
+                tasteProfile={taste.data}
+                onAddToWatchlist={(mediaId) => watchlistMutation.mutate(mediaId)}
+                onFeedback={(recId, type) =>
+                  feedback.mutate({ recommendationId: recId, feedbackType: type })
+                }
+              />
+            ) : null}
+
             {refresh.isError ? (
               <Text accessibilityRole="alert" style={{ color: colors.danger }}>
                 Recommendations could not be refreshed yet.
@@ -408,91 +432,25 @@ export default function HomeScreen() {
           </View>
         }
         ListEmptyComponent={
-          <View style={styles.empty}>
-            <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>
-              {recommendations.isPending ? 'Building your recommendations…' : 'More signals needed'}
-            </Text>
-            <Text
-              style={{
-                color: recommendations.isError ? colors.danger : colors.textSecondary,
-                textAlign: 'center',
-              }}
-            >
-              {recommendations.isError
-                ? 'Your recommendations could not be loaded. Check that recommendations are enabled in Settings.'
-                : 'Discover, rate, or complete more titles to improve your recommendations.'}
-            </Text>
-          </View>
-        }
-        renderItem={({ item }) => (
-          <View
-            style={[styles.card, { borderColor: colors.border, backgroundColor: colors.surface }]}
-          >
-            <MediaCard media={item.media} />
-            <View style={styles.cardCopy}>
-              <View style={styles.kindRow}>
-                <View
-                  style={[
-                    styles.matchBadge,
-                    {
-                      backgroundColor:
-                        item.recommendationType === 'HIDDEN_GEM'
-                          ? 'rgba(255, 215, 0, 0.15)'
-                          : colors.surfaceRaised,
-                    },
-                  ]}
-                >
-                  <Text style={[styles.kind, { color: colors.brand }]}>
-                    {item.recommendationType === 'HIDDEN_GEM' ? '💎 HIDDEN GEM' : '🎯 MATCH'} ·{' '}
-                    {Math.round(item.score * 100)}%
-                  </Text>
-                </View>
-              </View>
-
-              <Text style={[styles.explanation, { color: colors.textSecondary }]}>
-                {item.explanation}
+          recommendations.data && recommendations.data.length > 0 ? null : (
+            <View style={styles.empty}>
+              <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>
+                {recommendations.isPending ? 'Building your recommendations…' : 'More signals needed'}
               </Text>
-
-              <View style={styles.actions}>
-                <Pressable
-                  accessibilityRole="button"
-                  disabled={feedback.isPending}
-                  onPress={() =>
-                    feedback.mutate({ recommendationId: item.id, feedbackType: 'SAVED' })
-                  }
-                  style={({ pressed }) => [
-                    styles.action,
-                    {
-                      backgroundColor: colors.brand,
-                      opacity: pressed ? 0.85 : 1,
-                    },
-                  ]}
-                >
-                  <Ionicons name="bookmark-outline" size={16} color={colors.onBrand} />
-                  <Text style={{ color: colors.onBrand, fontWeight: '700' }}>Save</Text>
-                </Pressable>
-
-                <Pressable
-                  accessibilityRole="button"
-                  disabled={feedback.isPending}
-                  onPress={() =>
-                    feedback.mutate({ recommendationId: item.id, feedbackType: 'DISMISSED' })
-                  }
-                  style={({ pressed }) => [
-                    styles.action,
-                    {
-                      backgroundColor: colors.surfaceRaised,
-                      opacity: pressed ? 0.85 : 1,
-                    },
-                  ]}
-                >
-                  <Ionicons name="close-circle-outline" size={16} color={colors.textPrimary} />
-                  <Text style={{ color: colors.textPrimary, fontWeight: '700' }}>Not for me</Text>
-                </Pressable>
-              </View>
+              <Text
+                style={{
+                  color: recommendations.isError ? colors.danger : colors.textSecondary,
+                  textAlign: 'center',
+                }}
+              >
+                {recommendations.isError
+                  ? 'Your recommendations could not be loaded. Check that recommendations are enabled in Settings.'
+                  : 'Discover, rate, or complete more titles to improve your recommendations.'}
+              </Text>
             </View>
-          </View>
-        )}
+          )
+        }
+        renderItem={() => null}
       />
     </SafeAreaView>
   );
@@ -518,26 +476,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     gap: 8,
-  },
-  curatedPill: {
-    alignItems: 'center',
-    borderRadius: 999,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  pulseDot: {
-    backgroundColor: '#10B981',
-    borderRadius: 3,
-    height: 6,
-    width: 6,
-  },
-  curatedPillText: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1.2,
   },
   algoTag: {
     alignItems: 'center',

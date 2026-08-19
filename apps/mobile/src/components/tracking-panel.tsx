@@ -35,6 +35,8 @@ const VIBE_TAGS = [
   { id: 'stellar_acting', label: '🎭 Stellar Acting' },
   { id: 'visual_art', label: '🎨 Visual Art' },
   { id: 'slow_burn', label: '🕯️ Slow Burn' },
+  { id: 'feel_good', label: '✨ Feel Good' },
+  { id: 'adrenaline', label: '⚡ Adrenaline' },
 ];
 
 const VIEWING_FORMATS = [
@@ -349,25 +351,41 @@ export function TrackingPanel({
         </View>
       </View>
 
-      {/* Cinema Vibe Tags */}
-      <View style={{ gap: 6 }}>
-        <Text style={[styles.label, { color: colors.textPrimary }]}>Cinema Vibe Tags</Text>
-        <View style={styles.chips}>
+      {/* Cinema Vibe Tags (3 in a Row Horizontally) */}
+      <View style={{ gap: 8 }}>
+        <View style={styles.vibeHeaderRow}>
+          <Text style={[styles.label, { color: colors.textPrimary }]}>Cinema Vibe Tags</Text>
+          {selectedVibeTags.length > 0 ? (
+            <Text style={[styles.vibeCountBadge, { color: colors.brand }]}>
+              {selectedVibeTags.length} selected
+            </Text>
+          ) : null}
+        </View>
+        <View style={styles.vibeGrid}>
           {VIBE_TAGS.map((tag) => {
             const isSelected = selectedVibeTags.includes(tag.id);
             return (
               <Pressable
                 key={tag.id}
                 onPress={() => toggleVibeTag(tag.id)}
-                style={[
-                  styles.chip,
+                style={({ pressed }) => [
+                  styles.vibeTagCard,
                   {
-                    backgroundColor: isSelected ? 'rgba(245, 158, 11, 0.15)' : colors.surfaceRaised,
+                    backgroundColor: isSelected ? 'rgba(245, 158, 11, 0.16)' : colors.surfaceRaised,
                     borderColor: isSelected ? '#F59E0B' : colors.border,
+                    opacity: pressed ? 0.8 : 1,
                   },
                 ]}
               >
-                <Text style={{ color: isSelected ? '#F59E0B' : colors.textSecondary, fontWeight: isSelected ? '800' : '500', fontSize: 12 }}>
+                <Text
+                  numberOfLines={1}
+                  style={{
+                    color: isSelected ? '#F59E0B' : colors.textPrimary,
+                    fontWeight: isSelected ? '800' : '600',
+                    fontSize: 12,
+                    textAlign: 'center',
+                  }}
+                >
                   {tag.label}
                 </Text>
               </Pressable>
@@ -608,6 +626,29 @@ const styles = StyleSheet.create({
   panel: { borderRadius: 18, borderWidth: 1, gap: 14, padding: 16 },
   heading: { fontSize: 20, fontWeight: '800' },
   label: { fontSize: 13, fontWeight: '800', letterSpacing: 0.3 },
+  vibeHeaderRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  vibeCountBadge: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  vibeGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  vibeTagCard: {
+    alignItems: 'center',
+    borderRadius: 12,
+    borderWidth: 1,
+    height: 38,
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+    width: '31.4%',
+  },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { borderRadius: 999, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 8 },
   ratingRow: { flexDirection: 'row', gap: 8 },

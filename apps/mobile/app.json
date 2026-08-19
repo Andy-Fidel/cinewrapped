@@ -4,6 +4,7 @@
     "slug": "cinewrapped",
     "version": "0.1.0",
     "orientation": "portrait",
+    "icon": "./assets/icon.png",
     "scheme": "cinewrapped",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -13,12 +14,18 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.cinewrapped.app"
+      "bundleIdentifier": "com.cinewrapped.app",
+      "icon": "./assets/icon.png"
     },
     "android": {
-      "package": "com.cinewrapped.app"
+      "package": "com.cinewrapped.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0B0F19"
+      }
     },
     "web": {
+      "favicon": "./assets/logo-mark.png",
       "bundler": "metro",
       "output": "static"
     }

@@ -145,22 +145,45 @@ export class CalendarService {
         .replace(/\.\d{3}Z$/u, 'Z');
     const escape = (value: string) => value.replace(/([\\,;])/gu, '\\$1').replace(/\n/gu, '\\n');
     const end = new Date(event.startsAt.getTime() + event.durationMinutes * 60_000);
-    return [
+
+    const description = [
+      event.notes ?? '',
+      event.media?.title ? `Movie/Show: ${event.media.title}` : '',
+      'Scheduled via CineWrapped (https://cinewrapped.app)',
+    ]
+      .filter(Boolean)
+      .join('\\n\\n');
+
+    const lines = [
       'BEGIN:VCALENDAR',
       'VERSION:2.0',
       'PRODID:-//CineWrapped//Calendar//EN',
       'CALSCALE:GREGORIAN',
+      'METHOD:PUBLISH',
       'BEGIN:VEVENT',
-      `UID:${event.id}@cinewrapped`,
+      `UID:${event.id}@cinewrapped.app`,
       `DTSTAMP:${format(event.updatedAt)}`,
       `DTSTART:${format(event.startsAt)}`,
       `DTEND:${format(end)}`,
       `SUMMARY:${escape(event.title)}`,
-      ...(event.notes === null ? [] : [`DESCRIPTION:${escape(event.notes)}`]),
-      'END:VEVENT',
-      'END:VCALENDAR',
-      '',
-    ].join('\r\n');
+      `DESCRIPTION:${escape(description)}`,
+      'LOCATION:CineWrapped Watch Night',
+      'STATUS:CONFIRMED',
+      'CATEGORIES:Cinema,Entertainment,Movies',
+    ];
+
+    for (const reminder of event.reminderMinutes) {
+      lines.push(
+        'BEGIN:VALARM',
+        'ACTION:DISPLAY',
+        `DESCRIPTION:${escape(`Movie Time: ${event.title}`)}`,
+        `TRIGGER:-PT${reminder}M`,
+        'END:VALARM',
+      );
+    }
+
+    lines.push('END:VEVENT', 'END:VCALENDAR', '');
+    return lines.join('\r\n');
   }
 
   private async userId(subject: string): Promise<string> {
