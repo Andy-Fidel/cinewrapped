@@ -247,6 +247,7 @@ export function HomeBentoRecommendations({
             </Text>
             <Pressable
               accessibilityRole="button"
+              accessibilityLabel={`Save ${rec.media.title} to watchlist`}
               onPress={(e) => {
                 e.stopPropagation();
                 haptics.selection();
@@ -254,8 +255,16 @@ export function HomeBentoRecommendations({
                 onFeedback?.(rec.id, 'SAVED');
               }}
               hitSlop={8}
+              style={({ pressed }) => [
+                styles.curatedMiniBookmarkBtn,
+                {
+                  backgroundColor: colors.surfaceRaised,
+                  borderColor: colors.border,
+                  opacity: pressed ? 0.7 : 1,
+                },
+              ]}
             >
-              <Ionicons name="bookmark-outline" size={15} color={colors.textSecondary} />
+              <Ionicons name="bookmark-outline" size={14} color={colors.brand} />
             </Pressable>
           </View>
 
@@ -1371,6 +1380,14 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '800',
     letterSpacing: 0.3,
+  },
+  curatedMiniBookmarkBtn: {
+    alignItems: 'center',
+    borderRadius: 13,
+    borderWidth: 1,
+    height: 26,
+    justifyContent: 'center',
+    width: 26,
   },
   curatedMiniTitle: {
     fontSize: 13,

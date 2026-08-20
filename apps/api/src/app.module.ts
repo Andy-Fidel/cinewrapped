@@ -19,6 +19,7 @@ import { SceneIdentificationModule } from './scene-identification/scene-identifi
 import { SearchModule } from './search/search.module.js';
 import { SocialModule } from './social/social.module.js';
 import { SoundtracksModule } from './soundtracks/soundtracks.module.js';
+import { NotificationsModule } from './notifications/notifications.module.js';
 import { LibraryModule } from './library/library.module.js';
 import { UsersModule } from './users/users.module.js';
 
@@ -42,6 +43,7 @@ import { UsersModule } from './users/users.module.js';
     SearchModule,
     SocialModule,
     SoundtracksModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [{ provide: APP_FILTER, useClass: ApiExceptionFilter }],

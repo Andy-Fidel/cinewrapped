@@ -1071,3 +1071,58 @@ export interface CalendarEventSummary {
   createdAt: string;
   updatedAt: string;
 }
+
+export type NotificationType =
+  | 'FRIEND_REQUEST'
+  | 'FRIEND_REQUEST_ACCEPTED'
+  | 'COMMENT'
+  | 'REACTION'
+  | 'NEW_FOLLOWER'
+  | 'WRAP_READY'
+  | 'ACHIEVEMENT_UNLOCKED'
+  | 'SHARED_TITLE';
+
+export type NotificationEntityType =
+  | 'USER'
+  | 'FRIENDSHIP'
+  | 'COMMENT'
+  | 'REACTION'
+  | 'REVIEW'
+  | 'MEDIA'
+  | 'WRAP'
+  | 'ACHIEVEMENT';
+
+export interface NotificationSummary {
+  id: string;
+  userId: string;
+  type: NotificationType;
+  actorUserId: string | null;
+  actor?: {
+    id: string;
+    displayName: string;
+    handle: string;
+    avatarUrl: string | null;
+  } | null;
+  entityType: NotificationEntityType;
+  entityId: string;
+  title: string;
+  body: string;
+  deepLink: string | null;
+  readAt: string | null;
+  createdAt: string;
+}
+
+export interface NotificationInboxResponse {
+  items: NotificationSummary[];
+  unreadCount: number;
+  totalCount: number;
+}
+
+export interface RegisterPushDeviceDto {
+  installationId: string;
+  platform: 'IOS' | 'ANDROID' | 'WEB';
+  pushToken: string;
+  locale?: string;
+  timezone?: string;
+}
+

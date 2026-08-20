@@ -26,6 +26,7 @@ import {
   NetflixTop10ShelfSkeleton,
 } from '../../src/components/netflix-top10-shelf';
 import { HomeWidgetsHub } from '../../src/components/widgets/home-widgets-hub';
+import { NotificationBellButton } from '../../src/components/notification-bell-button';
 import { useColors } from '../../src/components/ui';
 import { api } from '../../src/lib/api';
 import { useAuth } from '../../src/providers/auth-provider';
@@ -146,25 +147,29 @@ export default function HomeScreen() {
                   </View>
                 </View>
 
-                {/* Avatar with Prestige Ring */}
-                <Pressable
-                  accessibilityRole="button"
-                  onPress={() => router.push('/insights')}
-                  style={({ pressed }) => [
-                    styles.avatarRing,
-                    { borderColor: colors.brand, opacity: pressed ? 0.8 : 1 },
-                  ]}
-                >
-                  {user?.avatarUrl ? (
-                    <Image source={{ uri: user.avatarUrl }} style={styles.userAvatar} />
-                  ) : (
-                    <View
-                      style={[styles.userAvatarFallback, { backgroundColor: colors.surfaceRaised }]}
-                    >
-                      <Ionicons name="person" size={18} color={colors.brand} />
-                    </View>
-                  )}
-                </Pressable>
+                {/* Action Icons: Notification Bell & Prestige Avatar */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <NotificationBellButton />
+
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => router.push('/insights')}
+                    style={({ pressed }) => [
+                      styles.avatarRing,
+                      { borderColor: colors.brand, opacity: pressed ? 0.8 : 1 },
+                    ]}
+                  >
+                    {user?.avatarUrl ? (
+                      <Image source={{ uri: user.avatarUrl }} style={styles.userAvatar} />
+                    ) : (
+                      <View
+                        style={[styles.userAvatarFallback, { backgroundColor: colors.surfaceRaised }]}
+                      >
+                        <Ionicons name="person" size={18} color={colors.brand} />
+                      </View>
+                    )}
+                  </Pressable>
+                </View>
               </View>
 
               {/* Dynamic Title with Highlighted User Name */}

@@ -21,6 +21,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { NotificationBellButton } from '../../src/components/notification-bell-button';
 import { Screen, useColors } from '../../src/components/ui';
 import { api } from '../../src/lib/api';
 import { errorMessage } from '../../src/lib/error-message';
@@ -583,7 +584,10 @@ export default function SocialScreen() {
         <View style={styles.content}>
           {/* Header Banner */}
           <View style={styles.header}>
-            <Text style={[styles.eyebrow, { color: colors.brand }]}>COMMUNITY FEED</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Text style={[styles.eyebrow, { color: colors.brand }]}>COMMUNITY FEED</Text>
+              <NotificationBellButton />
+            </View>
             <Text accessibilityRole="header" style={[styles.title, { color: colors.textPrimary }]}>
               Film Friends & Activity
             </Text>
