@@ -17,6 +17,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { WebView } from 'react-native-webview';
 
 import { MediaReviewsFeed } from '../../src/components/media-reviews-feed';
 import { SoundtracksPanel } from '../../src/components/soundtracks-panel';
@@ -140,6 +141,48 @@ function getYouTubeVideoId(url: string | null): string | null {
   return id && id.length === 11 ? id : null;
 }
 
+function TrailerPlayer({
+  videoId,
+  backgroundColor,
+  onError,
+}: {
+  videoId: string;
+  backgroundColor: string;
+  onError: () => void;
+}) {
+  const embedUrl = `https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}?autoplay=1&playsinline=1&rel=0`;
+
+  if (Platform.OS === 'web') {
+    return React.createElement('iframe', {
+      src: embedUrl,
+      title: 'Official trailer',
+      style: {
+        width: '100%',
+        height: '100%',
+        border: 'none',
+        borderRadius: 10,
+      },
+      allow:
+        'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture',
+      allowFullScreen: true,
+    });
+  }
+
+  return (
+    <WebView
+      allowsFullscreenVideo
+      allowsInlineMediaPlayback
+      javaScriptEnabled
+      mediaPlaybackRequiresUserAction={false}
+      onError={onError}
+      onHttpError={onError}
+      originWhitelist={['https://*']}
+      source={{ uri: embedUrl, headers: { Referer: 'https://cinewrapped.app' } }}
+      style={{ backgroundColor, flex: 1 }}
+    />
+  );
+}
+
 function Person({ credit }: { credit: CreditSummary }) {
   const colors = useColors();
   return (
@@ -177,6 +220,7 @@ export default function MediaDetailScreen() {
   const { session, user } = useAuth();
   const { mediaId } = useLocalSearchParams<{ mediaId: string }>();
   const [showTrailer, setShowTrailer] = useState(false);
+  const [trailerFailed, setTrailerFailed] = useState(false);
   const [whereToWatchExpanded, setWhereToWatchExpanded] = useState(true);
 
   const details = useQuery({
@@ -219,17 +263,10 @@ export default function MediaDetailScreen() {
   const media = details.data;
   const youtubeId = getYouTubeVideoId(media.trailerUrl);
 
-  const handlePlayTrailer = async () => {
+  const handlePlayTrailer = () => {
     haptics.selection();
-    if (Platform.OS === 'web') {
-      setShowTrailer(true);
-    } else if (media.trailerUrl) {
-      try {
-        await WebBrowser.openBrowserAsync(media.trailerUrl);
-      } catch {
-        void Linking.openURL(media.trailerUrl);
-      }
-    }
+    setTrailerFailed(false);
+    setShowTrailer(true);
   };
 
   return (
@@ -279,7 +316,7 @@ export default function MediaDetailScreen() {
             <Pressable
               accessibilityLabel="Play official trailer"
               accessibilityRole="button"
-              onPress={() => void handlePlayTrailer()}
+              onPress={handlePlayTrailer}
               style={({ pressed }) => [styles.heroPlayOverlay, { opacity: pressed ? 0.75 : 1 }]}
             >
               <View style={[styles.heroPlayCircle, { backgroundColor: 'rgba(0, 0, 0, 0.65)' }]}>
@@ -370,7 +407,7 @@ export default function MediaDetailScreen() {
             {media.trailerUrl === null ? null : (
               <Pressable
                 accessibilityRole="button"
-                onPress={() => void handlePlayTrailer()}
+                onPress={handlePlayTrailer}
                 style={({ pressed }) => [
                   styles.actionButton,
                   {
@@ -404,7 +441,7 @@ export default function MediaDetailScreen() {
             </Pressable>
           </View>
 
-          {/* Interactive Trailer Preview Frame if Active on Web */}
+          {/* Interactive in-app trailer player */}
           {showTrailer && youtubeId ? (
             <View
               style={[
@@ -422,25 +459,43 @@ export default function MediaDetailScreen() {
                 <Pressable
                   accessibilityLabel="Close trailer"
                   accessibilityRole="button"
-                  onPress={() => setShowTrailer(false)}
+                  onPress={() => {
+                    setShowTrailer(false);
+                    setTrailerFailed(false);
+                  }}
                 >
                   <Ionicons name="close-circle" size={22} color={colors.textSecondary} />
                 </Pressable>
               </View>
 
               <View style={styles.trailerFrameContainer}>
-                {React.createElement('iframe', {
-                  src: `https://www.youtube-nocookie.com/embed/${youtubeId}?autoplay=1&rel=0`,
-                  style: {
-                    width: '100%',
-                    height: '100%',
-                    border: 'none',
-                    borderRadius: 10,
-                  },
-                  allow:
-                    'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture',
-                  allowFullScreen: true,
-                })}
+                {trailerFailed ? (
+                  <View
+                    style={[styles.trailerFallback, { backgroundColor: colors.surfaceRaised }]}
+                  >
+                    <Ionicons
+                      name="alert-circle-outline"
+                      size={28}
+                      color={colors.textSecondary}
+                    />
+                    <Text style={[styles.trailerFallbackText, { color: colors.textSecondary }]}>
+                      This trailer cannot be embedded.
+                    </Text>
+                    <Button
+                      label="Open trailer"
+                      onPress={() => {
+                        if (media.trailerUrl !== null) void Linking.openURL(media.trailerUrl);
+                      }}
+                      variant="secondary"
+                    />
+                  </View>
+                ) : (
+                  <TrailerPlayer
+                    backgroundColor={colors.surfaceRaised}
+                    onError={() => setTrailerFailed(true)}
+                    videoId={youtubeId}
+                  />
+                )}
               </View>
             </View>
           ) : null}
@@ -900,6 +955,17 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
     width: '100%',
+  },
+  trailerFallback: {
+    alignItems: 'center',
+    flex: 1,
+    gap: 10,
+    justifyContent: 'center',
+    padding: 20,
+  },
+  trailerFallbackText: {
+    fontSize: 13,
+    textAlign: 'center',
   },
   heading: { fontSize: 18, fontWeight: '800', marginTop: 4 },
 

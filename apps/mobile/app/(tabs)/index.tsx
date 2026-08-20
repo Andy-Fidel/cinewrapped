@@ -25,6 +25,7 @@ import {
   NetflixTop10Shelf,
   NetflixTop10ShelfSkeleton,
 } from '../../src/components/netflix-top10-shelf';
+import { HomeWidgetsHub } from '../../src/components/widgets/home-widgets-hub';
 import { useColors } from '../../src/components/ui';
 import { api } from '../../src/lib/api';
 import { useAuth } from '../../src/providers/auth-provider';
@@ -376,6 +377,13 @@ export default function HomeScreen() {
                 />
               </Pressable>
             ) : null}
+
+            {/* Home-Screen Widgets Hub (Continue Watching, Daily Pick, Watchlist, Stats, Countdown) */}
+            <HomeWidgetsHub
+              recommendations={recommendations.data}
+              upcomingEvents={upcomingEvents.data}
+              onAddToWatchlist={(mediaId) => watchlistMutation.mutate(mediaId)}
+            />
 
             {/* Weekly Cinema Trivia Banner */}
             <Pressable

@@ -55,6 +55,27 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 
+export function ThemeOverride({
+  theme,
+  children,
+}: {
+  theme: ResolvedTheme;
+  children: React.ReactNode;
+}) {
+  const colors = tokens.color.semantic[theme];
+  const value = useMemo<ThemeContextValue>(
+    () => ({
+      colors,
+      preference: theme === 'light' ? 'LIGHT' : 'DARK',
+      resolvedTheme: theme,
+      setPreference: async () => {},
+    }),
+    [colors, theme],
+  );
+
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+}
+
 export function useTheme(): ThemeContextValue {
   const value = useContext(ThemeContext);
   if (value === null) throw new Error('useTheme must be used inside ThemeProvider.');

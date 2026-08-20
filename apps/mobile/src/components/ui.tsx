@@ -16,7 +16,9 @@ import {
 } from 'react-native';
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 
-import { useTheme } from '../providers/theme-provider';
+import { ThemeOverride, useTheme } from '../providers/theme-provider';
+
+export { ThemeOverride, useTheme } from '../providers/theme-provider';
 
 export function useColors() {
   return useTheme().colors;

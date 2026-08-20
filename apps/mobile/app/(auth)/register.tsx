@@ -228,7 +228,7 @@ export default function RegisterScreen() {
             <View style={styles.strengthMeterContainer}>
               {/* Strength Bar */}
               <View style={styles.strengthBarRow}>
-                <View style={styles.strengthTrack}>
+                <View style={[styles.strengthTrack, { backgroundColor: colors.surfaceRaised, borderColor: colors.border, borderWidth: 0.5 }]}>
                   <View
                     style={[
                       styles.strengthFill,
