@@ -1,21 +1,33 @@
-import type { MediaSummary } from '@cinewrapped/shared-types';
+import type { MediaDetails, MediaSummary } from '@cinewrapped/shared-types';
+import { useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { api } from '../lib/api';
 import { haptics } from '../lib/haptics';
 import { NetflixQuickPreviewModal } from './netflix-quick-preview-modal';
 import { PosterImage, StarRating, useColors } from './ui';
 
 export function MediaCard({ media }: { media: MediaSummary }) {
   const colors = useColors();
+  const queryClient = useQueryClient();
   const [previewVisible, setPreviewVisible] = useState(false);
+
+  const handlePrefetch = () => {
+    void queryClient.prefetchQuery({
+      queryKey: ['media-details', media.id],
+      queryFn: () => api.request<MediaDetails>(`media/${media.id}`),
+      staleTime: 6 * 60 * 60 * 1000,
+    });
+  };
 
   return (
     <>
       <Pressable
         accessibilityLabel={`${media.title}${media.releaseYear === null ? '' : `, ${media.releaseYear}`}`}
         accessibilityRole="button"
+        onPressIn={handlePrefetch}
         onPress={() => router.push(`/media/${media.id}`)}
         onLongPress={() => {
           haptics.clapperSnap();

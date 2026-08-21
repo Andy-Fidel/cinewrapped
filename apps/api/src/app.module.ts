@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { APP_FILTER } from '@nestjs/core';
+import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 
 import { AppController } from './app.controller.js';
 import { CalendarModule } from './calendar/calendar.module.js';
@@ -7,6 +7,7 @@ import { AiModule } from './ai/ai.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { ClubsModule } from './clubs/clubs.module.js';
 import { ApiExceptionFilter } from './common/api-exception.filter.js';
+import { PerformanceMonitoringInterceptor } from './common/performance-monitoring.interceptor.js';
 import { EnvironmentModule } from './config/environment.module.js';
 import { DatabaseModule } from './database/database.module.js';
 import { GamificationModule } from './gamification/gamification.module.js';
@@ -46,6 +47,9 @@ import { UsersModule } from './users/users.module.js';
     NotificationsModule,
   ],
   controllers: [AppController],
-  providers: [{ provide: APP_FILTER, useClass: ApiExceptionFilter }],
+  providers: [
+    { provide: APP_FILTER, useClass: ApiExceptionFilter },
+    { provide: APP_INTERCEPTOR, useClass: PerformanceMonitoringInterceptor },
+  ],
 })
 export class AppModule {}

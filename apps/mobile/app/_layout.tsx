@@ -10,7 +10,19 @@ import { DialogProvider } from '../src/providers/dialog-provider';
 import { ThemeProvider, useTheme } from '../src/providers/theme-provider';
 
 export default function RootLayout() {
-  const [queryClient] = useState(() => new QueryClient());
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            staleTime: 1000 * 60 * 5, // 5 minutes fresh data
+            gcTime: 1000 * 60 * 60 * 24, // 24 hours persistent cache retention
+            retry: 1,
+            refetchOnWindowFocus: false,
+          },
+        },
+      }),
+  );
   return (
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>

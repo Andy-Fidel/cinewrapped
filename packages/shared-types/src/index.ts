@@ -1126,3 +1126,100 @@ export interface RegisterPushDeviceDto {
   timezone?: string;
 }
 
+export type StorySlideLayout =
+  | 'HERO_STATS'
+  | 'TOP_FIVE_GRID'
+  | 'CINEMATIC_POSTER'
+  | 'RADAR_RADIAL'
+  | 'QUOTE_SPOTLIGHT'
+  | 'BADGE_CEREMONY'
+  | 'SUMMARY_CARD';
+
+export type StoryThemePreset =
+  | 'MIDNIGHT_GOLD'
+  | 'NEON_CYBER'
+  | 'CRIMSON_NOIR'
+  | 'EMERALD_VAULT'
+  | 'AMETHYST_DREAM';
+
+export interface StorySlideMetric {
+  label: string;
+  value: string | number;
+  sublabel?: string;
+  icon?: string;
+  highlight?: boolean;
+}
+
+export interface StorySlideRankingItem {
+  rank: number;
+  title: string;
+  subtitle?: string;
+  score?: string | number;
+  posterUrl?: string | null;
+  tag?: string;
+}
+
+export interface StorySlideData {
+  id: string;
+  layout: StorySlideLayout;
+  theme?: StoryThemePreset;
+  eyebrow: string;
+  headline: string;
+  description?: string;
+  media?: {
+    title: string;
+    releaseYear?: number | null;
+    posterUrl?: string | null;
+    backdropUrl?: string | null;
+    director?: string;
+    quote?: string;
+  };
+  metric?: {
+    value: string | number;
+    label: string;
+    prefix?: string;
+    suffix?: string;
+    badge?: string;
+  };
+  secondaryMetrics?: StorySlideMetric[];
+  rankingItems?: StorySlideRankingItem[];
+  vibeTags?: string[];
+  footer?: {
+    branding: string;
+    handle?: string;
+    badgeText?: string;
+  };
+  customColors?: {
+    background?: string;
+    accent?: string;
+    textPrimary?: string;
+    textSecondary?: string;
+  };
+}
+
+export interface StoryPresentation {
+  id: string;
+  type:
+    | 'ANNUAL_WRAP'
+    | 'MONTHLY_RECAP'
+    | 'TASTE_PROFILE'
+    | 'TRIVIA_CHAMPION'
+    | 'WATCHLIST_SHOWCASE'
+    | 'CLUB_HIGHLIGHT'
+    | 'MILESTONE_CELEBRATION';
+  title: string;
+  subtitle: string;
+  year?: number;
+  periodLabel?: string;
+  author: {
+    userId: string;
+    displayName: string;
+    username: string;
+    avatarUrl?: string | null;
+  };
+  slides: StorySlideData[];
+  defaultTheme: StoryThemePreset;
+  createdAt: string;
+}
+
+
