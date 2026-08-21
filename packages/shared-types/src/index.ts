@@ -526,6 +526,7 @@ export interface PublicProfile extends UserSummary {
   createdAt: string;
   counts: { followers: number; following: number; friends: number; reviews: number };
   relationship: RelationshipState;
+  favoriteMedia?: MediaSummary[] | null;
 }
 
 export interface FriendshipSummary {

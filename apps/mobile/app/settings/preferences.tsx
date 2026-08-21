@@ -13,6 +13,7 @@ import { Stack, router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
+import { LetterboxdImportModal } from '../../src/components/letterboxd-import-modal';
 import {
   ChoiceRow,
   SelectChip,
@@ -63,6 +64,7 @@ export default function PreferenceSettingsScreen() {
   const [favoriteSearch, setFavoriteSearch] = useState('');
   const [favoriteResults, setFavoriteResults] = useState<MediaSummary[]>([]);
   const [message, setMessage] = useState<string | null>(null);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
   useEffect(() => {
     const data = preferences.data;
@@ -439,6 +441,18 @@ export default function PreferenceSettingsScreen() {
       </SettingsCard>
 
       <SettingsCard
+        icon="cloud-upload-outline"
+        title="Data & Migrations"
+        body="Import your movie history, diary entries, ratings, and reviews from Letterboxd."
+      >
+        <Button
+          label="📥 Import from Letterboxd CSV"
+          variant="secondary"
+          onPress={() => setIsImportModalOpen(true)}
+        />
+      </SettingsCard>
+
+      <SettingsCard
         icon="shield-checkmark-outline"
         title="Legal & Compliance"
         body="Terms of Service, EULA zero-tolerance policies, and Privacy disclosures."
@@ -449,6 +463,11 @@ export default function PreferenceSettingsScreen() {
           onPress={() => router.push('/settings/legal')}
         />
       </SettingsCard>
+
+      <LetterboxdImportModal
+        visible={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+      />
 
       {message === null ? null : (
         <Text accessibilityRole="alert" style={{ color: colors.textSecondary }}>

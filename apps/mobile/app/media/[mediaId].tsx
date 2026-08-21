@@ -19,6 +19,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 
+import { FilmographyCompletionTracker } from '../../src/components/filmography-completion-tracker';
 import { MediaReviewsFeed } from '../../src/components/media-reviews-feed';
 import { SoundtracksPanel } from '../../src/components/soundtracks-panel';
 import { TrackingPanel } from '../../src/components/tracking-panel';
@@ -183,10 +184,21 @@ function TrailerPlayer({
   );
 }
 
-function Person({ credit }: { credit: CreditSummary }) {
+function Person({
+  credit,
+  onPress,
+}: {
+  credit: CreditSummary;
+  onPress?: () => void;
+}) {
   const colors = useColors();
   return (
-    <View style={styles.person}>
+    <Pressable
+      accessibilityLabel={`View ${credit.name} filmography`}
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [styles.person, { opacity: pressed ? 0.75 : 1 }]}
+    >
       {credit.profileUrl === null ? (
         <View
           style={[
@@ -210,7 +222,7 @@ function Person({ credit }: { credit: CreditSummary }) {
       <Text numberOfLines={2} style={[styles.personRole, { color: colors.textSecondary }]}>
         {credit.character ?? credit.job ?? credit.department}
       </Text>
-    </View>
+    </Pressable>
   );
 }
 
@@ -222,6 +234,7 @@ export default function MediaDetailScreen() {
   const [showTrailer, setShowTrailer] = useState(false);
   const [trailerFailed, setTrailerFailed] = useState(false);
   const [whereToWatchExpanded, setWhereToWatchExpanded] = useState(true);
+  const [selectedPersonForTracker, setSelectedPersonForTracker] = useState<CreditSummary | null>(null);
 
   const details = useQuery({
     queryKey: ['media-details', mediaId],
@@ -772,7 +785,14 @@ export default function MediaDetailScreen() {
               <Text style={[styles.heading, { color: colors.textPrimary }]}>Cast</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 {media.cast.map((credit) => (
-                  <Person credit={credit} key={credit.id} />
+                  <Person
+                    credit={credit}
+                    key={credit.id}
+                    onPress={() => {
+                      haptics.selection();
+                      setSelectedPersonForTracker(credit);
+                    }}
+                  />
                 ))}
               </ScrollView>
             </>
@@ -784,7 +804,14 @@ export default function MediaDetailScreen() {
               <Text style={[styles.heading, { color: colors.textPrimary }]}>Key Crew</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 {media.crew.map((credit) => (
-                  <Person credit={credit} key={credit.id} />
+                  <Person
+                    credit={credit}
+                    key={credit.id}
+                    onPress={() => {
+                      haptics.selection();
+                      setSelectedPersonForTracker(credit);
+                    }}
+                  />
                 ))}
               </ScrollView>
             </>
@@ -837,6 +864,15 @@ export default function MediaDetailScreen() {
           </Text>
         </View>
       </ScrollView>
+
+      {/* Filmography Completion Tracker Modal */}
+      {selectedPersonForTracker ? (
+        <FilmographyCompletionTracker
+          onClose={() => setSelectedPersonForTracker(null)}
+          person={selectedPersonForTracker}
+          visible={selectedPersonForTracker !== null}
+        />
+      ) : null}
     </SafeAreaView>
   );
 }

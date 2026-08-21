@@ -152,7 +152,7 @@ export class SocialService {
     ) {
       this.notFoundProfile();
     }
-    const [followers, following, friends, reviews, relationship] = await Promise.all([
+    const [followers, following, friends, reviews, relationship, favorites] = await Promise.all([
       this.prisma.follow.count({ where: { followingId: target.id } }),
       this.prisma.follow.count({ where: { followerId: target.id } }),
       this.prisma.friendship.count({
@@ -162,6 +162,12 @@ export class SocialService {
         where: { userId: target.id, status: 'PUBLISHED', deletedAt: null },
       }),
       this.relationship(viewer.id, target.id),
+      this.prisma.userFavoriteMedia.findMany({
+        where: { userId: target.id },
+        include: { media: { include: { genres: true } } },
+        orderBy: { position: 'asc' },
+        take: 4,
+      }),
     ]);
     return {
       ...userSummary(target),
@@ -169,6 +175,7 @@ export class SocialService {
       createdAt: target.createdAt.toISOString(),
       counts: { followers, following, friends, reviews },
       relationship,
+      favoriteMedia: favorites.map((f) => mediaSummary(f.media)),
     };
   }
 

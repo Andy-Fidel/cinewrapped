@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Redirect, Stack, useLocalSearchParams } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { FavoriteFourShelf } from '../../src/components/favorite-four-shelf';
 import { Button, ErrorText, Screen, useColors } from '../../src/components/ui';
 import { errorMessage } from '../../src/lib/error-message';
 import { api } from '../../src/lib/api';
@@ -103,6 +104,13 @@ export default function MemberProfileScreen() {
           </View>
         ))}
       </View>
+
+      {/* Profile Favorite 4 Showcase */}
+      <FavoriteFourShelf
+        favorites={member.favoriteMedia}
+        isSelf={isSelf}
+        username={member.username}
+      />
       {isSelf ? null : (
         <View style={styles.actions}>
           <Button
