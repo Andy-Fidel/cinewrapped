@@ -352,6 +352,33 @@ export class UsersService {
     return this.getCurrentUser(principal);
   }
 
+  public async deleteCurrentUser(principal: AuthPrincipal): Promise<{ success: true; deletedAt: string }> {
+    const user = await this.requireUser(principal.subject);
+    const now = new Date();
+
+    await this.prisma.$transaction(async (tx) => {
+      // Soft-delete and anonymize user profile to satisfy GDPR/Apple Guideline 5.1.1(v)
+      await tx.user.update({
+        where: { id: user.id },
+        data: {
+          deletedAt: now,
+          displayName: 'Deleted Cinephile',
+          username: `deleted_${user.id.slice(0, 8)}`,
+          usernameNormalized: `deleted_${user.id.slice(0, 8)}`,
+          avatarUrl: null,
+          bio: null,
+        },
+      });
+
+      // Clear active sessions, push devices, and notifications
+      await tx.authSession.deleteMany({ where: { userId: user.id } });
+      await tx.pushDevice.deleteMany({ where: { userId: user.id } });
+      await tx.notification.deleteMany({ where: { userId: user.id } });
+    });
+
+    return { success: true, deletedAt: now.toISOString() };
+  }
+
   private async requireUser(subject: string) {
     const user = await this.prisma.user.findUnique({ where: { authSubject: subject } });
     if (user === null || user.deletedAt !== null) {

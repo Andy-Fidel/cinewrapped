@@ -9,7 +9,7 @@ import type {
   UserPreferences,
 } from '@cinewrapped/shared-types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Stack } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
@@ -435,6 +435,18 @@ export default function PreferenceSettingsScreen() {
           value={data.reduceMotion}
           disabled={update.isPending}
           onChange={(reduceMotion) => update.mutate({ reduceMotion })}
+        />
+      </SettingsCard>
+
+      <SettingsCard
+        icon="shield-checkmark-outline"
+        title="Legal & Compliance"
+        body="Terms of Service, EULA zero-tolerance policies, and Privacy disclosures."
+      >
+        <Button
+          label="View Terms & Privacy Policy"
+          variant="secondary"
+          onPress={() => router.push('/settings/legal')}
         />
       </SettingsCard>
 

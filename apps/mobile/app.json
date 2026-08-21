@@ -15,10 +15,22 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.cinewrapped.app",
-      "icon": "./assets/icon.png"
+      "icon": "./assets/icon.png",
+      "infoPlist": {
+        "NSCameraUsageDescription": "CineWrapped uses your camera to identify film scenes from screens, posters, and physical cinema tickets.",
+        "NSPhotoLibraryUsageDescription": "CineWrapped accesses your photo library so you can choose avatar profile photos and analyze saved film stills.",
+        "NSCalendarsUsageDescription": "CineWrapped syncs movie premiere countdowns and festival watch schedules to your iOS Calendar."
+      }
     },
     "android": {
       "package": "com.cinewrapped.app",
+      "permissions": [
+        "CAMERA",
+        "READ_MEDIA_IMAGES",
+        "POST_NOTIFICATIONS",
+        "READ_CALENDAR",
+        "WRITE_CALENDAR"
+      ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0B0F19"

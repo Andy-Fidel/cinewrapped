@@ -6,6 +6,7 @@ import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'rea
 
 import { api } from '../lib/api';
 import { haptics } from '../lib/haptics';
+import { ReportContentModal, type ReportTarget } from './report-content-modal';
 import { ReviewShareCardModal } from './review-share-card-modal';
 import { useColors } from './ui';
 
@@ -28,6 +29,7 @@ export function MediaReviewsFeed({
   const [revealedSpoilers, setRevealedSpoilers] = useState<Record<string, boolean>>({});
   const [likedReviews, setLikedReviews] = useState<Record<string, boolean>>({});
   const [activeShareReview, setActiveShareReview] = useState<PublicReviewItem | null>(null);
+  const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
 
   const reviewsQuery = useQuery({
     queryKey: ['media-reviews', mediaId],
@@ -111,15 +113,39 @@ export function MediaReviewsFeed({
                     </View>
                   </View>
 
-                  {/* Rating Stars */}
-                  {review.ratingValue !== null ? (
-                    <View style={[styles.ratingBadge, { backgroundColor: 'rgba(245, 158, 11, 0.15)' }]}>
-                      <Ionicons name="star" size={13} color="#F59E0B" />
-                      <Text style={styles.ratingText}>
-                        {review.ratingValue}.0
-                      </Text>
-                    </View>
-                  ) : null}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    {/* Rating Stars */}
+                    {review.ratingValue !== null ? (
+                      <View style={[styles.ratingBadge, { backgroundColor: 'rgba(245, 158, 11, 0.15)' }]}>
+                        <Ionicons name="star" size={13} color="#F59E0B" />
+                        <Text style={styles.ratingText}>
+                          {review.ratingValue}.0
+                        </Text>
+                      </View>
+                    ) : null}
+
+                    {/* Report Violation Action */}
+                    <Pressable
+                      accessibilityLabel="Report review"
+                      accessibilityRole="button"
+                      hitSlop={8}
+                      onPress={() => {
+                        haptics.selection();
+                        setReportTarget({
+                          entityType: 'REVIEW',
+                          entityId: review.id,
+                          entityTitle: review.title || review.body.slice(0, 40),
+                          authorName: review.user.handle,
+                        });
+                      }}
+                      style={({ pressed }) => [
+                        styles.reportBtn,
+                        { opacity: pressed ? 0.6 : 0.8 },
+                      ]}
+                    >
+                      <Ionicons name="flag-outline" size={14} color={colors.textDisabled} />
+                    </Pressable>
+                  </View>
                 </View>
 
                 {/* Review Body or Spoiler Shield */}
@@ -236,11 +262,23 @@ export function MediaReviewsFeed({
           visible={Boolean(activeShareReview)}
         />
       ) : null}
+
+      {/* UGC Violation Report Modal */}
+      <ReportContentModal
+        visible={Boolean(reportTarget)}
+        target={reportTarget}
+        onClose={() => setReportTarget(null)}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  reportBtn: {
+    padding: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   container: {
     borderRadius: 18,
     borderWidth: 1,
