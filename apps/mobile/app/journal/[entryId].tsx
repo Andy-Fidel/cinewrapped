@@ -1,8 +1,10 @@
 import type { JournalAttachmentType, JournalEntrySummary } from '@cinewrapped/shared-types';
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { Redirect, Stack, router, useLocalSearchParams } from 'expo-router';
+import { useState } from 'react';
 import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { FeatureGate } from '../../src/components/feature-gate';
@@ -10,6 +12,7 @@ import { JournalForm, type JournalFormValue } from '../../src/components/journal
 import { Button, Screen, useColors } from '../../src/components/ui';
 import { api } from '../../src/lib/api';
 import { errorMessage } from '../../src/lib/error-message';
+import type { LocalUploadAsset } from '../../src/lib/media-upload';
 import { createPrivateObjectUrl, deletePrivateObject } from '../../src/lib/private-storage';
 import { removeJournalAttachment, uploadJournalImage } from '../../src/lib/journal-attachments';
 import { haptics } from '../../src/lib/haptics';
@@ -22,6 +25,7 @@ export default function JournalEntryScreen() {
   const { confirm, showError, showInfo } = useDialog();
   const queryClient = useQueryClient();
   const { entryId } = useLocalSearchParams<{ entryId: string }>();
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
   const entry = useQuery({
     queryKey: ['journal-entry', entryId],
     queryFn: () => api.request<JournalEntrySummary>(`journal/${entryId}`),
@@ -81,6 +85,32 @@ export default function JournalEntryScreen() {
 
   if (session === null) return <Redirect href="/(auth)/login" />;
 
+  const registerAttachment = async (
+    asset: LocalUploadAsset,
+    attachmentType: JournalAttachmentType,
+  ) => {
+    if (entry.data === undefined) return;
+    try {
+      const next = await uploadJournalImage({
+        entryId: entry.data.id,
+        ownerId: session.user.id,
+        asset,
+        attachmentType,
+        onPhase: (phase) => {
+          if (phase === 'READING') setUploadStatus('Preparing attachment…');
+          if (phase === 'UPLOADING') setUploadStatus('Uploading attachment…');
+          if (phase === 'COMPLETE') setUploadStatus('Saving attachment…');
+        },
+      });
+      queryClient.setQueryData(['journal-entry', entryId], next);
+      await queryClient.invalidateQueries({ queryKey: ['journal'] });
+    } catch (error) {
+      showError('Could not add attachment', errorMessage(error));
+    } finally {
+      setUploadStatus(null);
+    }
+  };
+
   const pickAttachment = async (attachmentType: JournalAttachmentType) => {
     if (user === null || entry.data === undefined) return;
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -100,18 +130,19 @@ export default function JournalEntryScreen() {
     });
     const asset = picked.canceled ? undefined : picked.assets[0];
     if (asset === undefined) return;
-    try {
-      const next = await uploadJournalImage({
-        entryId: entry.data.id,
-        ownerId: session.user.id,
-        asset,
-        attachmentType,
-      });
-      queryClient.setQueryData(['journal-entry', entryId], next);
-      await queryClient.invalidateQueries({ queryKey: ['journal'] });
-    } catch (error) {
-      showError('Could not add photo', errorMessage(error));
-    }
+    await registerAttachment(asset, attachmentType);
+  };
+
+  const pickTicketPdf = async () => {
+    if (user === null || entry.data === undefined) return;
+    const picked = await DocumentPicker.getDocumentAsync({
+      type: 'application/pdf',
+      copyToCacheDirectory: true,
+      multiple: false,
+    });
+    const asset = picked.canceled ? undefined : picked.assets[0];
+    if (asset === undefined) return;
+    await registerAttachment(asset, 'TICKET');
   };
 
   const openAttachment = async (path: string) => {
@@ -204,14 +235,27 @@ export default function JournalEntryScreen() {
             <View style={styles.attachmentActions}>
               <Button
                 label="Add ticket photo"
+                disabled={uploadStatus !== null}
                 onPress={() => void pickAttachment('TICKET')}
                 variant="secondary"
               />
               <Button
                 label="Add personal photo"
+                disabled={uploadStatus !== null}
                 onPress={() => void pickAttachment('PERSONAL_PHOTO')}
                 variant="secondary"
               />
+              <Button
+                label="Add ticket PDF"
+                disabled={uploadStatus !== null}
+                onPress={() => void pickTicketPdf()}
+                variant="secondary"
+              />
+              {uploadStatus === null ? null : (
+                <Text accessibilityRole="alert" style={{ color: colors.textSecondary }}>
+                  {uploadStatus}
+                </Text>
+              )}
             </View>
             <ScrollView
               horizontal

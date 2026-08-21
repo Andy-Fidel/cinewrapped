@@ -1,8 +1,15 @@
--- CineWrapped private feature storage.
--- Run once in the Supabase SQL editor. Objects are always stored under <auth.uid()>/... .
+-- CineWrapped feature storage.
+-- Objects are always stored under <auth.uid()>/... .
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values
+  (
+    'avatars',
+    'avatars',
+    true,
+    5242880,
+    array['image/jpeg', 'image/png', 'image/webp', 'image/heic']
+  ),
   (
     'journal-attachments',
     'journal-attachments',
@@ -42,6 +49,43 @@ on conflict (id) do update set
   public = excluded.public,
   file_size_limit = excluded.file_size_limit,
   allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists "cinewrapped avatars select own" on storage.objects;
+drop policy if exists "cinewrapped avatars insert own" on storage.objects;
+drop policy if exists "cinewrapped avatars update own" on storage.objects;
+drop policy if exists "cinewrapped avatars delete own" on storage.objects;
+
+create policy "cinewrapped avatars select own"
+on storage.objects for select to authenticated
+using (
+  bucket_id = 'avatars'
+  and (storage.foldername(name))[1] = (select auth.uid())::text
+);
+
+create policy "cinewrapped avatars insert own"
+on storage.objects for insert to authenticated
+with check (
+  bucket_id = 'avatars'
+  and (storage.foldername(name))[1] = (select auth.uid())::text
+);
+
+create policy "cinewrapped avatars update own"
+on storage.objects for update to authenticated
+using (
+  bucket_id = 'avatars'
+  and (storage.foldername(name))[1] = (select auth.uid())::text
+)
+with check (
+  bucket_id = 'avatars'
+  and (storage.foldername(name))[1] = (select auth.uid())::text
+);
+
+create policy "cinewrapped avatars delete own"
+on storage.objects for delete to authenticated
+using (
+  bucket_id = 'avatars'
+  and (storage.foldername(name))[1] = (select auth.uid())::text
+);
 
 drop policy if exists "cinewrapped private objects select own" on storage.objects;
 drop policy if exists "cinewrapped private objects insert own" on storage.objects;

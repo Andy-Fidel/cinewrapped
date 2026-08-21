@@ -562,10 +562,10 @@ export function TrackingPanel({
         onPress={() => reviewMutation.mutate()}
       />
 
-      {/* Visual Letterboxd Share Card Generator Button */}
+      {/* Visual CineWrapped Share Card Generator Button */}
       {currentReviewBody.trim().length > 0 ? (
         <Button
-          label="📸 Letterboxd-Style Share Card"
+          label="✨ CineWrapped Share Card"
           variant="secondary"
           onPress={() => {
             haptics.selection();

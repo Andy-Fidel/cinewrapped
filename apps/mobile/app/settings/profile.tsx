@@ -3,7 +3,6 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as Linking from 'expo-linking';
 import { Stack, router } from 'expo-router';
-import { randomUUID } from 'expo-crypto';
 import { useEffect, useState } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 
@@ -15,17 +14,14 @@ import {
 } from '../../src/components/settings-controls';
 import { Button, Field, Screen, useColors } from '../../src/components/ui';
 import { api } from '../../src/lib/api';
+import {
+  previousAvatarPath,
+  removeAvatarObject,
+  uploadAvatarAsset,
+} from '../../src/lib/avatar-upload';
 import { errorMessage } from '../../src/lib/error-message';
-import { supabase } from '../../src/lib/supabase';
 import { useAuth } from '../../src/providers/auth-provider';
 import { useDialog } from '../../src/providers/dialog-provider';
-
-function decodeBase64(base64: string): ArrayBuffer {
-  const binary = globalThis.atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
-  return bytes.buffer;
-}
 
 export default function ProfileSettingsScreen() {
   const colors = useColors();
@@ -90,7 +86,7 @@ export default function ProfileSettingsScreen() {
     );
 
   const uploadAvatar = async () => {
-    if (user === null) return;
+    if (user === null || session === null) return;
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
       const openSettings = await confirm({
@@ -107,24 +103,29 @@ export default function ProfileSettingsScreen() {
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
-      base64: true,
     });
     if (picked.canceled) return;
     await run(async () => {
       const asset = picked.assets[0];
-      if (asset?.base64 == null) throw new Error('The selected photo could not be read.');
-      const identity = (await supabase.auth.getUser()).data.user;
-      if (identity === null) throw new Error('Your identity session has expired.');
-      const path = `${identity.id}/${randomUUID()}.jpg`;
-      const { error } = await supabase.storage
-        .from('avatars')
-        .upload(path, decodeBase64(asset.base64), {
-          contentType: asset.mimeType ?? 'image/jpeg',
-          upsert: false,
-        });
-      if (error !== null) throw error;
-      const avatarUrl = supabase.storage.from('avatars').getPublicUrl(path).data.publicUrl;
-      await patchProfile({ avatarUrl });
+      if (asset === undefined) throw new Error('The selected photo could not be read.');
+      const ownerId = session.user.id;
+      const previousPath = previousAvatarPath(user.avatarUrl, ownerId);
+      const uploaded = await uploadAvatarAsset({
+        asset,
+        ownerId,
+        onPhase: (phase) => {
+          if (phase === 'READING') setMessage('Preparing photo…');
+          if (phase === 'UPLOADING') setMessage('Uploading avatar…');
+        },
+      });
+      try {
+        await patchProfile({ avatarUrl: uploaded.publicUrl });
+      } catch (error) {
+        await removeAvatarObject(uploaded.path).catch(() => undefined);
+        throw error;
+      }
+      if (previousPath !== null && previousPath !== uploaded.path)
+        await removeAvatarObject(previousPath).catch(() => undefined);
     }, 'Avatar updated.');
   };
 

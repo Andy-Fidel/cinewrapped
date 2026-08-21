@@ -1,56 +1,44 @@
 import type { SceneIdentificationSummary } from '@cinewrapped/shared-types';
-import type { ImagePickerAsset } from 'expo-image-picker';
 
 import { api } from './api';
-import {
-  createPrivateObjectPath,
-  createPrivateObjectUrl,
-  deletePrivateObject,
-  uploadPrivateObject,
-} from './private-storage';
-
-function extensionFor(mimeType: string): string {
-  if (mimeType === 'image/png') return 'png';
-  if (mimeType === 'image/webp') return 'webp';
-  return 'jpg';
-}
+import type { LocalUploadAsset, UploadPhase } from './media-upload';
+import { uploadOwnedObject } from './media-upload';
+import { createPrivateObjectUrl, deletePrivateObject } from './private-storage';
 
 export async function identifySceneFromAsset(input: {
-  asset: ImagePickerAsset;
+  asset: LocalUploadAsset;
   ownerId: string;
   language: string;
   countryCode: string;
+  onPhase?: (phase: UploadPhase) => void;
 }): Promise<SceneIdentificationSummary> {
-  const response = await fetch(input.asset.uri);
-  if (!response.ok) throw new Error('The selected frame could not be read.');
-  const bytes = await response.arrayBuffer();
-  const mimeType = input.asset.mimeType ?? 'image/jpeg';
-  if (!['image/jpeg', 'image/png', 'image/webp'].includes(mimeType))
-    throw new Error('Choose a JPEG, PNG, or WebP screenshot. HEIC images are not supported.');
-  if (bytes.byteLength > 10 * 1024 * 1024)
-    throw new Error('The screenshot must be smaller than 10 MB.');
-  const path = createPrivateObjectPath(input.ownerId, extensionFor(mimeType));
-  await uploadPrivateObject({
+  const uploaded = await uploadOwnedObject({
+    asset: input.asset,
     bucket: 'scene-identification',
-    path,
-    contentType: mimeType,
-    bytes,
+    ownerId: input.ownerId,
+    policy: {
+      allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
+      defaultMimeType: 'image/jpeg',
+      fallbackFileName: 'scene-screenshot',
+      maxBytes: 6 * 1024 * 1024,
+    },
+    ...(input.onPhase === undefined ? {} : { onPhase: input.onPhase }),
   });
   try {
-    const signedImageUrl = await createPrivateObjectUrl('scene-identification', path, 300);
+    const signedImageUrl = await createPrivateObjectUrl('scene-identification', uploaded.path, 300);
     return await api.request<SceneIdentificationSummary>('scene-identifications', {
       method: 'POST',
       body: {
-        storagePath: path,
+        storagePath: uploaded.path,
         signedImageUrl,
-        mimeType,
-        byteSize: bytes.byteLength,
+        mimeType: uploaded.mimeType,
+        byteSize: uploaded.byteSize,
         language: input.language,
         countryCode: input.countryCode,
         privacyAcknowledged: true,
       },
     });
   } finally {
-    await deletePrivateObject('scene-identification', path).catch(() => undefined);
+    await deletePrivateObject('scene-identification', uploaded.path).catch(() => undefined);
   }
 }

@@ -3,52 +3,47 @@ import type {
   JournalAttachmentType,
   JournalEntrySummary,
 } from '@cinewrapped/shared-types';
-import type { ImagePickerAsset } from 'expo-image-picker';
 
 import { api } from './api';
-import {
-  createPrivateObjectPath,
-  deletePrivateObject,
-  uploadPrivateObject,
-} from './private-storage';
-
-function extensionFor(mimeType: string): string {
-  if (mimeType === 'image/png') return 'png';
-  if (mimeType === 'image/webp') return 'webp';
-  if (mimeType === 'image/heic') return 'heic';
-  return 'jpg';
-}
+import type { LocalUploadAsset, UploadPhase } from './media-upload';
+import { uploadOwnedObject } from './media-upload';
+import { deletePrivateObject } from './private-storage';
 
 export async function uploadJournalImage(input: {
   entryId: string;
   ownerId: string;
-  asset: ImagePickerAsset;
+  asset: LocalUploadAsset;
   attachmentType: JournalAttachmentType;
+  onPhase?: (phase: UploadPhase) => void;
 }): Promise<JournalEntrySummary> {
-  const response = await fetch(input.asset.uri);
-  if (!response.ok) throw new Error('The selected image could not be read.');
-  const bytes = await response.arrayBuffer();
-  const mimeType = input.asset.mimeType ?? 'image/jpeg';
-  const path = createPrivateObjectPath(input.ownerId, extensionFor(mimeType));
-  await uploadPrivateObject({
+  const uploaded = await uploadOwnedObject({
+    asset: input.asset,
     bucket: 'journal-attachments',
-    path,
-    contentType: mimeType,
-    bytes,
+    ownerId: input.ownerId,
+    policy: {
+      allowedMimeTypes:
+        input.attachmentType === 'TICKET'
+          ? ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'application/pdf']
+          : ['image/jpeg', 'image/png', 'image/webp', 'image/heic'],
+      defaultMimeType: 'image/jpeg',
+      fallbackFileName: input.attachmentType === 'TICKET' ? 'cinema-ticket' : 'journal-photo',
+      maxBytes: 6 * 1024 * 1024,
+    },
+    ...(input.onPhase === undefined ? {} : { onPhase: input.onPhase }),
   });
   try {
     return await api.request<JournalEntrySummary>(`journal/${input.entryId}/attachments`, {
       method: 'POST',
       body: {
         attachmentType: input.attachmentType,
-        storagePath: path,
-        fileName: input.asset.fileName ?? `journal-${Date.now()}.${extensionFor(mimeType)}`,
-        mimeType,
-        byteSize: bytes.byteLength,
+        storagePath: uploaded.path,
+        fileName: uploaded.fileName,
+        mimeType: uploaded.mimeType,
+        byteSize: uploaded.byteSize,
       },
     });
   } catch (error) {
-    await deletePrivateObject('journal-attachments', path).catch(() => undefined);
+    await deletePrivateObject('journal-attachments', uploaded.path).catch(() => undefined);
     throw error;
   }
 }

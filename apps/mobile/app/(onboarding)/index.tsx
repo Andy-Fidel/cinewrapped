@@ -15,8 +15,12 @@ import { Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native'
 
 import { BrandHeader, Button, ErrorText, Field, Screen, useColors } from '../../src/components/ui';
 import { api } from '../../src/lib/api';
+import {
+  previousAvatarPath,
+  removeAvatarObject,
+  uploadAvatarAsset,
+} from '../../src/lib/avatar-upload';
 import { errorMessage } from '../../src/lib/error-message';
-import { supabase } from '../../src/lib/supabase';
 import { useAuth } from '../../src/providers/auth-provider';
 import { useDialog } from '../../src/providers/dialog-provider';
 import { useOnboardingStore } from '../../src/stores/onboarding-store';
@@ -111,18 +115,9 @@ function toggle(items: string[], id: string): string[] {
   return items.includes(id) ? items.filter((item) => item !== id) : [...items, id];
 }
 
-function decodeBase64(base64: string): ArrayBuffer {
-  const binary = globalThis.atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let index = 0; index < binary.length; index += 1) {
-    bytes[index] = binary.charCodeAt(index);
-  }
-  return bytes.buffer;
-}
-
 export default function OnboardingScreen() {
   const colors = useColors();
-  const { user, refreshUser } = useAuth();
+  const { session, user, refreshUser } = useAuth();
   const { confirm, showError } = useDialog();
   const draft = useOnboardingStore();
   const [search, setSearch] = useState('');
@@ -150,7 +145,7 @@ export default function OnboardingScreen() {
     api.request('users/me/onboarding', { method: 'PATCH', body: { step } });
 
   const next = async () => {
-    if (user === null) return;
+    if (user === null || session === null) return;
     setBusy(true);
     setMessage(null);
     try {
@@ -171,6 +166,10 @@ export default function OnboardingScreen() {
             avatarUrl: draft.avatarUrl,
           },
         });
+        const previousPath = previousAvatarPath(user.avatarUrl, session.user.id);
+        const nextPath = previousAvatarPath(draft.avatarUrl, session.user.id);
+        if (previousPath !== null && previousPath !== nextPath)
+          await removeAvatarObject(previousPath).catch(() => undefined);
         draft.patch({ profileVersion: updated.version });
         await mark('PROFILE');
       } else if (draft.step === 1) {
@@ -244,7 +243,7 @@ export default function OnboardingScreen() {
   };
 
   const uploadAvatar = async () => {
-    if (user === null) return;
+    if (user === null || session === null) return;
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
       const detail =
@@ -265,26 +264,26 @@ export default function OnboardingScreen() {
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
-      base64: true,
     });
     if (picked.canceled) return;
     setBusy(true);
     try {
       const asset = picked.assets[0];
       if (asset === undefined) return;
-      if (asset.base64 == null)
-        throw new Error('The selected photo could not be read. Try another photo.');
-      const body = decodeBase64(asset.base64);
-      const identity = (await supabase.auth.getUser()).data.user;
-      if (identity === null) throw new Error('Your identity session has expired.');
-      const path = `${identity.id}/${randomUUID()}.jpg`;
-      const { error } = await supabase.storage
-        .from('avatars')
-        .upload(path, body, { contentType: asset.mimeType ?? 'image/jpeg', upsert: false });
-      if (error !== null) throw error;
-      draft.patch({
-        avatarUrl: supabase.storage.from('avatars').getPublicUrl(path).data.publicUrl,
+      const ownerId = session.user.id;
+      const previousDraftPath = previousAvatarPath(draft.avatarUrl, ownerId);
+      const persistedPath = previousAvatarPath(user.avatarUrl, ownerId);
+      const uploaded = await uploadAvatarAsset({
+        asset,
+        ownerId,
+        onPhase: (phase) => {
+          if (phase === 'READING') setMessage('Preparing photo…');
+          if (phase === 'UPLOADING') setMessage('Uploading avatar…');
+        },
       });
+      draft.patch({ avatarUrl: uploaded.publicUrl });
+      if (previousDraftPath !== null && previousDraftPath !== persistedPath)
+        await removeAvatarObject(previousDraftPath).catch(() => undefined);
     } catch (error) {
       const detail = errorMessage(error);
       setMessage(detail);

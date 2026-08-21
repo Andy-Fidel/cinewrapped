@@ -2,18 +2,21 @@ import type { PublicReviewItem } from '@cinewrapped/shared-types';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import {
+  ActivityIndicator,
   Image,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
-  Share,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 
 import { haptics } from '../lib/haptics';
+import { shareCineWrappedGraphicCard } from '../lib/share-card-generator';
 import { PosterImage, useColors } from './ui';
+import { useDialog } from '../providers/dialog-provider';
 
 export type CardTheme = 'MIDNIGHT' | 'CRIMSON' | 'CYAN' | 'GOLD';
 
@@ -93,24 +96,38 @@ export function ReviewShareCardModal({
   media,
 }: ReviewShareCardModalProps) {
   const colors = useColors();
+  const { showInfo } = useDialog();
   const [activeTheme, setActiveTheme] = useState<CardTheme>('MIDNIGHT');
+  const [isSharing, setIsSharing] = useState(false);
 
   const theme = THEMES[activeTheme];
 
   const releaseYear = media.releaseDate ? media.releaseDate.slice(0, 4) : '';
   const starCount = review.ratingValue ?? 5;
-  const starsString = '★'.repeat(starCount) + '☆'.repeat(Math.max(0, 5 - starCount));
 
-  const handleNativeShare = async () => {
+  const handleShareCard = async () => {
     haptics.selection();
-    const reviewText = review.body.trim();
-    const quoteHeader = review.quote ? `« ${review.quote} »\n\n` : '';
-    const shareMessage = `🎬 "${media.title}" (${releaseYear})\nRating: ${starsString} (${starCount}/5)\n\n${quoteHeader}${reviewText}\n\n— Review by @${review.user?.handle || 'cinephile'} on CineWrapped ✨`;
+    setIsSharing(true);
 
-    await Share.share({
-      message: shareMessage,
-      title: `${media.title} Review`,
-    });
+    try {
+      await shareCineWrappedGraphicCard({
+        mediaTitle: media.title,
+        releaseYear,
+        ratingValue: starCount,
+        reviewBody: review.body,
+        quote: review.quote ?? review.title ?? null,
+        reviewerName: review.user?.displayName ?? 'Cinephile',
+        reviewerHandle: review.user?.handle ?? 'cinephile',
+        reviewerAvatarUrl: review.user?.avatarUrl ?? null,
+        posterUrl: media.posterUrl ?? null,
+        accentColor: theme.accent,
+        cardBgColor: theme.cardBg,
+      });
+    } catch {
+      // Ignore dismiss
+    } finally {
+      setIsSharing(false);
+    }
   };
 
   return (
@@ -127,7 +144,7 @@ export function ReviewShareCardModal({
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <Ionicons name="sparkles" size={18} color="#F59E0B" />
               <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
-                Letterboxd-Style Share Card
+                CineWrapped Share
               </Text>
             </View>
             <Pressable
@@ -199,7 +216,7 @@ export function ReviewShareCardModal({
                   </Text>
                 </View>
                 <View style={[styles.verifiedTag, { backgroundColor: 'rgba(255,255,255,0.08)' }]}>
-                  <Text style={styles.verifiedText}>REVIEW SPOTLIGHT</Text>
+                  <Text style={styles.verifiedText}>CINEWRAPPED SPOTLIGHT</Text>
                 </View>
               </View>
 
@@ -285,18 +302,79 @@ export function ReviewShareCardModal({
               </View>
             </View>
 
-            {/* Main Action Buttons */}
+            {/* Social Share Grid */}
+            <View style={styles.platformsRow}>
+              {/* WhatsApp */}
+              <Pressable
+                accessibilityRole="button"
+                onPress={handleShareCard}
+                style={({ pressed }) => [
+                  styles.platformButton,
+                  {
+                    backgroundColor: 'rgba(37, 211, 102, 0.15)',
+                    borderColor: '#25D366',
+                    opacity: pressed ? 0.8 : 1,
+                  },
+                ]}
+              >
+                <Ionicons name="logo-whatsapp" size={20} color="#25D366" />
+                <Text style={[styles.platformButtonText, { color: '#25D366' }]}>WhatsApp</Text>
+              </Pressable>
+
+              {/* Instagram */}
+              <Pressable
+                accessibilityRole="button"
+                onPress={handleShareCard}
+                style={({ pressed }) => [
+                  styles.platformButton,
+                  {
+                    backgroundColor: 'rgba(225, 48, 108, 0.15)',
+                    borderColor: '#E1306C',
+                    opacity: pressed ? 0.8 : 1,
+                  },
+                ]}
+              >
+                <Ionicons name="logo-instagram" size={20} color="#E1306C" />
+                <Text style={[styles.platformButtonText, { color: '#E1306C' }]}>Instagram</Text>
+              </Pressable>
+
+              {/* X / Twitter */}
+              <Pressable
+                accessibilityRole="button"
+                onPress={handleShareCard}
+                style={({ pressed }) => [
+                  styles.platformButton,
+                  {
+                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                    borderColor: colors.border,
+                    opacity: pressed ? 0.8 : 1,
+                  },
+                ]}
+              >
+                <Ionicons name="logo-twitter" size={20} color="#38BDF8" />
+                <Text style={[styles.platformButtonText, { color: '#38BDF8' }]}>X / Twitter</Text>
+              </Pressable>
+            </View>
+
+            {/* Main Action Button */}
             <View style={styles.actionsWrap}>
               <Pressable
                 accessibilityRole="button"
-                onPress={() => void handleNativeShare()}
+                disabled={isSharing}
+                onPress={() => void handleShareCard()}
                 style={({ pressed }) => [
                   styles.primaryShareBtn,
-                  { backgroundColor: theme.accent, opacity: pressed ? 0.85 : 1 },
+                  { backgroundColor: theme.accent, opacity: pressed || isSharing ? 0.85 : 1 },
                 ]}
               >
-                <Ionicons name="share-outline" size={20} color="#FFFFFF" />
-                <Text style={styles.primaryShareText}>Share to Instagram / X / Messages</Text>
+                {isSharing ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <>
+                    <Ionicons name="share-outline" size={20} color="#FFFFFF" />
+                    <Text style={styles.primaryShareText}>Share Card Graphic</Text>
+                  </>
+                )}
               </Pressable>
             </View>
           </ScrollView>
@@ -348,82 +426,77 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   themeDot: {
-    borderRadius: 4,
-    height: 8,
-    width: 8,
+    borderRadius: 5,
+    height: 10,
+    width: 10,
   },
   themeName: {
-    fontSize: 11,
+    fontSize: 12,
   },
   scrollContent: {
     alignItems: 'center',
     gap: 16,
     paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingVertical: 12,
   },
-
-  // Visual Share Card Frame
   shareCard: {
-    borderRadius: 22,
+    borderRadius: 20,
     borderWidth: 1.5,
-    gap: 14,
-    maxWidth: 340,
     overflow: 'hidden',
     padding: 20,
     position: 'relative',
-    width: '100%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.5,
+    shadowRadius: 24,
+    width: 320,
   },
   cardWatermarkRow: {
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
+    marginBottom: 16,
   },
   watermarkBrand: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '900',
     letterSpacing: 1.2,
   },
   verifiedTag: {
-    borderRadius: 4,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
   },
   verifiedText: {
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: '#F59E0B',
     fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 0.5,
+    fontWeight: '900',
+    letterSpacing: 0.8,
   },
-
-  // Floating Poster Section
   posterSection: {
     alignItems: 'center',
-    justifyContent: 'center',
-    marginVertical: 4,
+    marginBottom: 16,
     position: 'relative',
   },
   posterGlowBackplate: {
     borderRadius: 20,
-    height: 170,
-    opacity: 0.35,
+    height: 200,
+    opacity: 0.6,
     position: 'absolute',
-    width: 125,
+    top: 10,
+    width: 150,
   },
   posterFrame: {
     borderRadius: 14,
-    elevation: 12,
-    height: 160,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.5,
-    shadowRadius: 12,
-    width: 110,
+    height: 210,
+    overflow: 'hidden',
+    width: 140,
+    zIndex: 2,
   },
-
-  // Title Section
   titleSection: {
     alignItems: 'center',
     gap: 4,
+    marginBottom: 12,
   },
   filmTitle: {
     fontSize: 18,
@@ -434,11 +507,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
-
-  // Rating Section
   ratingSection: {
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
+    marginBottom: 14,
   },
   starsWrap: {
     flexDirection: 'row',
@@ -446,30 +518,30 @@ const styles = StyleSheet.create({
   },
   numericRating: {
     color: '#F59E0B',
-    fontSize: 12,
-    fontWeight: '800',
+    fontSize: 13,
+    fontWeight: '900',
   },
-
-  // Review Section
   reviewSection: {
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-    borderRadius: 14,
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderRadius: 12,
+    marginBottom: 16,
     padding: 14,
     position: 'relative',
   },
   quoteGlyph: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: '900',
-    lineHeight: 28,
-    marginBottom: -8,
+    lineHeight: 24,
+    marginBottom: 4,
+    opacity: 0.8,
   },
   cardReviewBody: {
     fontSize: 13,
     fontStyle: 'italic',
     lineHeight: 19,
+    textAlign: 'center',
   },
-
-  // Card Footer
   cardFooter: {
     alignItems: 'center',
     borderTopWidth: 1,
@@ -483,54 +555,73 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   reviewerAvatar: {
-    borderRadius: 14,
-    height: 28,
-    width: 28,
+    borderRadius: 16,
+    height: 32,
+    width: 32,
   },
   reviewerAvatarFallback: {
     alignItems: 'center',
-    borderRadius: 14,
-    height: 28,
+    borderRadius: 16,
+    height: 32,
     justifyContent: 'center',
-    width: 28,
+    width: 32,
   },
   reviewerInitials: {
     color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '800',
+    fontSize: 11,
+    fontWeight: '900',
   },
   reviewerName: {
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   reviewerHandle: {
     fontSize: 10,
   },
   cinewrappedBadge: {
     borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
   },
   cinewrappedBadgeText: {
     fontSize: 10,
     fontWeight: '800',
   },
-
-  // Actions Wrap
+  platformsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    width: 320,
+  },
+  platformButton: {
+    alignItems: 'center',
+    borderRadius: 14,
+    borderWidth: 1,
+    flex: 1,
+    flexDirection: 'row',
+    gap: 6,
+    justifyContent: 'center',
+    paddingVertical: 10,
+  },
+  platformButtonText: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
   actionsWrap: {
-    paddingHorizontal: 10,
-    width: '100%',
+    gap: 10,
+    width: 320,
   },
   primaryShareBtn: {
     alignItems: 'center',
     borderRadius: 14,
     flexDirection: 'row',
     gap: 8,
-    height: 48,
+    height: 50,
     justifyContent: 'center',
     width: '100%',
   },
   primaryShareText: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '800',
   },
 });

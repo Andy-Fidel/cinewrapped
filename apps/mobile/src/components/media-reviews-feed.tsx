@@ -192,7 +192,7 @@ export function MediaReviewsFeed({
                   </Text>
 
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    {/* 1-Tap Visual Letterboxd Share Card Trigger */}
+                    {/* 1-Tap Visual CineWrapped Share Card Trigger */}
                     <Pressable
                       accessibilityLabel="Generate visual share card"
                       accessibilityRole="button"
