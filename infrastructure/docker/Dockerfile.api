@@ -34,6 +34,7 @@ COPY --from=builder --chown=cinewrapped:cinewrapped /workspace/node_modules ./no
 COPY --from=builder --chown=cinewrapped:cinewrapped /workspace/apps/api/node_modules ./apps/api/node_modules
 COPY --from=builder --chown=cinewrapped:cinewrapped /workspace/apps/api/package.json ./apps/api/package.json
 COPY --from=builder --chown=cinewrapped:cinewrapped /workspace/apps/api/dist ./apps/api/dist
+COPY --from=builder --chown=cinewrapped:cinewrapped /workspace/packages/config/node_modules ./packages/config/node_modules
 COPY --from=builder --chown=cinewrapped:cinewrapped /workspace/packages/config/package.json ./packages/config/package.json
 COPY --from=builder --chown=cinewrapped:cinewrapped /workspace/packages/config/dist ./packages/config/dist
 COPY --from=builder --chown=cinewrapped:cinewrapped /workspace/packages/database/package.json ./packages/database/package.json
@@ -42,6 +43,7 @@ COPY --from=builder --chown=cinewrapped:cinewrapped /workspace/packages/database
 COPY --from=builder --chown=cinewrapped:cinewrapped /workspace/packages/database/prisma ./packages/database/prisma
 COPY --from=builder --chown=cinewrapped:cinewrapped /workspace/packages/shared-types/package.json ./packages/shared-types/package.json
 COPY --from=builder --chown=cinewrapped:cinewrapped /workspace/packages/shared-types/dist ./packages/shared-types/dist
+COPY --from=builder --chown=cinewrapped:cinewrapped /workspace/packages/validation/node_modules ./packages/validation/node_modules
 COPY --from=builder --chown=cinewrapped:cinewrapped /workspace/packages/validation/package.json ./packages/validation/package.json
 COPY --from=builder --chown=cinewrapped:cinewrapped /workspace/packages/validation/dist ./packages/validation/dist
 USER cinewrapped

@@ -32,10 +32,13 @@ COPY --from=builder --chown=cinewrapped:cinewrapped /workspace/node_modules ./no
 COPY --from=builder --chown=cinewrapped:cinewrapped /workspace/apps/worker/node_modules ./apps/worker/node_modules
 COPY --from=builder --chown=cinewrapped:cinewrapped /workspace/apps/worker/package.json ./apps/worker/package.json
 COPY --from=builder --chown=cinewrapped:cinewrapped /workspace/apps/worker/dist ./apps/worker/dist
+COPY --from=builder --chown=cinewrapped:cinewrapped /workspace/packages/config/node_modules ./packages/config/node_modules
 COPY --from=builder --chown=cinewrapped:cinewrapped /workspace/packages/config/package.json ./packages/config/package.json
 COPY --from=builder --chown=cinewrapped:cinewrapped /workspace/packages/config/dist ./packages/config/dist
+COPY --from=builder --chown=cinewrapped:cinewrapped /workspace/packages/database/node_modules ./packages/database/node_modules
 COPY --from=builder --chown=cinewrapped:cinewrapped /workspace/packages/database/package.json ./packages/database/package.json
 COPY --from=builder --chown=cinewrapped:cinewrapped /workspace/packages/database/dist ./packages/database/dist
+COPY --from=builder --chown=cinewrapped:cinewrapped /workspace/packages/jobs/node_modules ./packages/jobs/node_modules
 COPY --from=builder --chown=cinewrapped:cinewrapped /workspace/packages/jobs/package.json ./packages/jobs/package.json
 COPY --from=builder --chown=cinewrapped:cinewrapped /workspace/packages/jobs/dist ./packages/jobs/dist
 USER cinewrapped
