@@ -6,6 +6,7 @@
   "scripts": {
     "build": "expo export --platform all --output-dir dist",
     "dev": "expo start",
+    "postinstall": "cd ../.. && pnpm --filter '@cinewrapped/mobile^...' build",
     "lint": "eslint app src",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests"
