@@ -3,6 +3,7 @@ import { z } from 'zod';
 const nodeEnvironmentSchema = z.enum(['development', 'test', 'staging', 'production']);
 const logLevelSchema = z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']);
 const secretSchema = z.string().min(16);
+const booleanEnvironmentSchema = z.enum(['true', 'false']).transform((value) => value === 'true');
 
 const sharedServerSchema = z.object({
   NODE_ENV: nodeEnvironmentSchema.default('development'),
@@ -15,8 +16,8 @@ const apiEnvironmentSchema = sharedServerSchema.extend({
   API_HOST: z.string().min(1).default('0.0.0.0'),
   API_PORT: z.coerce.number().int().min(1).max(65_535).default(4000),
   API_PUBLIC_URL: z.url(),
-  TRUST_PROXY: z.coerce.boolean().default(false),
-  API_DOCS_ENABLED: z.coerce.boolean().optional(),
+  TRUST_PROXY: booleanEnvironmentSchema.default(false),
+  API_DOCS_ENABLED: booleanEnvironmentSchema.optional(),
   CORS_ORIGINS: z
     .string()
     .transform((value) => value.split(',').map((origin) => origin.trim()))
@@ -71,7 +72,18 @@ export type MobilePublicEnvironment = z.infer<typeof mobilePublicEnvironmentSche
 export function parseApiEnvironment(
   environment: Record<string, string | undefined>,
 ): ApiEnvironment {
-  return apiEnvironmentSchema.parse(environment);
+  const apiPort = environment.PORT ?? environment.API_PORT;
+  const apiPublicUrl =
+    environment.API_PUBLIC_URL ??
+    environment.RENDER_EXTERNAL_URL ??
+    `http://localhost:${apiPort ?? '4000'}`;
+
+  return apiEnvironmentSchema.parse({
+    ...environment,
+    API_PORT: apiPort,
+    API_PUBLIC_URL: apiPublicUrl,
+    CORS_ORIGINS: environment.CORS_ORIGINS ?? apiPublicUrl,
+  });
 }
 
 export function parseWorkerEnvironment(
