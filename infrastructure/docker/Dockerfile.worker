@@ -36,7 +36,6 @@ COPY --from=builder --chown=cinewrapped:cinewrapped /workspace/packages/config/p
 COPY --from=builder --chown=cinewrapped:cinewrapped /workspace/packages/config/dist ./packages/config/dist
 COPY --from=builder --chown=cinewrapped:cinewrapped /workspace/packages/database/package.json ./packages/database/package.json
 COPY --from=builder --chown=cinewrapped:cinewrapped /workspace/packages/database/dist ./packages/database/dist
-COPY --from=builder --chown=cinewrapped:cinewrapped /workspace/packages/database/generated ./packages/database/generated
 COPY --from=builder --chown=cinewrapped:cinewrapped /workspace/packages/jobs/package.json ./packages/jobs/package.json
 COPY --from=builder --chown=cinewrapped:cinewrapped /workspace/packages/jobs/dist ./packages/jobs/dist
 USER cinewrapped
