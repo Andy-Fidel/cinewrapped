@@ -526,7 +526,7 @@ export default function CalendarScreen() {
                   ]}
                 >
                   <View style={styles.circadianHeader}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <View style={styles.circadianTitleRow}>
                       <Ionicons name="time" size={18} color="#8B5CF6" />
                       <Text style={[styles.circadianTitle, { color: colors.textPrimary }]}>
                         Circadian Cinema Clock
@@ -535,7 +535,7 @@ export default function CalendarScreen() {
                     <View
                       style={[styles.personaBadge, { backgroundColor: 'rgba(139, 92, 246, 0.15)' }]}
                     >
-                      <Text style={styles.personaBadgeText}>
+                      <Text numberOfLines={2} style={styles.personaBadgeText}>
                         🎭 {heatmapData.circadianRhythm.persona}
                       </Text>
                     </View>
@@ -1257,23 +1257,39 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   circadianHeader: {
+    alignItems: 'flex-start',
+    columnGap: 8,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    rowGap: 8,
+  },
+  circadianTitleRow: {
     alignItems: 'center',
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexShrink: 1,
+    gap: 8,
+    minWidth: 0,
   },
   circadianTitle: {
+    flexShrink: 1,
     fontSize: 15,
     fontWeight: '800',
   },
   personaBadge: {
+    alignSelf: 'flex-start',
     borderRadius: 6,
+    flexShrink: 1,
+    maxWidth: '100%',
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
   personaBadgeText: {
     color: '#8B5CF6',
+    flexShrink: 1,
     fontSize: 11,
     fontWeight: '800',
+    lineHeight: 15,
   },
   quadrantBarsWrap: {
     gap: 10,
@@ -1531,6 +1547,7 @@ const styles = StyleSheet.create({
   eventInfo: {
     flex: 1,
     gap: 4,
+    minWidth: 0,
   },
   eventHeaderRow: {
     flexDirection: 'row',
@@ -1547,15 +1564,22 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   eventActionsRow: {
+    alignItems: 'stretch',
+    columnGap: 6,
     flexDirection: 'row',
-    gap: 8,
+    flexWrap: 'wrap',
     marginTop: 4,
+    rowGap: 6,
   },
   calendarActionBtn: {
     alignItems: 'center',
     borderRadius: 8,
+    flexGrow: 1,
+    flexShrink: 1,
     flexDirection: 'row',
     gap: 4,
+    justifyContent: 'center',
+    minWidth: 70,
     paddingHorizontal: 8,
     paddingVertical: 5,
   },
@@ -1566,7 +1590,10 @@ const styles = StyleSheet.create({
   deleteActionBtn: {
     alignItems: 'center',
     borderRadius: 8,
+    flexGrow: 1,
+    flexShrink: 1,
     justifyContent: 'center',
+    minWidth: 36,
     paddingHorizontal: 8,
     paddingVertical: 5,
   },
