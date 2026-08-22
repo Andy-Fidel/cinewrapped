@@ -46,6 +46,13 @@
       "favicon": "./assets/logo-mark.png",
       "bundler": "metro",
       "output": "static"
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "de90dff5-a2f1-445c-9aa0-4493c6287f13"
+      }
+    },
+    "owner": "andy-fidel"
   }
 }

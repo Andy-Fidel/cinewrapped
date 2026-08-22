@@ -7,6 +7,7 @@ enableGlobalVirtualStore: false
 overrides:
   deepmerge-ts: 8.0.0
   effect: 3.21.4
+  expo-constants: 18.0.14
   find-my-way: 9.7.0
   js-yaml: 5.2.2
   nanoid: 3.3.18
