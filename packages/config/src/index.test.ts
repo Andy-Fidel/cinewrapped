@@ -46,11 +46,7 @@ describe('environment validation', () => {
       SUPABASE_JWKS_URL: 'https://example.supabase.co/auth/v1/.well-known/jwks.json',
       TMDB_API_TOKEN: 'test-token-at-least-sixteen-characters',
       OPENAI_API_KEY: 'test-openai-key-at-least-sixteen-characters',
-      S3_ENDPOINT: 'https://example.storage.supabase.co/storage/v1/s3',
-      S3_REGION: 'eu-west-1',
-      S3_BUCKET: 'cinewrapped-test',
-      S3_ACCESS_KEY: 'test-key',
-      S3_SECRET_KEY: 'test-secret-at-least-sixteen-characters',
+      PUSH_TOKEN_ENCRYPTION_KEY: 'test-push-key-at-least-sixteen-characters',
     });
 
     expect(environment.API_PORT).toBe(10_000);
