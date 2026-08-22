@@ -1,4 +1,5 @@
 import type { AuthPrincipal } from '../src/auth/auth.types.js';
+import type { ApiEnvironment } from '@cinewrapped/config';
 import type { PrismaService } from '../src/database/prisma.service.js';
 import type { FeatureFlagsService } from '../src/feature-flags/feature-flags.service.js';
 import { JournalService } from '../src/journal/journal.service.js';
@@ -13,6 +14,9 @@ const principal: AuthPrincipal = {
 };
 const user = { id: '20000000-0000-4000-8000-000000000000', authSubject: principal.subject };
 const flags = { assertEnabled: vi.fn(() => Promise.resolve()) } as unknown as FeatureFlagsService;
+const environment = {
+  SUPABASE_URL: 'https://example.supabase.co',
+} as ApiEnvironment;
 
 function record() {
   return {
@@ -61,7 +65,7 @@ describe('JournalService', () => {
       feedActivity: { create: vi.fn() },
     } as unknown as PrismaService;
 
-    await new JournalService(prisma, flags).create(principal, {
+    await new JournalService(prisma, flags, environment).create(principal, {
       mediaId: record().mediaId,
       status: 'DRAFT',
       companionNames: [],
@@ -86,7 +90,7 @@ describe('JournalService', () => {
     } as unknown as PrismaService;
 
     await expect(
-      new JournalService(prisma, flags).get(principal, record().id),
+      new JournalService(prisma, flags, environment).get(principal, record().id),
     ).rejects.toMatchObject({
       code: 'JOURNAL_ENTRY_NOT_FOUND',
     });
@@ -99,10 +103,12 @@ describe('JournalService', () => {
     } as unknown as PrismaService;
 
     await expect(
-      new JournalService(prisma, flags).addAttachment(principal, record().id, {
+      new JournalService(prisma, flags, environment).addAttachment(principal, record().id, {
         attachmentType: 'PERSONAL_PHOTO',
         storagePath:
           '90000000-0000-4000-8000-000000000000/80000000-0000-4000-8000-000000000000.jpg',
+        signedUrl:
+          'https://example.supabase.co/storage/v1/object/sign/journal-attachments/file?token=1234567890123456',
         fileName: 'photo.jpg',
         mimeType: 'image/jpeg',
         byteSize: 1_024,
@@ -119,7 +125,7 @@ describe('JournalService', () => {
     } as unknown as PrismaService;
 
     await expect(
-      new JournalService(prisma, flags).update(principal, record().id, {
+      new JournalService(prisma, flags, environment).update(principal, record().id, {
         expectedVersion: 1,
         notes: 'Changed elsewhere',
       }),

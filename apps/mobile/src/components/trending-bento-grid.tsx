@@ -2,14 +2,7 @@ import type { MediaSummary } from '@cinewrapped/shared-types';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import {
-  Image,
-  Pressable,
-  StyleSheet,
-  Text,
-  useWindowDimensions,
-  View,
-} from 'react-native';
+import { Image, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { haptics } from '../lib/haptics';
 import { BrandLogo } from './brand-logo';
@@ -26,7 +19,13 @@ export function TrendingBentoGridSkeleton() {
       <View style={styles.gridContainer}>
         {/* ROW 1 Skeleton */}
         <View style={[styles.row, isWide && styles.rowWide]}>
-          <View style={[styles.card, styles.cardHeroSpotlight, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View
+            style={[
+              styles.card,
+              styles.cardHeroSpotlight,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+            ]}
+          >
             <View style={styles.cardHeaderRow}>
               <Skeleton width={110} height={24} rounded={12} />
               <Skeleton width={24} height={24} rounded={12} />
@@ -37,7 +36,13 @@ export function TrendingBentoGridSkeleton() {
             </View>
           </View>
 
-          <View style={[styles.card, styles.cardBillboard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View
+            style={[
+              styles.card,
+              styles.cardBillboard,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+            ]}
+          >
             <View style={{ flex: 1, gap: 8 }}>
               <Skeleton width={90} height={20} rounded={6} />
               <Skeleton width="75%" height={20} rounded={6} />
@@ -48,19 +53,37 @@ export function TrendingBentoGridSkeleton() {
 
         {/* ROW 2 Skeleton */}
         <View style={[styles.row, isWide && styles.rowWide]}>
-          <View style={[styles.card, styles.cardPortrait, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View
+            style={[
+              styles.card,
+              styles.cardPortrait,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+            ]}
+          >
             <Skeleton width="100%" height={160} rounded={16} />
             <Skeleton width="80%" height={20} rounded={6} />
             <Skeleton width="95%" height={14} rounded={4} />
           </View>
 
           <View style={styles.metricColumn}>
-            <View style={[styles.card, styles.cardMetricSquare, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View
+              style={[
+                styles.card,
+                styles.cardMetricSquare,
+                { backgroundColor: colors.surface, borderColor: colors.border },
+              ]}
+            >
               <Skeleton width={80} height={16} rounded={4} />
               <Skeleton width={90} height={32} rounded={8} />
               <Skeleton width={110} height={20} rounded={6} />
             </View>
-            <View style={[styles.card, styles.cardMetricSquare, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View
+              style={[
+                styles.card,
+                styles.cardMetricSquare,
+                { backgroundColor: colors.surface, borderColor: colors.border },
+              ]}
+            >
               <Skeleton width={60} height={30} rounded={6} />
               <Skeleton width="100%" height={24} rounded={12} />
             </View>
@@ -148,7 +171,8 @@ export function TrendingBentoGrid({ mediaList }: TrendingBentoGridProps) {
               </Text>
               <View style={styles.heroSpotlightMetaRow}>
                 <Text style={styles.heroSpotlightMeta}>
-                  {item0?.releaseYear ?? '2026'} · {item0?.mediaType === 'MOVIE' ? 'Movie' : 'Series'}
+                  {item0?.releaseYear ?? '2026'} ·{' '}
+                  {item0?.mediaType === 'MOVIE' ? 'Movie' : 'Series'}
                 </Text>
                 {item0?.averageProviderRating ? (
                   <View style={styles.matchScorePill}>
@@ -193,7 +217,10 @@ export function TrendingBentoGrid({ mediaList }: TrendingBentoGridProps) {
               <Text style={[styles.billboardEyebrow, { color: colors.textSecondary }]}>
                 CINEPHILE BUZZ
               </Text>
-              <Text numberOfLines={2} style={[styles.billboardTitle, { color: colors.textPrimary }]}>
+              <Text
+                numberOfLines={2}
+                style={[styles.billboardTitle, { color: colors.textPrimary }]}
+              >
                 {item1?.title ?? 'Cinematic Highlight'}
               </Text>
             </View>
@@ -207,7 +234,9 @@ export function TrendingBentoGrid({ mediaList }: TrendingBentoGridProps) {
                   resizeMode="cover"
                 />
               ) : (
-                <View style={[styles.billboardPlaceholder, { backgroundColor: colors.surfaceRaised }]}>
+                <View
+                  style={[styles.billboardPlaceholder, { backgroundColor: colors.surfaceRaised }]}
+                >
                   <Ionicons name="videocam" size={24} color={colors.textDisabled} />
                 </View>
               )}
@@ -245,8 +274,12 @@ export function TrendingBentoGrid({ mediaList }: TrendingBentoGridProps) {
               <Text numberOfLines={1} style={[styles.portraitTitle, { color: colors.textPrimary }]}>
                 {item2?.title ?? 'Must-Watch Reel'}
               </Text>
-              <Text numberOfLines={2} style={[styles.portraitOverview, { color: colors.textSecondary }]}>
-                {item2?.overview ?? 'Celebrated by critics for extraordinary cinematography and narrative depth.'}
+              <Text
+                numberOfLines={2}
+                style={[styles.portraitOverview, { color: colors.textSecondary }]}
+              >
+                {item2?.overview ??
+                  'Celebrated by critics for extraordinary cinematography and narrative depth.'}
               </Text>
             </View>
           </Pressable>
@@ -264,9 +297,7 @@ export function TrendingBentoGrid({ mediaList }: TrendingBentoGridProps) {
               <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>
                 Weekly Watchers
               </Text>
-              <Text style={[styles.metricBigNumber, { color: colors.textPrimary }]}>
-                94.8K
-              </Text>
+              <Text style={[styles.metricBigNumber, { color: colors.textPrimary }]}>94.8K</Text>
               <View style={styles.growthPill}>
                 <Ionicons name="trending-up" size={13} color="#10B981" />
                 <Text style={styles.growthPillText}>+18.4% velocity</Text>
@@ -291,25 +322,50 @@ export function TrendingBentoGrid({ mediaList }: TrendingBentoGridProps) {
             >
               <View style={styles.ratingRow}>
                 <Text style={[styles.ratingScore, { color: colors.textPrimary }]}>
-                  {item3?.averageProviderRating ? (item3.averageProviderRating * 0.95).toFixed(1) : '4.9'}
+                  {item3?.averageProviderRating
+                    ? (item3.averageProviderRating * 0.95).toFixed(1)
+                    : '4.9'}
                 </Text>
                 <View style={[styles.arrowCircle, { backgroundColor: colors.surfaceRaised }]}>
-                  <Ionicons name="arrow-up-outline" size={14} color={colors.brand} style={{ transform: [{ rotate: '45deg' }] }} />
+                  <Ionicons
+                    name="arrow-up-outline"
+                    size={14}
+                    color={colors.brand}
+                    style={{ transform: [{ rotate: '45deg' }] }}
+                  />
                 </View>
               </View>
 
               {/* Overlapping Community Avatar Story Stack */}
               <View style={styles.avatarStackRow}>
-                <View style={[styles.avatarCircle, { backgroundColor: '#E11D48', borderColor: colors.surface }]}>
+                <View
+                  style={[
+                    styles.avatarCircle,
+                    { backgroundColor: '#E11D48', borderColor: colors.surface },
+                  ]}
+                >
                   <Text style={styles.avatarInitials}>JS</Text>
                 </View>
-                <View style={[styles.avatarCircle, { backgroundColor: '#8B5CF6', marginLeft: -8, borderColor: colors.surface }]}>
+                <View
+                  style={[
+                    styles.avatarCircle,
+                    { backgroundColor: '#8B5CF6', marginLeft: -8, borderColor: colors.surface },
+                  ]}
+                >
                   <Text style={styles.avatarInitials}>MK</Text>
                 </View>
-                <View style={[styles.avatarCircle, { backgroundColor: '#059669', marginLeft: -8, borderColor: colors.surface }]}>
+                <View
+                  style={[
+                    styles.avatarCircle,
+                    { backgroundColor: '#059669', marginLeft: -8, borderColor: colors.surface },
+                  ]}
+                >
                   <Text style={styles.avatarInitials}>AL</Text>
                 </View>
-                <Text numberOfLines={1} style={[styles.avatarStackLabel, { color: colors.textSecondary }]}>
+                <Text
+                  numberOfLines={1}
+                  style={[styles.avatarStackLabel, { color: colors.textSecondary }]}
+                >
                   {item3?.title ?? 'Critically Acclaimed'}
                 </Text>
               </View>
@@ -350,8 +406,18 @@ export function TrendingBentoGrid({ mediaList }: TrendingBentoGridProps) {
 
             {/* Stylized Cinema Resonance Waves */}
             <View style={styles.wavesArtContainer}>
-              <View style={[styles.waveRibbon, { backgroundColor: 'rgba(167, 139, 250, 0.25)', top: 12 }]} />
-              <View style={[styles.waveRibbon, { backgroundColor: 'rgba(236, 72, 153, 0.35)', top: 22 }]} />
+              <View
+                style={[
+                  styles.waveRibbon,
+                  { backgroundColor: 'rgba(167, 139, 250, 0.25)', top: 12 },
+                ]}
+              />
+              <View
+                style={[
+                  styles.waveRibbon,
+                  { backgroundColor: 'rgba(236, 72, 153, 0.35)', top: 22 },
+                ]}
+              />
               <View style={[styles.waveRibbon, { backgroundColor: '#7C3AED', top: 32 }]} />
             </View>
 
@@ -379,11 +445,12 @@ export function TrendingBentoGrid({ mediaList }: TrendingBentoGridProps) {
               },
             ]}
           >
-            <Text style={[styles.editorialEyebrow, { color: colors.brand }]}>
-              CURATED RADAR
-            </Text>
-            <Text numberOfLines={2} style={[styles.editorialHeadline, { color: colors.textPrimary }]}>
-              {item5?.title ?? "Standout Vision"}
+            <Text style={[styles.editorialEyebrow, { color: colors.brand }]}>CURATED RADAR</Text>
+            <Text
+              numberOfLines={2}
+              style={[styles.editorialHeadline, { color: colors.textPrimary }]}
+            >
+              {item5?.title ?? 'Standout Vision'}
             </Text>
 
             <View style={styles.clapperSymbolWrap}>

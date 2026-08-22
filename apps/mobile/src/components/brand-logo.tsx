@@ -1,6 +1,11 @@
 import React from 'react';
 import { Image, StyleSheet, View, type ViewStyle } from 'react-native';
 
+import logoFull from '../../assets/logo.png';
+import logoFullWhite from '../../assets/logo-white.png';
+import logoMark from '../../assets/logo-mark.png';
+import logoMarkWhite from '../../assets/logo-mark-white.png';
+
 import { useTheme } from '../providers/theme-provider';
 
 interface BrandLogoProps {
@@ -9,11 +14,6 @@ interface BrandLogoProps {
   style?: ViewStyle;
 }
 
-const logoFull = require('../../assets/logo.png');
-const logoFullWhite = require('../../assets/logo-white.png');
-const logoMark = require('../../assets/logo-mark.png');
-const logoMarkWhite = require('../../assets/logo-mark-white.png');
-
 const SIZES = {
   sm: { fullWidth: 110, fullHeight: 25, markSize: 24 },
   md: { fullWidth: 150, fullHeight: 34, markSize: 34 },
@@ -21,11 +21,7 @@ const SIZES = {
   xl: { fullWidth: 260, fullHeight: 60, markSize: 64 },
 };
 
-export function BrandLogo({
-  size = 'md',
-  variant = 'full',
-  style,
-}: BrandLogoProps) {
+export function BrandLogo({ size = 'md', variant = 'full', style }: BrandLogoProps) {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
   const config = SIZES[size];
@@ -34,7 +30,7 @@ export function BrandLogo({
     return (
       <View style={[styles.container, style]}>
         <Image
-          source={isDark ? logoMark : logoMark}
+          source={isDark ? logoMarkWhite : logoMark}
           style={{ width: config.markSize, height: config.markSize }}
           resizeMode="contain"
         />
@@ -45,7 +41,7 @@ export function BrandLogo({
   return (
     <View style={[styles.container, style]}>
       <Image
-        source={isDark ? logoFull : logoFull}
+        source={isDark ? logoFullWhite : logoFull}
         style={{ width: config.fullWidth, height: config.fullHeight }}
         resizeMode="contain"
       />

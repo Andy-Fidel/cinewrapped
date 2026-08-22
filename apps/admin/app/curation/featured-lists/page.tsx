@@ -1,6 +1,6 @@
 'use client';
 
-import { Eye, EyeOff, Film, ListOrdered, Plus, Sparkles } from 'lucide-react';
+import { Eye, EyeOff, ListOrdered } from 'lucide-react';
 import { useState } from 'react';
 
 import { Badge } from '../../../components/ui/badge';
@@ -14,7 +14,11 @@ export default function FeaturedListsPage() {
   const [, setRerender] = useState(0);
 
   const handleTogglePublish = (id: string) => {
-    adminStore.toggleListPublish(session, id, 'Toggled featured shelf visibility on mobile home/discover');
+    adminStore.toggleListPublish(
+      session,
+      id,
+      'Toggled featured shelf visibility on mobile home/discover',
+    );
     setRerender((v) => v + 1);
   };
 
@@ -49,7 +53,9 @@ export default function FeaturedListsPage() {
                 <p className="text-xs text-zinc-400">{list.description}</p>
 
                 <div className="flex items-center gap-4 text-xs text-zinc-500 pt-1">
-                  <span>Curator: <strong className="text-zinc-300">{list.curatorName}</strong></span>
+                  <span>
+                    Curator: <strong className="text-zinc-300">{list.curatorName}</strong>
+                  </span>
                   <span>•</span>
                   <span>{list.viewCount.toLocaleString()} impressions</span>
                   <span>•</span>
@@ -63,7 +69,11 @@ export default function FeaturedListsPage() {
                   size="sm"
                   onClick={() => handleTogglePublish(list.id)}
                 >
-                  {list.isPublished ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                  {list.isPublished ? (
+                    <EyeOff className="h-3.5 w-3.5" />
+                  ) : (
+                    <Eye className="h-3.5 w-3.5" />
+                  )}
                   {list.isPublished ? 'Unpublish' : 'Publish Shelf'}
                 </Button>
               </div>

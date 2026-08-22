@@ -103,7 +103,10 @@ export function AnnualHeatmap({ data, selectedDate, onSelectDate }: AnnualHeatma
     const startWeekday = firstDate.getUTCDay(); // 0=Sun, 1=Mon, ..., 6=Sat
 
     const weekList: Array<Array<ActivityHeatmapDay | null>> = [];
-    let currentWeek: Array<ActivityHeatmapDay | null> = Array(startWeekday).fill(null);
+    let currentWeek: Array<ActivityHeatmapDay | null> = Array.from(
+      { length: startWeekday },
+      () => null,
+    );
 
     const headers: Array<{ monthName: string; weekIndex: number }> = [];
     let lastMonth = -1;
@@ -151,7 +154,9 @@ export function AnnualHeatmap({ data, selectedDate, onSelectDate }: AnnualHeatma
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+    <View
+      style={[styles.container, { backgroundColor: colors.surface, borderColor: colors.border }]}
+    >
       {/* Header with Title & Stats */}
       <View style={styles.header}>
         <View style={styles.titleRow}>
@@ -190,7 +195,10 @@ export function AnnualHeatmap({ data, selectedDate, onSelectDate }: AnnualHeatma
               <Text
                 style={[
                   styles.paletteName,
-                  { color: isSelected ? colors.textPrimary : colors.textSecondary, fontWeight: isSelected ? '800' : '600' },
+                  {
+                    color: isSelected ? colors.textPrimary : colors.textSecondary,
+                    fontWeight: isSelected ? '800' : '600',
+                  },
                 ]}
               >
                 {p.name}
@@ -201,7 +209,11 @@ export function AnnualHeatmap({ data, selectedDate, onSelectDate }: AnnualHeatma
       </View>
 
       {/* 52-Week Scrollable Matrix */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.matrixScroll}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.matrixScroll}
+      >
         <View style={styles.matrixWrapper}>
           {/* Month Labels Header */}
           <View style={styles.monthRow}>

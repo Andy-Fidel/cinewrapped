@@ -1,6 +1,6 @@
 'use client';
 
-import { Calendar, CheckCircle2, Flame, Plus, Users } from 'lucide-react';
+import { Calendar, Flame, Plus } from 'lucide-react';
 import { useState } from 'react';
 
 import { Badge } from '../../../components/ui/badge';
@@ -64,16 +64,10 @@ export default function ChallengesPage() {
         {adminStore.challenges.map((ch) => (
           <Card key={ch.id} className="p-0 overflow-hidden flex flex-col">
             <div className="h-36 relative">
-              <img
-                src={ch.coverImageUrl}
-                alt={ch.title}
-                className="w-full h-full object-cover"
-              />
+              <img src={ch.coverImageUrl} alt={ch.title} className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/40 to-transparent" />
               <div className="absolute top-3 right-3 flex gap-2">
-                <Badge variant={ch.status === 'ACTIVE' ? 'success' : 'info'}>
-                  {ch.status}
-                </Badge>
+                <Badge variant={ch.status === 'ACTIVE' ? 'success' : 'info'}>{ch.status}</Badge>
                 <Badge variant="outline">{ch.category}</Badge>
               </div>
             </div>
@@ -86,15 +80,21 @@ export default function ChallengesPage() {
                 <div className="mt-4 grid grid-cols-3 gap-2 bg-zinc-950/60 p-3 rounded-xl border border-zinc-800/80 text-center">
                   <div>
                     <p className="text-[10px] uppercase font-bold text-zinc-500">Target</p>
-                    <p className="text-sm font-extrabold text-white mt-0.5">{ch.targetCount} films</p>
+                    <p className="text-sm font-extrabold text-white mt-0.5">
+                      {ch.targetCount} films
+                    </p>
                   </div>
                   <div>
                     <p className="text-[10px] uppercase font-bold text-zinc-500">Joined</p>
-                    <p className="text-sm font-extrabold text-white mt-0.5">{ch.participantCount}</p>
+                    <p className="text-sm font-extrabold text-white mt-0.5">
+                      {ch.participantCount}
+                    </p>
                   </div>
                   <div>
                     <p className="text-[10px] uppercase font-bold text-zinc-500">Completed</p>
-                    <p className="text-sm font-extrabold text-emerald-400 mt-0.5">{ch.completionCount}</p>
+                    <p className="text-sm font-extrabold text-emerald-400 mt-0.5">
+                      {ch.completionCount}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -102,7 +102,8 @@ export default function ChallengesPage() {
               <div className="flex items-center justify-between text-xs text-zinc-500 pt-2 border-t border-zinc-800/80">
                 <span className="flex items-center gap-1">
                   <Calendar className="h-3.5 w-3.5" />
-                  {new Date(ch.startDate).toLocaleDateString()} — {new Date(ch.endDate).toLocaleDateString()}
+                  {new Date(ch.startDate).toLocaleDateString()} —{' '}
+                  {new Date(ch.endDate).toLocaleDateString()}
                 </span>
                 <span className="font-semibold text-zinc-300">
                   {ch.participantCount > 0
@@ -123,7 +124,9 @@ export default function ChallengesPage() {
       >
         <div className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-zinc-300 uppercase mb-1">Challenge Title</label>
+            <label className="block text-xs font-semibold text-zinc-300 uppercase mb-1">
+              Challenge Title
+            </label>
             <input
               type="text"
               placeholder="e.g. Noir August 2026"
@@ -134,7 +137,9 @@ export default function ChallengesPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-zinc-300 uppercase mb-1">Subtitle / Goal</label>
+            <label className="block text-xs font-semibold text-zinc-300 uppercase mb-1">
+              Subtitle / Goal
+            </label>
             <input
               type="text"
               placeholder="e.g. Watch 10 neo-noir or classic detective movies"
@@ -146,7 +151,9 @@ export default function ChallengesPage() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-zinc-300 uppercase mb-1">Target Film Count</label>
+              <label className="block text-xs font-semibold text-zinc-300 uppercase mb-1">
+                Target Film Count
+              </label>
               <input
                 type="number"
                 value={targetCount}
@@ -155,7 +162,9 @@ export default function ChallengesPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-zinc-300 uppercase mb-1">Category</label>
+              <label className="block text-xs font-semibold text-zinc-300 uppercase mb-1">
+                Category
+              </label>
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value as ManagedChallenge['category'])}

@@ -14,28 +14,10 @@ export interface WeeklyStatsData {
   dailyActivity: { day: string; watched: boolean; minutes: number }[];
 }
 
-const DEFAULT_WEEKLY_STATS: WeeklyStatsData = {
-  filmsCount: 5,
-  runtimeMinutes: 624, // ~10.4 hours
-  currentStreakDays: 6,
-  topVibe: '🤯 Mind-Bending',
-  dailyActivity: [
-    { day: 'M', watched: true, minutes: 120 },
-    { day: 'T', watched: true, minutes: 140 },
-    { day: 'W', watched: false, minutes: 0 },
-    { day: 'T', watched: true, minutes: 110 },
-    { day: 'F', watched: true, minutes: 154 },
-    { day: 'S', watched: true, minutes: 100 },
-    { day: 'S', watched: false, minutes: 0 },
-  ],
-};
-
-export function WeeklyStatsWidget({
-  stats = DEFAULT_WEEKLY_STATS,
-}: {
-  stats?: WeeklyStatsData;
-}) {
+export function WeeklyStatsWidget({ stats }: { stats?: WeeklyStatsData | undefined }) {
   const colors = useColors();
+
+  if (stats === undefined) return null;
 
   const hours = (stats.runtimeMinutes / 60).toFixed(1);
 
@@ -80,22 +62,44 @@ export function WeeklyStatsWidget({
 
       {/* 4-Stat Metric Grid */}
       <View style={styles.statsGrid}>
-        <View style={[styles.statBox, { backgroundColor: colors.surfaceRaised, borderColor: colors.border }]}>
+        <View
+          style={[
+            styles.statBox,
+            { backgroundColor: colors.surfaceRaised, borderColor: colors.border },
+          ]}
+        >
           <Text style={[styles.statValue, { color: colors.textPrimary }]}>{stats.filmsCount}</Text>
           <Text style={[styles.statLabel, { color: colors.textSecondary }]}>FILMS LOGGED</Text>
         </View>
 
-        <View style={[styles.statBox, { backgroundColor: colors.surfaceRaised, borderColor: colors.border }]}>
+        <View
+          style={[
+            styles.statBox,
+            { backgroundColor: colors.surfaceRaised, borderColor: colors.border },
+          ]}
+        >
           <Text style={[styles.statValue, { color: colors.brand }]}>{hours}h</Text>
           <Text style={[styles.statLabel, { color: colors.textSecondary }]}>SCREEN TIME</Text>
         </View>
 
-        <View style={[styles.statBox, { backgroundColor: colors.surfaceRaised, borderColor: colors.border }]}>
-          <Text style={[styles.statValue, { color: '#F59E0B' }]}>🔥 {stats.currentStreakDays}d</Text>
+        <View
+          style={[
+            styles.statBox,
+            { backgroundColor: colors.surfaceRaised, borderColor: colors.border },
+          ]}
+        >
+          <Text style={[styles.statValue, { color: '#F59E0B' }]}>
+            🔥 {stats.currentStreakDays}d
+          </Text>
           <Text style={[styles.statLabel, { color: colors.textSecondary }]}>ACTIVE STREAK</Text>
         </View>
 
-        <View style={[styles.statBox, { backgroundColor: colors.surfaceRaised, borderColor: colors.border }]}>
+        <View
+          style={[
+            styles.statBox,
+            { backgroundColor: colors.surfaceRaised, borderColor: colors.border },
+          ]}
+        >
           <Text style={[styles.statValueVibe, { color: colors.textPrimary }]} numberOfLines={1}>
             {stats.topVibe.split(' ')[0]}
           </Text>

@@ -70,7 +70,9 @@ function getAmbientPalette(genres: Array<{ name: string }>): {
       accentBadge: 'rgba(239, 68, 68, 0.15)',
     };
   }
-  if (names.some((n) => n.includes('sci-fi') || n.includes('science fiction') || n.includes('action'))) {
+  if (
+    names.some((n) => n.includes('sci-fi') || n.includes('science fiction') || n.includes('action'))
+  ) {
     return {
       primaryGlow: 'rgba(59, 130, 246, 0.35)', // Electric Blue
       secondaryGlow: 'rgba(245, 158, 11, 0.25)', // Amber
@@ -184,13 +186,7 @@ function TrailerPlayer({
   );
 }
 
-function Person({
-  credit,
-  onPress,
-}: {
-  credit: CreditSummary;
-  onPress?: () => void;
-}) {
+function Person({ credit, onPress }: { credit: CreditSummary; onPress?: () => void }) {
   const colors = useColors();
   return (
     <Pressable
@@ -234,7 +230,9 @@ export default function MediaDetailScreen() {
   const [showTrailer, setShowTrailer] = useState(false);
   const [trailerFailed, setTrailerFailed] = useState(false);
   const [whereToWatchExpanded, setWhereToWatchExpanded] = useState(true);
-  const [selectedPersonForTracker, setSelectedPersonForTracker] = useState<CreditSummary | null>(null);
+  const [selectedPersonForTracker, setSelectedPersonForTracker] = useState<CreditSummary | null>(
+    null,
+  );
 
   const details = useQuery({
     queryKey: ['media-details', mediaId],
@@ -316,12 +314,7 @@ export default function MediaDetailScreen() {
             />
           )}
           {/* Ambient Lighting Gradient Layer */}
-          <View
-            style={[
-              styles.ambientBackdropLayer,
-              { backgroundColor: ambient.primaryGlow },
-            ]}
-          />
+          <View style={[styles.ambientBackdropLayer, { backgroundColor: ambient.primaryGlow }]} />
           <View style={styles.backdropOverlay} />
 
           {/* Hero Play Button Overlay if trailer exists */}
@@ -483,14 +476,8 @@ export default function MediaDetailScreen() {
 
               <View style={styles.trailerFrameContainer}>
                 {trailerFailed ? (
-                  <View
-                    style={[styles.trailerFallback, { backgroundColor: colors.surfaceRaised }]}
-                  >
-                    <Ionicons
-                      name="alert-circle-outline"
-                      size={28}
-                      color={colors.textSecondary}
-                    />
+                  <View style={[styles.trailerFallback, { backgroundColor: colors.surfaceRaised }]}>
+                    <Ionicons name="alert-circle-outline" size={28} color={colors.textSecondary} />
                     <Text style={[styles.trailerFallbackText, { color: colors.textSecondary }]}>
                       This trailer cannot be embedded.
                     </Text>
@@ -601,7 +588,12 @@ export default function MediaDetailScreen() {
           ) : null}
 
           {/* Where to Watch Collapsible Accordion Section */}
-          <View style={[styles.accordionContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View
+            style={[
+              styles.accordionContainer,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+            ]}
+          >
             <Pressable
               accessibilityLabel="Where to Watch streaming availability"
               accessibilityRole="button"
@@ -620,7 +612,12 @@ export default function MediaDetailScreen() {
               ]}
             >
               <View style={styles.accordionHeaderLeft}>
-                <View style={[styles.streamingIconCircle, { backgroundColor: 'rgba(222, 54, 65, 0.12)' }]}>
+                <View
+                  style={[
+                    styles.streamingIconCircle,
+                    { backgroundColor: 'rgba(222, 54, 65, 0.12)' },
+                  ]}
+                >
                   <Ionicons name="play" size={16} color={colors.brand} />
                 </View>
                 <View>
@@ -665,7 +662,9 @@ export default function MediaDetailScreen() {
                           accessibilityRole="link"
                           disabled={item.providerUrl === null}
                           key={`${item.providerId}-${item.monetizationType}`}
-                          onPress={() => void openStreamingProvider(item.providerName, item.providerUrl)}
+                          onPress={() =>
+                            void openStreamingProvider(item.providerName, item.providerUrl)
+                          }
                           style={({ pressed }) => [
                             styles.providerCard,
                             {
@@ -676,7 +675,9 @@ export default function MediaDetailScreen() {
                           ]}
                         >
                           {/* Brand indicator strip */}
-                          <View style={[styles.providerBrandStrip, { backgroundColor: brandAccent }]} />
+                          <View
+                            style={[styles.providerBrandStrip, { backgroundColor: brandAccent }]}
+                          />
 
                           {item.logoUrl === null ? (
                             <View
@@ -746,7 +747,9 @@ export default function MediaDetailScreen() {
                               name="play"
                               size={12}
                               color={
-                                item.monetizationType === 'FLATRATE' ? colors.onBrand : colors.textPrimary
+                                item.monetizationType === 'FLATRATE'
+                                  ? colors.onBrand
+                                  : colors.textPrimary
                               }
                             />
                             <Text
@@ -860,7 +863,8 @@ export default function MediaDetailScreen() {
           )}
 
           <Text style={[styles.attribution, { color: colors.textDisabled }]}>
-            Metadata and availability supplied by TMDB & JustWatch. Streaming availability subject to change.
+            Metadata and availability supplied by TMDB & JustWatch. Streaming availability subject
+            to change.
           </Text>
         </View>
       </ScrollView>
@@ -870,7 +874,7 @@ export default function MediaDetailScreen() {
         <FilmographyCompletionTracker
           onClose={() => setSelectedPersonForTracker(null)}
           person={selectedPersonForTracker}
-          visible={selectedPersonForTracker !== null}
+          visible
         />
       ) : null}
     </SafeAreaView>

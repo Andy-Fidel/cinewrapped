@@ -15,6 +15,8 @@ const apiEnvironmentSchema = sharedServerSchema.extend({
   API_HOST: z.string().min(1).default('0.0.0.0'),
   API_PORT: z.coerce.number().int().min(1).max(65_535).default(4000),
   API_PUBLIC_URL: z.url(),
+  TRUST_PROXY: z.coerce.boolean().default(false),
+  API_DOCS_ENABLED: z.coerce.boolean().optional(),
   CORS_ORIGINS: z
     .string()
     .transform((value) => value.split(',').map((origin) => origin.trim()))
@@ -23,6 +25,7 @@ const apiEnvironmentSchema = sharedServerSchema.extend({
   SUPABASE_JWT_ISSUER: z.url({ protocol: /^https$/ }),
   SUPABASE_JWT_AUDIENCE: z.string().min(1),
   SUPABASE_JWKS_URL: z.url({ protocol: /^https$/ }),
+  SUPABASE_SECRET_KEY: secretSchema.optional(),
   TMDB_API_TOKEN: secretSchema,
   OPENAI_API_KEY: secretSchema,
   OPENAI_VISION_MODEL: z.string().min(1).max(80).default('gpt-5.4-mini'),
@@ -33,6 +36,7 @@ const apiEnvironmentSchema = sharedServerSchema.extend({
   S3_SECRET_KEY: secretSchema,
   SENTRY_DSN: z.union([z.url(), z.literal('')]).optional(),
   POSTHOG_API_KEY: z.string().optional(),
+  PUSH_TOKEN_ENCRYPTION_KEY: secretSchema.optional(),
 });
 
 const workerEnvironmentSchema = sharedServerSchema.extend({
@@ -56,6 +60,7 @@ const mobilePublicEnvironmentSchema = z.object({
   EXPO_PUBLIC_API_BASE_URL: z.url(),
   EXPO_PUBLIC_SUPABASE_URL: z.url({ protocol: /^https$/ }),
   EXPO_PUBLIC_SUPABASE_ANON_KEY: z.string().min(16),
+  EXPO_PUBLIC_EAS_PROJECT_ID: z.string().uuid().optional(),
 });
 
 export type ApiEnvironment = z.infer<typeof apiEnvironmentSchema>;

@@ -11,6 +11,8 @@ import {
 } from 'react-native';
 
 import { useColors } from './ui';
+import { api } from '../lib/api';
+import { errorMessage } from '../lib/error-message';
 import { haptics } from '../lib/haptics';
 import { useDialog } from '../providers/dialog-provider';
 
@@ -21,13 +23,17 @@ export interface ReportTarget {
   authorName?: string;
 }
 
-const REPORT_REASONS = [
+const REPORT_REASONS: ReadonlyArray<{
+  id: string;
+  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+}> = [
   { id: 'SPAM', label: 'Spam or Advertising', icon: 'megaphone-outline' },
   { id: 'HARASSMENT', label: 'Harassment or Hate Speech', icon: 'alert-circle-outline' },
   { id: 'EXPLICIT', label: 'Inappropriate or Explicit Content', icon: 'eye-off-outline' },
   { id: 'SPOILERS', label: 'Unmarked Major Spoilers', icon: 'warning-outline' },
   { id: 'OTHER', label: 'Other Policy Violation', icon: 'shield-outline' },
-] as const;
+];
 
 export function ReportContentModal({
   visible,
@@ -39,7 +45,7 @@ export function ReportContentModal({
   onClose: () => void;
 }) {
   const colors = useColors();
-  const { showInfo } = useDialog();
+  const { showError, showInfo } = useDialog();
   const [selectedReason, setSelectedReason] = useState<string>('SPAM');
   const [details, setDetails] = useState('');
   const [blockAuthor, setBlockAuthor] = useState(false);
@@ -51,39 +57,53 @@ export function ReportContentModal({
     haptics.selection();
     setIsSubmitting(true);
 
-    // Simulate fast submission & store logging
-    await new Promise((resolve) => setTimeout(resolve, 600));
-    setIsSubmitting(false);
-
-    showInfo(
-      'Report Received',
-      `Thank you for keeping CineWrapped safe. Our moderation team reviews all flagged content within 24 hours.${
-        blockAuthor ? ' This user has also been blocked from your feed.' : ''
-      }`,
-    );
-
-    setDetails('');
-    onClose();
+    try {
+      const result = await api.request<{ reportId: string; blocked: boolean }>('reports', {
+        method: 'POST',
+        body: {
+          entityType: target.entityType,
+          entityId: target.entityId,
+          reason: selectedReason,
+          ...(details.trim() === '' ? {} : { details: details.trim() }),
+          blockAuthor,
+        },
+      });
+      showInfo(
+        'Report received',
+        `Your report reference is ${result.reportId}.${result.blocked ? ' The account has also been blocked.' : ''}`,
+      );
+      setDetails('');
+      setBlockAuthor(false);
+      onClose();
+    } catch (error) {
+      showError('Could not submit report', errorMessage(error));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose}>
         <Pressable
-          style={[
-            styles.sheet,
-            { backgroundColor: colors.surface, borderColor: colors.border },
-          ]}
+          style={[styles.sheet, { backgroundColor: colors.surface, borderColor: colors.border }]}
           onPress={(e) => e.stopPropagation()}
         >
           {/* Header */}
           <View style={styles.header}>
             <View style={{ gap: 2 }}>
               <Text style={[styles.title, { color: colors.textPrimary }]}>
-                Report {target.entityType === 'REVIEW' ? 'Review' : target.entityType === 'USER' ? 'User' : 'Content'}
+                Report{' '}
+                {target.entityType === 'REVIEW'
+                  ? 'Review'
+                  : target.entityType === 'USER'
+                    ? 'User'
+                    : 'Content'}
               </Text>
               <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-                {target.entityTitle ? `"${target.entityTitle}"` : `Reported by @${target.authorName ?? 'user'}`}
+                {target.entityTitle
+                  ? `"${target.entityTitle}"`
+                  : `Reported by @${target.authorName ?? 'user'}`}
               </Text>
             </View>
             <Pressable
@@ -119,7 +139,7 @@ export function ReportContentModal({
                   ]}
                 >
                   <Ionicons
-                    name={r.icon as any}
+                    name={r.icon}
                     size={18}
                     color={isSelected ? colors.brand : colors.textSecondary}
                   />
@@ -182,7 +202,7 @@ export function ReportContentModal({
           {/* Submit Button */}
           <Pressable
             accessibilityRole="button"
-            onPress={handleSubmit}
+            onPress={() => void handleSubmit()}
             disabled={isSubmitting}
             style={({ pressed }) => [
               styles.submitBtn,

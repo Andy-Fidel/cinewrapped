@@ -2,7 +2,7 @@ import type { RecommendationSummary } from '@cinewrapped/shared-types';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View, type GestureResponderEvent } from 'react-native';
 
 import { useColors } from '../ui';
 import { haptics } from '../../lib/haptics';
@@ -27,8 +27,8 @@ export function DailyRecommendationWidget({
     router.push(`/media/${media.id}`);
   };
 
-  const handleToggleWatchlist = (e: any) => {
-    e.stopPropagation?.();
+  const handleToggleWatchlist = (event: GestureResponderEvent) => {
+    event.stopPropagation();
     if (!media) return;
     haptics.heartReact();
     setInWatchlist((prev) => !prev);
@@ -93,14 +93,20 @@ export function DailyRecommendationWidget({
             </Text>
 
             <Text style={styles.metaSubtext}>
-              {media.releaseYear ?? ''} · {media.runtimeMinutes ? `${media.runtimeMinutes}m` : 'Feature'} · {media.mediaType}
+              {media.releaseYear ?? ''} ·{' '}
+              {media.runtimeMinutes ? `${media.runtimeMinutes}m` : 'Feature'} · {media.mediaType}
             </Text>
           </View>
         </View>
       </View>
 
       {/* Action Footer */}
-      <View style={[styles.footerBar, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
+      <View
+        style={[
+          styles.footerBar,
+          { backgroundColor: colors.surface, borderTopColor: colors.border },
+        ]}
+      >
         <View style={styles.streamingInfo}>
           <Ionicons name="tv-outline" size={15} color={colors.textSecondary} />
           <Text style={[styles.streamingText, { color: colors.textSecondary }]}>

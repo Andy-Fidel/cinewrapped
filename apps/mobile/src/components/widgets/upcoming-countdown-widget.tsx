@@ -2,7 +2,7 @@ import type { CalendarEventSummary } from '@cinewrapped/shared-types';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View, type GestureResponderEvent } from 'react-native';
 
 import { useColors } from '../ui';
 import { CalendarSyncModal } from '../calendar-sync-modal';
@@ -13,22 +13,11 @@ export interface CountdownReleaseInfo {
   title: string;
   releaseDate: string; // ISO string
   format: string; // 'IMAX 70mm', 'Theatrical', 'VOD Premiere'
-  posterUrl: string;
-  backdropUrl: string;
-  synopsis?: string;
+  posterUrl: string | null;
+  backdropUrl: string | null;
+  synopsis?: string | null;
   mediaId?: string;
 }
-
-const DEFAULT_RELEASE: CountdownReleaseInfo = {
-  id: 'rel-1',
-  title: 'Megalopolis',
-  releaseDate: new Date(Date.now() + 6 * 24 * 3600 * 1000 + 14 * 3600 * 1000 + 32 * 60 * 1000).toISOString(),
-  format: 'IMAX 70mm Special Screening',
-  posterUrl: 'https://image.tmdb.org/t/p/w500/m9Etv1ErkFGLTCn6OD1SnZ6Ptkl.jpg',
-  backdropUrl: 'https://image.tmdb.org/t/p/w1280/9l1eZiJHmhnNXghMU2UMUk1ZGL7.jpg',
-  synopsis: 'An architect strives to rebuild a ruined metropolis into a utopian paradise.',
-  mediaId: 'm-megalopolis',
-};
 
 function getTimeRemaining(targetDateIso: string) {
   const total = Date.parse(targetDateIso) - Date.now();
@@ -43,20 +32,23 @@ function getTimeRemaining(targetDateIso: string) {
 }
 
 export function UpcomingCountdownWidget({
-  release = DEFAULT_RELEASE,
+  release,
 }: {
-  release?: CountdownReleaseInfo;
+  release?: CountdownReleaseInfo | undefined;
 }) {
   const colors = useColors();
-  const [timeLeft, setTimeLeft] = useState(() => getTimeRemaining(release.releaseDate));
+  const releaseDate = release?.releaseDate ?? new Date(0).toISOString();
+  const [timeLeft, setTimeLeft] = useState(() => getTimeRemaining(releaseDate));
   const [syncModalVisible, setSyncModalVisible] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setTimeLeft(getTimeRemaining(release.releaseDate));
+      setTimeLeft(getTimeRemaining(releaseDate));
     }, 1000);
     return () => clearInterval(timer);
-  }, [release.releaseDate]);
+  }, [releaseDate]);
+
+  if (release === undefined) return null;
 
   const handleOpenMedia = () => {
     haptics.selection();
@@ -67,8 +59,8 @@ export function UpcomingCountdownWidget({
     }
   };
 
-  const handleOpenSync = (e: any) => {
-    e.stopPropagation?.();
+  const handleOpenSync = (event: GestureResponderEvent) => {
+    event.stopPropagation();
     haptics.selection();
     setSyncModalVisible(true);
   };
@@ -119,11 +111,13 @@ export function UpcomingCountdownWidget({
       >
         {/* Visual Poster Banner */}
         <View style={styles.bannerContainer}>
-          <Image
-            source={{ uri: release.backdropUrl }}
-            style={styles.backdropImage}
-            resizeMode="cover"
-          />
+          {release.backdropUrl !== null ? (
+            <Image
+              source={{ uri: release.backdropUrl }}
+              style={styles.backdropImage}
+              resizeMode="cover"
+            />
+          ) : null}
           <View style={styles.overlay} />
 
           {/* Top Format & Status Tags */}
@@ -144,7 +138,12 @@ export function UpcomingCountdownWidget({
               {release.title}
             </Text>
             <Text style={styles.releaseDateText}>
-              Premiere Date: {new Date(release.releaseDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+              Premiere Date:{' '}
+              {new Date(release.releaseDate).toLocaleDateString(undefined, {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+              })}
             </Text>
           </View>
         </View>
@@ -152,29 +151,57 @@ export function UpcomingCountdownWidget({
         {/* Live Countdown Blocks Grid */}
         <View style={[styles.timerSection, { backgroundColor: colors.surface }]}>
           <View style={styles.timerGrid}>
-            <View style={[styles.timeBox, { backgroundColor: colors.surfaceRaised, borderColor: colors.border }]}>
-              <Text style={[styles.timeValue, { color: colors.textPrimary }]}>{String(timeLeft.days).padStart(2, '0')}</Text>
+            <View
+              style={[
+                styles.timeBox,
+                { backgroundColor: colors.surfaceRaised, borderColor: colors.border },
+              ]}
+            >
+              <Text style={[styles.timeValue, { color: colors.textPrimary }]}>
+                {String(timeLeft.days).padStart(2, '0')}
+              </Text>
               <Text style={[styles.timeLabel, { color: colors.textSecondary }]}>DAYS</Text>
             </View>
 
             <Text style={[styles.colonText, { color: colors.textSecondary }]}>:</Text>
 
-            <View style={[styles.timeBox, { backgroundColor: colors.surfaceRaised, borderColor: colors.border }]}>
-              <Text style={[styles.timeValue, { color: colors.textPrimary }]}>{String(timeLeft.hours).padStart(2, '0')}</Text>
+            <View
+              style={[
+                styles.timeBox,
+                { backgroundColor: colors.surfaceRaised, borderColor: colors.border },
+              ]}
+            >
+              <Text style={[styles.timeValue, { color: colors.textPrimary }]}>
+                {String(timeLeft.hours).padStart(2, '0')}
+              </Text>
               <Text style={[styles.timeLabel, { color: colors.textSecondary }]}>HOURS</Text>
             </View>
 
             <Text style={[styles.colonText, { color: colors.textSecondary }]}>:</Text>
 
-            <View style={[styles.timeBox, { backgroundColor: colors.surfaceRaised, borderColor: colors.border }]}>
-              <Text style={[styles.timeValue, { color: colors.textPrimary }]}>{String(timeLeft.minutes).padStart(2, '0')}</Text>
+            <View
+              style={[
+                styles.timeBox,
+                { backgroundColor: colors.surfaceRaised, borderColor: colors.border },
+              ]}
+            >
+              <Text style={[styles.timeValue, { color: colors.textPrimary }]}>
+                {String(timeLeft.minutes).padStart(2, '0')}
+              </Text>
               <Text style={[styles.timeLabel, { color: colors.textSecondary }]}>MINS</Text>
             </View>
 
             <Text style={[styles.colonText, { color: colors.textSecondary }]}>:</Text>
 
-            <View style={[styles.timeBox, { backgroundColor: colors.surfaceRaised, borderColor: colors.border }]}>
-              <Text style={[styles.timeValue, { color: colors.brand }]}>{String(timeLeft.seconds).padStart(2, '0')}</Text>
+            <View
+              style={[
+                styles.timeBox,
+                { backgroundColor: colors.surfaceRaised, borderColor: colors.border },
+              ]}
+            >
+              <Text style={[styles.timeValue, { color: colors.brand }]}>
+                {String(timeLeft.seconds).padStart(2, '0')}
+              </Text>
               <Text style={[styles.timeLabel, { color: colors.textSecondary }]}>SECS</Text>
             </View>
           </View>

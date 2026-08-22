@@ -3,15 +3,20 @@ import type {
   NotificationSummary,
   RegisterPushDeviceDto,
 } from '@cinewrapped/shared-types';
+import { Prisma } from '@cinewrapped/database';
 import { Injectable } from '@nestjs/common';
 
 import type { AuthPrincipal } from '../auth/auth.types.js';
 import { AppException } from '../common/app.exception.js';
+import { TokenCryptoService } from '../common/token-crypto.service.js';
 import { PrismaService } from '../database/prisma.service.js';
 
 @Injectable()
 export class NotificationsService {
-  public constructor(private readonly prisma: PrismaService) {}
+  public constructor(
+    private readonly prisma: PrismaService,
+    private readonly tokenCrypto: TokenCryptoService,
+  ) {}
 
   public async getInbox(
     principal: AuthPrincipal,
@@ -19,7 +24,7 @@ export class NotificationsService {
   ): Promise<NotificationInboxResponse> {
     const userId = await this.userId(principal.subject);
 
-    const whereClause: any = {
+    const whereClause: Prisma.NotificationWhereInput = {
       userId,
       deletedAt: null,
     };
@@ -59,10 +64,10 @@ export class NotificationsService {
       }),
     ]);
 
-    let items: NotificationSummary[] = dbItems.map((item) => ({
+    const items: NotificationSummary[] = dbItems.map((item) => ({
       id: item.id,
       userId: item.userId,
-      type: item.type as any,
+      type: item.type,
       actorUserId: item.actorUserId,
       actor: item.actor
         ? {
@@ -72,7 +77,7 @@ export class NotificationsService {
             avatarUrl: item.actor.avatarUrl,
           }
         : null,
-      entityType: item.entityType as any,
+      entityType: item.entityType,
       entityId: item.entityId,
       title: item.title,
       body: item.body,
@@ -81,61 +86,10 @@ export class NotificationsService {
       createdAt: item.createdAt.toISOString(),
     }));
 
-    // If brand new user with no notifications yet, provide helpful initial onboarding notifications
-    if (items.length === 0 && filter === 'all') {
-      const now = new Date();
-      items = [
-        {
-          id: 'notif-welcome',
-          userId,
-          type: 'WRAP_READY',
-          actorUserId: null,
-          actor: null,
-          entityType: 'WRAP',
-          entityId: 'wrap-welcome',
-          title: '🎬 Welcome to CineWrapped',
-          body: 'Your personalized cinema intelligence center is ready. Log your first viewing to generate your live taste radar.',
-          deepLink: '/(tabs)/library',
-          readAt: null,
-          createdAt: new Date(now.getTime() - 1000 * 60 * 5).toISOString(),
-        },
-        {
-          id: 'notif-premiere',
-          userId,
-          type: 'SHARED_TITLE',
-          actorUserId: null,
-          actor: null,
-          entityType: 'MEDIA',
-          entityId: 'm-megalopolis',
-          title: '⏳ Upcoming Release Alert',
-          body: 'Megalopolis is premiering soon in IMAX 70mm. Tap to view countdown and sync to your calendar.',
-          deepLink: '/calendar',
-          readAt: null,
-          createdAt: new Date(now.getTime() - 1000 * 60 * 60 * 2).toISOString(),
-        },
-        {
-          id: 'notif-achievement',
-          userId,
-          type: 'ACHIEVEMENT_UNLOCKED',
-          actorUserId: null,
-          actor: null,
-          entityType: 'ACHIEVEMENT',
-          entityId: 'ach-first-step',
-          title: '🏆 Achievement Unlocked: Film Novice',
-          body: 'You successfully completed CineWrapped onboarding and taste calibration.',
-          deepLink: '/insights',
-          readAt: new Date(now.getTime() - 1000 * 60 * 60 * 4).toISOString(),
-          createdAt: new Date(now.getTime() - 1000 * 60 * 60 * 4).toISOString(),
-        },
-      ];
-    }
-
-    const computedUnread = items.filter((it) => it.readAt === null).length;
-
     return {
       items,
-      unreadCount: unreadCount > 0 ? unreadCount : computedUnread,
-      totalCount: totalCount > 0 ? totalCount : items.length,
+      unreadCount,
+      totalCount,
     };
   }
 
@@ -145,18 +99,17 @@ export class NotificationsService {
   ): Promise<{ success: boolean; id: string }> {
     const userId = await this.userId(principal.subject);
 
-    try {
-      await this.prisma.notification.updateMany({
-        where: {
-          id: notificationId,
-          userId,
-        },
-        data: {
-          readAt: new Date(),
-        },
-      });
-    } catch {
-      // Fallback for mocked notifications
+    const result = await this.prisma.notification.updateMany({
+      where: {
+        id: notificationId,
+        userId,
+      },
+      data: {
+        readAt: new Date(),
+      },
+    });
+    if (result.count === 0) {
+      throw new AppException(404, 'NOTIFICATION_NOT_FOUND', 'The notification was not found.');
     }
 
     return { success: true, id: notificationId };
@@ -186,6 +139,8 @@ export class NotificationsService {
     dto: RegisterPushDeviceDto,
   ): Promise<{ success: boolean; deviceId?: string }> {
     const userId = await this.userId(principal.subject);
+    const pushTokenHash = this.tokenCrypto.hash(dto.pushToken);
+    const encryptedToken = this.tokenCrypto.encrypt(dto.pushToken);
 
     const device = await this.prisma.pushDevice.upsert({
       where: {
@@ -197,16 +152,17 @@ export class NotificationsService {
       create: {
         userId,
         installationId: dto.installationId,
-        platform: dto.platform as any,
-        pushTokenHash: `${dto.installationId}_${Date.now()}`.slice(0, 128),
-        encryptedToken: dto.pushToken,
+        platform: dto.platform,
+        pushTokenHash,
+        encryptedToken,
         locale: dto.locale ?? null,
         timezone: dto.timezone ?? null,
         lastSeenAt: new Date(),
       },
       update: {
-        platform: dto.platform as any,
-        encryptedToken: dto.pushToken,
+        platform: dto.platform,
+        pushTokenHash,
+        encryptedToken,
         locale: dto.locale ?? null,
         timezone: dto.timezone ?? null,
         lastSeenAt: new Date(),

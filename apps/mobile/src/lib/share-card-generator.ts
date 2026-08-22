@@ -1,4 +1,3 @@
-import * as Sharing from 'expo-sharing';
 import { Platform, Share } from 'react-native';
 
 export interface CineWrappedSharePayload {
@@ -27,21 +26,17 @@ export async function shareCineWrappedGraphicCard(payload: CineWrappedSharePaylo
 
   // Web sharing
   if (Platform.OS === 'web') {
-    if (typeof navigator !== 'undefined' && navigator.share) {
-      try {
-        await navigator.share({
-          title: `${payload.mediaTitle} - CineWrapped Review`,
-          text: captionText,
-          url: payload.posterUrl ?? 'https://cinewrapped.app',
-        });
-        return;
-      } catch {
-        // Fallback
-      }
+    try {
+      await navigator.share({
+        title: `${payload.mediaTitle} - CineWrapped Review`,
+        text: captionText,
+        url: payload.posterUrl ?? 'https://cinewrapped.app',
+      });
+      return;
+    } catch {
+      // Fall back to clipboard when native web sharing is unavailable or cancelled.
     }
-    if (typeof navigator !== 'undefined' && navigator.clipboard) {
-      await navigator.clipboard.writeText(captionText);
-    }
+    await navigator.clipboard.writeText(captionText);
     return;
   }
 

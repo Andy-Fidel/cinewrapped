@@ -22,7 +22,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { NotificationBellButton } from '../../src/components/notification-bell-button';
-import { Screen, useColors } from '../../src/components/ui';
+import { useColors } from '../../src/components/ui';
 import { api } from '../../src/lib/api';
 import { errorMessage } from '../../src/lib/error-message';
 import { haptics } from '../../src/lib/haptics';
@@ -218,9 +218,7 @@ function FriendRequestCard({ request }: { request: FriendshipSummary }) {
       </View>
 
       {respond.isError && (
-        <Text style={{ color: colors.danger, fontSize: 12 }}>
-          {errorMessage(respond.error)}
-        </Text>
+        <Text style={{ color: colors.danger, fontSize: 12 }}>{errorMessage(respond.error)}</Text>
       )}
     </View>
   );
@@ -273,10 +271,7 @@ function ActivityCard({ activity }: { activity: FeedActivitySummary }) {
 
   return (
     <View
-      style={[
-        styles.activityCard,
-        { backgroundColor: colors.surface, borderColor: colors.border },
-      ]}
+      style={[styles.activityCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
     >
       {/* User Header Row */}
       <View style={styles.activityHeader}>
@@ -333,7 +328,13 @@ function ActivityCard({ activity }: { activity: FeedActivitySummary }) {
               resizeMode="cover"
             />
           ) : (
-            <View style={[styles.mediaPoster, styles.posterFallback, { backgroundColor: colors.surface }]}>
+            <View
+              style={[
+                styles.mediaPoster,
+                styles.posterFallback,
+                { backgroundColor: colors.surface },
+              ]}
+            >
               <Ionicons name="film-outline" size={24} color={colors.textDisabled} />
             </View>
           )}
@@ -384,12 +385,7 @@ function ActivityCard({ activity }: { activity: FeedActivitySummary }) {
             size={16}
             color={isLiked ? '#EF4444' : colors.textPrimary}
           />
-          <Text
-            style={[
-              styles.reactionCount,
-              { color: isLiked ? '#EF4444' : colors.textPrimary },
-            ]}
-          >
+          <Text style={[styles.reactionCount, { color: isLiked ? '#EF4444' : colors.textPrimary }]}>
             {activity.reactions.counts.LIKE ?? 0}
           </Text>
         </Pressable>
@@ -415,12 +411,7 @@ function ActivityCard({ activity }: { activity: FeedActivitySummary }) {
 
       {/* Comments Drawer */}
       {showComments && (
-        <View
-          style={[
-            styles.commentsDrawer,
-            { borderTopColor: colors.border },
-          ]}
-        >
+        <View style={[styles.commentsDrawer, { borderTopColor: colors.border }]}>
           {comments.isPending && (
             <ActivityIndicator color={colors.brand} style={{ paddingVertical: 8 }} />
           )}
@@ -430,7 +421,9 @@ function ActivityCard({ activity }: { activity: FeedActivitySummary }) {
               {item.author.avatarUrl ? (
                 <Image source={{ uri: item.author.avatarUrl }} style={styles.commentAvatar} />
               ) : (
-                <View style={[styles.commentAvatarFallback, { backgroundColor: colors.surfaceRaised }]}>
+                <View
+                  style={[styles.commentAvatarFallback, { backgroundColor: colors.surfaceRaised }]}
+                >
                   <Text style={[styles.commentAvatarInitial, { color: colors.brand }]}>
                     {item.author.displayName.slice(0, 1).toUpperCase()}
                   </Text>
@@ -452,9 +445,7 @@ function ActivityCard({ activity }: { activity: FeedActivitySummary }) {
                     </View>
                   )}
                 </View>
-                <Text style={[styles.commentBody, { color: colors.textPrimary }]}>
-                  {item.body}
-                </Text>
+                <Text style={[styles.commentBody, { color: colors.textPrimary }]}>{item.body}</Text>
               </View>
             </View>
           ))}
@@ -469,7 +460,11 @@ function ActivityCard({ activity }: { activity: FeedActivitySummary }) {
               placeholderTextColor={colors.textDisabled}
               style={[
                 styles.commentInput,
-                { color: colors.textPrimary, borderColor: colors.border, backgroundColor: colors.surfaceRaised },
+                {
+                  color: colors.textPrimary,
+                  borderColor: colors.border,
+                  backgroundColor: colors.surfaceRaised,
+                },
               ]}
               value={comment}
             />
@@ -496,7 +491,8 @@ function ActivityCard({ activity }: { activity: FeedActivitySummary }) {
                   styles.postCommentBtn,
                   {
                     backgroundColor: colors.brand,
-                    opacity: comment.trim().length === 0 || postComment.isPending || pressed ? 0.6 : 1,
+                    opacity:
+                      comment.trim().length === 0 || postComment.isPending || pressed ? 0.6 : 1,
                   },
                 ]}
               >
@@ -558,11 +554,12 @@ export default function SocialScreen() {
     const list = feed.data ?? [];
     if (activeFilter === 'ALL') return list;
     if (activeFilter === 'WATCHED')
-      return list.filter((a) => a.activityType.includes('WATCH') || a.activityType.includes('COMPLETED'));
+      return list.filter(
+        (a) => a.activityType.includes('WATCH') || a.activityType.includes('COMPLETED'),
+      );
     if (activeFilter === 'RATED') return list.filter((a) => a.activityType.includes('RATE'));
     if (activeFilter === 'REVIEWED') return list.filter((a) => a.activityType.includes('REVIEW'));
-    if (activeFilter === 'FAVORITED') return list.filter((a) => a.activityType.includes('FAVORITE'));
-    return list;
+    return list.filter((a) => a.activityType.includes('FAVORITE'));
   }, [feed.data, activeFilter]);
 
   if (session === null) return <Redirect href="/(auth)/login" />;
@@ -584,7 +581,13 @@ export default function SocialScreen() {
         <View style={styles.content}>
           {/* Header Banner */}
           <View style={styles.header}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
               <Text style={[styles.eyebrow, { color: colors.brand }]}>COMMUNITY FEED</Text>
               <NotificationBellButton />
             </View>
@@ -659,7 +662,10 @@ export default function SocialScreen() {
                         </View>
                       )}
                     </View>
-                    <Text numberOfLines={1} style={[styles.storyName, { color: colors.textPrimary }]}>
+                    <Text
+                      numberOfLines={1}
+                      style={[styles.storyName, { color: colors.textPrimary }]}
+                    >
                       {friend.displayName.split(' ')[0]}
                     </Text>
                   </Pressable>

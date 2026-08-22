@@ -92,9 +92,7 @@ export function generateIcsContent(event: CalendarEventPayload): string {
 
   // Add Alarm / Reminder for Apple Calendar
   const reminders =
-    event.reminderMinutes && event.reminderMinutes.length > 0
-      ? event.reminderMinutes
-      : [30];
+    event.reminderMinutes && event.reminderMinutes.length > 0 ? event.reminderMinutes : [30];
 
   for (const reminder of reminders) {
     icsLines.push(

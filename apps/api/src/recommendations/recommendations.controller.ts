@@ -50,7 +50,9 @@ export class RecommendationsController {
     @CurrentPrincipal() principal: AuthPrincipal,
     @Req() request: FastifyRequest,
   ) {
-    if (!(await this.cache.consume(`recommendation-refresh:${principal.subject}`, 5, 3_600))) {
+    if (
+      !(await this.cache.consume(`recommendation-refresh:${principal.subject}`, 5, 3_600, true))
+    ) {
       throw new AppException(
         429,
         'RATE_LIMITED',

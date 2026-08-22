@@ -1,7 +1,6 @@
 import type {
   CalendarEventSummary,
   FriendshipSummary,
-  GenreSummary,
   MediaSummary,
   RecommendationSummary,
 } from '@cinewrapped/shared-types';
@@ -12,7 +11,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
-  Dimensions,
   Easing,
   Image,
   Pressable,
@@ -24,7 +22,6 @@ import {
 
 import { PosterImage, Screen, StarRating, useColors } from '../../src/components/ui';
 import { api } from '../../src/lib/api';
-import { errorMessage } from '../../src/lib/error-message';
 import { haptics } from '../../src/lib/haptics';
 import { useAuth } from '../../src/providers/auth-provider';
 
@@ -115,7 +112,11 @@ export default function FilmNightRouletteScreen() {
         if (film.averageProviderRating < minRating) return false;
       }
       if (runtime === 'UNDER_90' && film.runtimeMinutes && film.runtimeMinutes > 95) return false;
-      if (runtime === 'STANDARD_120' && film.runtimeMinutes && (film.runtimeMinutes < 90 || film.runtimeMinutes > 135))
+      if (
+        runtime === 'STANDARD_120' &&
+        film.runtimeMinutes &&
+        (film.runtimeMinutes < 90 || film.runtimeMinutes > 135)
+      )
         return false;
       if (runtime === 'EPIC_LONG' && film.runtimeMinutes && film.runtimeMinutes < 130) return false;
       return true;
@@ -189,7 +190,8 @@ export default function FilmNightRouletteScreen() {
           Film Night Roulette
         </Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-          Stop scrolling, start watching. Spin the cinematic wheel or match tastes with friends for tonight’s screening.
+          Stop scrolling, start watching. Spin the cinematic wheel or match tastes with friends for
+          tonight’s screening.
         </Text>
       </View>
 
@@ -259,7 +261,10 @@ export default function FilmNightRouletteScreen() {
           <View
             style={[
               styles.stageCard,
-              { backgroundColor: colors.surface, borderColor: isSpinning ? colors.brand : colors.border },
+              {
+                backgroundColor: colors.surface,
+                borderColor: isSpinning ? colors.brand : colors.border,
+              },
             ]}
           >
             {/* Spinning Visual Ticker */}
@@ -267,7 +272,10 @@ export default function FilmNightRouletteScreen() {
               <View style={styles.spinningContainer}>
                 <PosterImage uri={currentPreview.posterUrl} size="md" rounded={12} />
                 <View style={styles.spinningCopy}>
-                  <Text numberOfLines={1} style={[styles.spinningTitle, { color: colors.textPrimary }]}>
+                  <Text
+                    numberOfLines={1}
+                    style={[styles.spinningTitle, { color: colors.textPrimary }]}
+                  >
                     {currentPreview.title}
                   </Text>
                   <Text style={[styles.spinningSub, { color: colors.brand }]}>
@@ -278,8 +286,15 @@ export default function FilmNightRouletteScreen() {
               </View>
             ) : winningFilm ? (
               /* Winner Card */
-              <Animated.View style={[styles.winnerContainer, { transform: [{ scale: pulseAnim }] }]}>
-                <View style={[styles.winnerBadge, { backgroundColor: 'rgba(245, 158, 11, 0.2)', borderColor: '#F59E0B' }]}>
+              <Animated.View
+                style={[styles.winnerContainer, { transform: [{ scale: pulseAnim }] }]}
+              >
+                <View
+                  style={[
+                    styles.winnerBadge,
+                    { backgroundColor: 'rgba(245, 158, 11, 0.2)', borderColor: '#F59E0B' },
+                  ]}
+                >
                   <Ionicons name="trophy" size={14} color="#F59E0B" />
                   <Text style={styles.winnerBadgeText}>TONIGHT'S WINNING PICK</Text>
                 </View>
@@ -294,7 +309,9 @@ export default function FilmNightRouletteScreen() {
 
                     <Text style={[styles.winnerMeta, { color: colors.textSecondary }]}>
                       {winningFilm.releaseYear ?? 'TBA'} ·{' '}
-                      {winningFilm.runtimeMinutes ? `${winningFilm.runtimeMinutes} min` : 'Feature Film'}
+                      {winningFilm.runtimeMinutes
+                        ? `${winningFilm.runtimeMinutes} min`
+                        : 'Feature Film'}
                     </Text>
 
                     {winningFilm.averageProviderRating !== null && (
@@ -304,7 +321,10 @@ export default function FilmNightRouletteScreen() {
                     )}
 
                     {winningFilm.overview ? (
-                      <Text numberOfLines={3} style={[styles.winnerOverview, { color: colors.textSecondary }]}>
+                      <Text
+                        numberOfLines={3}
+                        style={[styles.winnerOverview, { color: colors.textSecondary }]}
+                      >
                         {winningFilm.overview}
                       </Text>
                     ) : null}
@@ -319,7 +339,10 @@ export default function FilmNightRouletteScreen() {
                     onPress={() => scheduleEvent.mutate(winningFilm)}
                     style={({ pressed }) => [
                       styles.scheduleBtn,
-                      { backgroundColor: colors.brand, opacity: pressed || scheduleEvent.isPending ? 0.8 : 1 },
+                      {
+                        backgroundColor: colors.brand,
+                        opacity: pressed || scheduleEvent.isPending ? 0.8 : 1,
+                      },
                     ]}
                   >
                     {scheduleEvent.isPending ? (
@@ -339,18 +362,33 @@ export default function FilmNightRouletteScreen() {
                     onPress={() => router.push(`/media/${winningFilm.id}`)}
                     style={({ pressed }) => [
                       styles.detailsBtn,
-                      { backgroundColor: colors.surfaceRaised, borderColor: colors.border, opacity: pressed ? 0.8 : 1 },
+                      {
+                        backgroundColor: colors.surfaceRaised,
+                        borderColor: colors.border,
+                        opacity: pressed ? 0.8 : 1,
+                      },
                     ]}
                   >
-                    <Ionicons name="information-circle-outline" size={16} color={colors.textPrimary} />
-                    <Text style={[styles.detailsBtnText, { color: colors.textPrimary }]}>Details</Text>
+                    <Ionicons
+                      name="information-circle-outline"
+                      size={16}
+                      color={colors.textPrimary}
+                    />
+                    <Text style={[styles.detailsBtnText, { color: colors.textPrimary }]}>
+                      Details
+                    </Text>
                   </Pressable>
                 </View>
               </Animated.View>
             ) : (
               /* Idle Ready State */
               <View style={styles.idleContainer}>
-                <View style={[styles.idleIconCircle, { backgroundColor: colors.surfaceRaised, borderColor: colors.border }]}>
+                <View
+                  style={[
+                    styles.idleIconCircle,
+                    { backgroundColor: colors.surfaceRaised, borderColor: colors.border },
+                  ]}
+                >
                   <Ionicons name="film-outline" size={36} color={colors.brand} />
                 </View>
                 <Text style={[styles.idleTitle, { color: colors.textPrimary }]}>
@@ -392,7 +430,9 @@ export default function FilmNightRouletteScreen() {
           </View>
 
           {/* Vibe & Mood Horizon */}
-          <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>TONIGHT’S VIBE</Text>
+          <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>
+            TONIGHT’S VIBE
+          </Text>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -428,7 +468,9 @@ export default function FilmNightRouletteScreen() {
           </ScrollView>
 
           {/* Runtime Presets */}
-          <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>LENGTH & RUNTIME</Text>
+          <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>
+            LENGTH & RUNTIME
+          </Text>
           <View style={styles.filterRow}>
             {[
               { id: 'ANY' as const, label: 'Any Length' },
@@ -463,7 +505,9 @@ export default function FilmNightRouletteScreen() {
           </View>
 
           {/* Minimum Rating Threshold */}
-          <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>QUALITY THRESHOLD</Text>
+          <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>
+            QUALITY THRESHOLD
+          </Text>
           <View style={styles.filterRow}>
             {[
               { val: null, label: 'Any Rating' },
@@ -530,13 +574,22 @@ export default function FilmNightRouletteScreen() {
                   {f.otherUser.avatarUrl ? (
                     <Image source={{ uri: f.otherUser.avatarUrl }} style={styles.friendAvatar} />
                   ) : (
-                    <View style={[styles.friendAvatar, styles.avatarFallback, { backgroundColor: colors.surfaceRaised }]}>
+                    <View
+                      style={[
+                        styles.friendAvatar,
+                        styles.avatarFallback,
+                        { backgroundColor: colors.surfaceRaised },
+                      ]}
+                    >
                       <Text style={[styles.avatarText, { color: colors.brand }]}>
                         {f.otherUser.displayName.slice(0, 1).toUpperCase()}
                       </Text>
                     </View>
                   )}
-                  <Text numberOfLines={1} style={[styles.friendName, { color: colors.textPrimary }]}>
+                  <Text
+                    numberOfLines={1}
+                    style={[styles.friendName, { color: colors.textPrimary }]}
+                  >
                     {f.otherUser.displayName}
                   </Text>
                   <View style={[styles.tastePill, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
@@ -547,7 +600,12 @@ export default function FilmNightRouletteScreen() {
             })}
 
             {(friends.data?.length ?? 0) === 0 && (
-              <View style={[styles.emptyFriendsBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <View
+                style={[
+                  styles.emptyFriendsBox,
+                  { backgroundColor: colors.surface, borderColor: colors.border },
+                ]}
+              >
                 <Ionicons name="people-outline" size={24} color={colors.textDisabled} />
                 <Text style={[styles.emptyFriendsText, { color: colors.textSecondary }]}>
                   Connect with friends on the Social tab to find overlap picks!
@@ -566,7 +624,9 @@ export default function FilmNightRouletteScreen() {
             <View style={styles.matchHeroInfo}>
               <View style={[styles.matchScoreCircle, { borderColor: colors.brand }]}>
                 <Text style={[styles.matchScoreNum, { color: colors.brand }]}>94%</Text>
-                <Text style={[styles.matchScoreLabel, { color: colors.textSecondary }]}>OVERLAP</Text>
+                <Text style={[styles.matchScoreLabel, { color: colors.textSecondary }]}>
+                  OVERLAP
+                </Text>
               </View>
 
               <View style={{ flex: 1, gap: 4 }}>

@@ -9,20 +9,26 @@ import { haptics } from '../../src/lib/haptics';
 export default function LegalSettingsScreen() {
   const colors = useColors();
 
-  const legalItems = [
+  const legalItems: ReadonlyArray<{
+    id: string;
+    title: string;
+    subtitle: string;
+    icon: keyof typeof Ionicons.glyphMap;
+    route: '/settings/terms' | '/settings/privacy-policy';
+  }> = [
     {
       id: 'terms',
       title: 'Terms of Service & EULA',
       subtitle: 'Community guidelines & zero-tolerance policy',
       icon: 'document-text-outline',
-      route: '/settings/terms' as const,
+      route: '/settings/terms',
     },
     {
       id: 'privacy',
       title: 'Privacy Policy',
       subtitle: 'Data handling, safety & retention disclosures',
       icon: 'shield-checkmark-outline',
-      route: '/settings/privacy-policy' as const,
+      route: '/settings/privacy-policy',
     },
   ];
 
@@ -38,7 +44,9 @@ export default function LegalSettingsScreen() {
       />
 
       <View style={styles.container}>
-        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <View
+          style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
+        >
           {legalItems.map((item, index) => (
             <Pressable
               key={item.id}
@@ -57,13 +65,11 @@ export default function LegalSettingsScreen() {
               ]}
             >
               <View style={[styles.iconBox, { backgroundColor: colors.surfaceRaised }]}>
-                <Ionicons name={item.icon as any} size={20} color={colors.brand} />
+                <Ionicons name={item.icon} size={20} color={colors.brand} />
               </View>
 
               <View style={styles.textWrap}>
-                <Text style={[styles.itemTitle, { color: colors.textPrimary }]}>
-                  {item.title}
-                </Text>
+                <Text style={[styles.itemTitle, { color: colors.textPrimary }]}>{item.title}</Text>
                 <Text style={[styles.itemSubtitle, { color: colors.textSecondary }]}>
                   {item.subtitle}
                 </Text>

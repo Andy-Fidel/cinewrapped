@@ -72,11 +72,7 @@ export default function CommentModerationPage() {
               </div>
 
               <div className="flex items-center gap-2 shrink-0">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleTogglePin(com.id)}
-                >
+                <Button variant="outline" size="sm" onClick={() => handleTogglePin(com.id)}>
                   <Pin className="h-3.5 w-3.5" />
                   {com.isPinned ? 'Unpin' : 'Pin'}
                 </Button>
@@ -85,14 +81,14 @@ export default function CommentModerationPage() {
                   size="sm"
                   onClick={() => handleToggleVisibility(com.id)}
                 >
-                  {com.isHidden ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                  {com.isHidden ? (
+                    <Eye className="h-3.5 w-3.5" />
+                  ) : (
+                    <EyeOff className="h-3.5 w-3.5" />
+                  )}
                   {com.isHidden ? 'Unhide' : 'Hide'}
                 </Button>
-                <Button
-                  variant="danger"
-                  size="sm"
-                  onClick={() => handleDelete(com.id)}
-                >
+                <Button variant="danger" size="sm" onClick={() => handleDelete(com.id)}>
                   <Trash2 className="h-3.5 w-3.5" />
                   Delete
                 </Button>

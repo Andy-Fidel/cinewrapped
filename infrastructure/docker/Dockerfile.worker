@@ -8,14 +8,19 @@ FROM base AS dependencies
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/worker/package.json apps/worker/package.json
 COPY packages/config/package.json packages/config/package.json
+COPY packages/database/package.json packages/database/package.json
+COPY packages/jobs/package.json packages/jobs/package.json
 COPY packages/typescript-config/package.json packages/typescript-config/package.json
-RUN pnpm install --frozen-lockfile
+RUN --mount=type=cache,id=cinewrapped-pnpm,target=/pnpm/store \
+    pnpm config set store-dir /pnpm/store && pnpm install --frozen-lockfile
 
 FROM dependencies AS builder
 COPY turbo.json eslint.config.mjs ./
 COPY apps/worker apps/worker
 COPY packages/config packages/config
+COPY packages/database packages/database
 COPY packages/eslint-config packages/eslint-config
+COPY packages/jobs packages/jobs
 COPY packages/typescript-config packages/typescript-config
 RUN pnpm --filter @cinewrapped/worker... build
 
@@ -29,5 +34,10 @@ COPY --from=builder --chown=cinewrapped:cinewrapped /workspace/apps/worker/packa
 COPY --from=builder --chown=cinewrapped:cinewrapped /workspace/apps/worker/dist ./apps/worker/dist
 COPY --from=builder --chown=cinewrapped:cinewrapped /workspace/packages/config/package.json ./packages/config/package.json
 COPY --from=builder --chown=cinewrapped:cinewrapped /workspace/packages/config/dist ./packages/config/dist
+COPY --from=builder --chown=cinewrapped:cinewrapped /workspace/packages/database/package.json ./packages/database/package.json
+COPY --from=builder --chown=cinewrapped:cinewrapped /workspace/packages/database/dist ./packages/database/dist
+COPY --from=builder --chown=cinewrapped:cinewrapped /workspace/packages/database/generated ./packages/database/generated
+COPY --from=builder --chown=cinewrapped:cinewrapped /workspace/packages/jobs/package.json ./packages/jobs/package.json
+COPY --from=builder --chown=cinewrapped:cinewrapped /workspace/packages/jobs/dist ./packages/jobs/dist
 USER cinewrapped
 CMD ["node", "apps/worker/dist/main.js"]

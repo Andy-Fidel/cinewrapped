@@ -1,6 +1,6 @@
 'use client';
 
-import { Activity, CheckCircle2, Radio, RefreshCw, Server, Wifi } from 'lucide-react';
+import { Radio, RefreshCw } from 'lucide-react';
 import { useState } from 'react';
 
 import { Badge } from '../../../components/ui/badge';
@@ -30,7 +30,8 @@ export default function ProvidersHealthPage() {
           Provider Ingest & API Health
         </h1>
         <p className="text-sm text-zinc-400 mt-1">
-          Monitor upstream API latency, daily quota consumption, error rates, and trigger manual syncs.
+          Monitor upstream API latency, daily quota consumption, error rates, and trigger manual
+          syncs.
         </p>
       </div>
 
@@ -55,11 +56,15 @@ export default function ProvidersHealthPage() {
               </div>
               <div>
                 <p className="text-[10px] uppercase font-bold text-zinc-500">24h Error Rate</p>
-                <p className="text-sm font-extrabold text-emerald-400 mt-0.5">{(prov.errorRate24h * 100).toFixed(2)}%</p>
+                <p className="text-sm font-extrabold text-emerald-400 mt-0.5">
+                  {(prov.errorRate24h * 100).toFixed(2)}%
+                </p>
               </div>
               <div>
                 <p className="text-[10px] uppercase font-bold text-zinc-500">Daily Quota</p>
-                <p className="text-sm font-extrabold text-zinc-200 mt-0.5">{prov.dailyApiQuotaUsedPercent}%</p>
+                <p className="text-sm font-extrabold text-zinc-200 mt-0.5">
+                  {prov.dailyApiQuotaUsedPercent}%
+                </p>
               </div>
             </div>
 
@@ -71,7 +76,9 @@ export default function ProvidersHealthPage() {
                 disabled={syncingId === prov.id}
                 onClick={() => void handleSync(prov.id)}
               >
-                <RefreshCw className={`h-3.5 w-3.5 ${syncingId === prov.id ? 'animate-spin' : ''}`} />
+                <RefreshCw
+                  className={`h-3.5 w-3.5 ${syncingId === prov.id ? 'animate-spin' : ''}`}
+                />
                 {syncingId === prov.id ? 'Syncing...' : 'Trigger Sync'}
               </Button>
             </div>

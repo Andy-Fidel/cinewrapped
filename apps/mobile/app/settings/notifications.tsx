@@ -7,12 +7,15 @@ import { SettingsCard, ToggleRow } from '../../src/components/settings-controls'
 import { Screen, useColors } from '../../src/components/ui';
 import { api } from '../../src/lib/api';
 import { errorMessage } from '../../src/lib/error-message';
+import { registerForPushNotifications } from '../../src/lib/push-notifications';
 import { useAuth } from '../../src/providers/auth-provider';
+import { useDialog } from '../../src/providers/dialog-provider';
 
 export default function NotificationSettingsScreen() {
   const colors = useColors();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { showError, showInfo } = useDialog();
   const queryKey = ['preferences', user?.id ?? 'anonymous'] as const;
   const preferences = useQuery({
     queryKey,
@@ -26,10 +29,21 @@ export default function NotificationSettingsScreen() {
         body: { notificationPreferences },
       }),
     onSuccess: (updated) => queryClient.setQueryData(queryKey, updated),
+    onError: (reason) => showError('Could not save preferences', errorMessage(reason)),
   });
 
   const data = preferences.data;
-  const setNotification = (key: string, value: boolean) => {
+  const setNotification = async (key: string, value: boolean) => {
+    if (value) {
+      try {
+        await registerForPushNotifications();
+      } catch (error) {
+        showInfo(
+          'Preference saved',
+          `${errorMessage(error)} You can keep this preference enabled and finish device setup later.`,
+        );
+      }
+    }
     update.mutate({ ...(data?.notificationPreferences ?? {}), [key]: value });
   };
 
@@ -54,21 +68,21 @@ export default function NotificationSettingsScreen() {
           body="New personalized picks and availability updates."
           value={data?.notificationPreferences.recommendations ?? false}
           disabled={data === undefined || update.isPending}
-          onChange={(value) => setNotification('recommendations', value)}
+          onChange={(value) => void setNotification('recommendations', value)}
         />
         <ToggleRow
           label="Social activity"
           body="Friend requests, reactions, comments, and club activity."
           value={data?.notificationPreferences.social ?? false}
           disabled={data === undefined || update.isPending}
-          onChange={(value) => setNotification('social', value)}
+          onChange={(value) => void setNotification('social', value)}
         />
         <ToggleRow
           label="Product news"
           body="Occasional feature announcements and CineWrapped updates."
           value={data?.notificationPreferences.product ?? false}
           disabled={data === undefined || update.isPending}
-          onChange={(value) => setNotification('product', value)}
+          onChange={(value) => void setNotification('product', value)}
         />
       </SettingsCard>
       {preferences.isError || update.isError ? (

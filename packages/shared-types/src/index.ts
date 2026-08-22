@@ -1084,14 +1084,7 @@ export type NotificationType =
   | 'SHARED_TITLE';
 
 export type NotificationEntityType =
-  | 'USER'
-  | 'FRIENDSHIP'
-  | 'COMMENT'
-  | 'REACTION'
-  | 'REVIEW'
-  | 'MEDIA'
-  | 'WRAP'
-  | 'ACHIEVEMENT';
+  'USER' | 'FRIENDSHIP' | 'COMMENT' | 'REACTION' | 'REVIEW' | 'MEDIA' | 'WRAP' | 'ACHIEVEMENT';
 
 export interface NotificationSummary {
   id: string;
@@ -1137,11 +1130,7 @@ export type StorySlideLayout =
   | 'SUMMARY_CARD';
 
 export type StoryThemePreset =
-  | 'MIDNIGHT_GOLD'
-  | 'NEON_CYBER'
-  | 'CRIMSON_NOIR'
-  | 'EMERALD_VAULT'
-  | 'AMETHYST_DREAM';
+  'MIDNIGHT_GOLD' | 'NEON_CYBER' | 'CRIMSON_NOIR' | 'EMERALD_VAULT' | 'AMETHYST_DREAM';
 
 export interface StorySlideMetric {
   label: string;
@@ -1222,5 +1211,3 @@ export interface StoryPresentation {
   defaultTheme: StoryThemePreset;
   createdAt: string;
 }
-
-

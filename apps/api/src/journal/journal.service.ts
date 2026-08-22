@@ -1,15 +1,18 @@
 import { Prisma } from '@cinewrapped/database';
+import type { ApiEnvironment } from '@cinewrapped/config';
 import type { JournalEntrySummary, MediaSummary } from '@cinewrapped/shared-types';
 import {
   createJournalEntrySchema,
   registerJournalAttachmentSchema,
   updateJournalEntrySchema,
 } from '@cinewrapped/validation';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import type { z } from 'zod';
 
 import type { AuthPrincipal } from '../auth/auth.types.js';
 import { AppException } from '../common/app.exception.js';
+import { assertTrustedStorageUrl, validateRemoteFile } from '../common/file-upload-security.js';
+import { API_ENVIRONMENT } from '../config/environment.module.js';
 import { PrismaService } from '../database/prisma.service.js';
 import { FeatureFlagsService } from '../feature-flags/feature-flags.service.js';
 
@@ -130,6 +133,7 @@ export class JournalService {
   public constructor(
     private readonly prisma: PrismaService,
     private readonly featureFlags: FeatureFlagsService,
+    @Inject(API_ENVIRONMENT) private readonly environment: ApiEnvironment,
   ) {}
 
   public async list(principal: AuthPrincipal, query: JournalQuery) {
@@ -302,6 +306,20 @@ export class JournalService {
         'The attachment path is not owned by this account.',
       );
     }
+    assertTrustedStorageUrl({
+      supabaseUrl: this.environment.SUPABASE_URL,
+      bucket: 'journal-attachments',
+      subject: principal.subject,
+      storagePath: input.storagePath,
+      signedUrl: input.signedUrl,
+    });
+    await validateRemoteFile({
+      signedUrl: input.signedUrl,
+      mimeType: input.mimeType,
+      fileName: input.fileName,
+      maxSizeBytes: 10_485_760,
+      expectedSizeBytes: input.byteSize,
+    });
     if (entry.attachments.length >= 10) {
       throw new AppException(
         422,

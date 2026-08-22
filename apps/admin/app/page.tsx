@@ -1,21 +1,13 @@
 'use client';
 
 import {
-  Activity,
   AlertTriangle,
-  ArrowUpRight,
-  Award,
   CheckCircle2,
   Clock,
-  Film,
-  Flame,
   Radio,
   Server,
   ShieldAlert,
-  ShieldCheck,
-  TrendingUp,
   Users,
-  XCircle,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
@@ -36,11 +28,18 @@ export default function AdminDashboardPage() {
 
   const pendingReports = adminStore.reports.filter((r) => r.status === 'PENDING');
   const activeJobs = adminStore.jobs.reduce((acc, j) => acc + j.activeCount, 0);
-  const operationalProviders = adminStore.providers.filter((p) => p.status === 'OPERATIONAL').length;
+  const operationalProviders = adminStore.providers.filter(
+    (p) => p.status === 'OPERATIONAL',
+  ).length;
 
   const handleResolve = (action: 'RESOLVED' | 'DISMISSED') => {
     if (!activeReportModal) return;
-    adminStore.resolveReport(session, activeReportModal.id, action, resolveReason || `Report ${action.toLowerCase()} from Dashboard triage`);
+    adminStore.resolveReport(
+      session,
+      activeReportModal.id,
+      action,
+      resolveReason || `Report ${action.toLowerCase()} from Dashboard triage`,
+    );
     setActiveReportModal(null);
     setResolveReason('');
     setRerender((v) => v + 1);
@@ -60,8 +59,10 @@ export default function AdminDashboardPage() {
             </Badge>
           </div>
           <p className="mt-1 text-sm text-zinc-400">
-            Welcome back, <span className="text-zinc-200 font-semibold">{session.name}</span>. Currently operating as{' '}
-            <span className="text-red-400 font-bold">{session.activeRole.replace(/_/gu, ' ')}</span>.
+            Welcome back, <span className="text-zinc-200 font-semibold">{session.name}</span>.
+            Currently operating as{' '}
+            <span className="text-red-400 font-bold">{session.activeRole.replace(/_/gu, ' ')}</span>
+            .
           </p>
         </div>
 
@@ -132,7 +133,10 @@ export default function AdminDashboardPage() {
                   Pending items flagged by community members and automated sentiment analysis
                 </CardDescription>
               </div>
-              <Link href="/moderation/reports" className="text-xs text-red-400 font-semibold hover:underline">
+              <Link
+                href="/moderation/reports"
+                className="text-xs text-red-400 font-semibold hover:underline"
+              >
                 View all ({pendingReports.length}) →
               </Link>
             </CardHeader>
@@ -145,7 +149,10 @@ export default function AdminDashboardPage() {
                 </div>
               ) : (
                 pendingReports.slice(0, 4).map((report) => (
-                  <div key={report.id} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-zinc-800/30 p-2 rounded-xl transition-colors">
+                  <div
+                    key={report.id}
+                    className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-zinc-800/30 p-2 rounded-xl transition-colors"
+                  >
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
                         <Badge
@@ -167,7 +174,9 @@ export default function AdminDashboardPage() {
                         "{report.targetSnippet}"
                       </p>
                       <p className="text-[11px] text-zinc-500">
-                        Flagged by <span className="text-zinc-300 font-semibold">{report.reporterName}</span> against{' '}
+                        Flagged by{' '}
+                        <span className="text-zinc-300 font-semibold">{report.reporterName}</span>{' '}
+                        against{' '}
                         <span className="text-zinc-300 font-semibold">{report.authorName}</span>
                       </p>
                     </div>
@@ -191,21 +200,27 @@ export default function AdminDashboardPage() {
           <div className="grid gap-4 sm:grid-cols-3">
             <Link href="/feature-flags">
               <Card className="hover:border-zinc-700 transition-all p-4">
-                <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Features</p>
+                <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                  Features
+                </p>
                 <h4 className="text-lg font-bold text-white mt-1">Feature Flags</h4>
                 <p className="text-xs text-zinc-500 mt-0.5">Toggle runtime rollout percentages</p>
               </Card>
             </Link>
             <Link href="/campaigns">
               <Card className="hover:border-zinc-700 transition-all p-4">
-                <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Broadcast</p>
+                <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                  Broadcast
+                </p>
                 <h4 className="text-lg font-bold text-white mt-1">Push Campaigns</h4>
                 <p className="text-xs text-zinc-500 mt-0.5">Send targeted notifications</p>
               </Card>
             </Link>
             <Link href="/curation/featured-lists">
               <Card className="hover:border-zinc-700 transition-all p-4">
-                <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Editorial</p>
+                <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                  Editorial
+                </p>
                 <h4 className="text-lg font-bold text-white mt-1">Featured Shelves</h4>
                 <p className="text-xs text-zinc-500 mt-0.5">Manage home & radar picks</p>
               </Card>
@@ -236,7 +251,8 @@ export default function AdminDashboardPage() {
                       <span className="font-bold text-zinc-200">{p.name.split('(')[0]}</span>
                     </div>
                     <p className="text-[11px] text-zinc-500 mt-0.5">
-                      Latency: <span className="text-zinc-300 font-mono">{p.latencyMs}ms</span> · Quota: {p.dailyApiQuotaUsedPercent}%
+                      Latency: <span className="text-zinc-300 font-mono">{p.latencyMs}ms</span> ·
+                      Quota: {p.dailyApiQuotaUsedPercent}%
                     </p>
                   </div>
                   <Badge variant="success">Active</Badge>
@@ -255,18 +271,27 @@ export default function AdminDashboardPage() {
                 </CardTitle>
                 <CardDescription>Immutable administrative actions</CardDescription>
               </div>
-              <Link href="/audit-logs" className="text-xs text-red-400 hover:underline font-semibold">
+              <Link
+                href="/audit-logs"
+                className="text-xs text-red-400 hover:underline font-semibold"
+              >
                 All Logs →
               </Link>
             </CardHeader>
 
             <div className="space-y-3 mt-3">
               {adminStore.audits.slice(0, 4).map((audit) => (
-                <div key={audit.id} className="p-2.5 rounded-lg bg-zinc-950/40 border border-zinc-800/40 text-xs">
+                <div
+                  key={audit.id}
+                  className="p-2.5 rounded-lg bg-zinc-950/40 border border-zinc-800/40 text-xs"
+                >
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-zinc-300">{audit.actorName}</span>
                     <span className="text-[10px] text-zinc-500 font-mono">
-                      {new Date(audit.occurredAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {new Date(audit.occurredAt).toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
                     </span>
                   </div>
                   <p className="text-red-400 font-mono text-[11px] mt-0.5">{audit.action}</p>
@@ -283,7 +308,11 @@ export default function AdminDashboardPage() {
         isOpen={activeReportModal !== null}
         onClose={() => setActiveReportModal(null)}
         title="Resolve Moderation Report"
-        description={activeReportModal ? `Reviewing report on ${activeReportModal.targetType}: "${activeReportModal.targetTitle}"` : undefined}
+        description={
+          activeReportModal
+            ? `Reviewing report on ${activeReportModal.targetType}: "${activeReportModal.targetTitle}"`
+            : undefined
+        }
       >
         {activeReportModal && (
           <div className="space-y-4">

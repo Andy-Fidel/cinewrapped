@@ -33,9 +33,14 @@ describe('AuthService', () => {
     };
     const upsertUser = vi.fn(() => Promise.resolve(user));
     const upsertSession = vi.fn(() => Promise.resolve({}));
+    const createAuditLog = vi.fn(() => Promise.resolve({}));
     const prisma = {
       $transaction: (work: (transaction: unknown) => Promise<unknown>) =>
-        work({ user: { upsert: upsertUser }, authSession: { upsert: upsertSession } }),
+        work({
+          user: { upsert: upsertUser },
+          authSession: { upsert: upsertSession },
+          auditLog: { create: createAuditLog },
+        }),
     } as unknown as PrismaService;
 
     const result = await new AuthService(prisma).bootstrap(principal, {
@@ -51,6 +56,9 @@ describe('AuthService', () => {
     );
     expect(upsertSession).toHaveBeenCalledWith(
       expect.objectContaining({ where: { id: principal.sessionId } }),
+    );
+    expect(createAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ action: 'AUTH_LOGIN' }) }),
     );
   });
 });

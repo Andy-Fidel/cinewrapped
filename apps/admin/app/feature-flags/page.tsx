@@ -1,6 +1,6 @@
 'use client';
 
-import { CheckCircle2, ShieldAlert, Sliders, ToggleLeft, Users } from 'lucide-react';
+import { Sliders, ToggleLeft } from 'lucide-react';
 import { useState } from 'react';
 
 import { Badge } from '../../components/ui/badge';
@@ -33,7 +33,8 @@ export default function FeatureFlagsPage() {
       selectedFlag.key,
       targetEnabled,
       targetRollout,
-      adminReason || `Updated flag ${selectedFlag.key} rollout to ${targetRollout}% (enabled: ${targetEnabled})`,
+      adminReason ||
+        `Updated flag ${selectedFlag.key} rollout to ${targetRollout}% (enabled: ${targetEnabled})`,
     );
     setSelectedFlag(null);
     setRerender((v) => v + 1);
@@ -82,11 +83,7 @@ export default function FeatureFlagsPage() {
               </div>
 
               <div className="flex items-center gap-4 shrink-0">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => handleOpenEdit(flag)}
-                >
+                <Button variant="secondary" size="sm" onClick={() => handleOpenEdit(flag)}>
                   <Sliders className="h-3.5 w-3.5" />
                   Configure
                 </Button>

@@ -133,14 +133,21 @@ export function parseLetterboxdCsv(csvText: string): LetterboxdImportSummary {
     const review = rawReview?.trim() ? rawReview.trim() : null;
     if (review) withReviews++;
 
-    const rawWatchedDate = colWatchedDate !== -1 && row[colWatchedDate] ? row[colWatchedDate] : undefined;
+    const rawWatchedDate =
+      colWatchedDate !== -1 && row[colWatchedDate] ? row[colWatchedDate] : undefined;
     const rawDate = colDate !== -1 && row[colDate] ? row[colDate] : undefined;
-    const watchedDate = rawWatchedDate?.trim() ? rawWatchedDate.trim() : rawDate?.trim() ? rawDate.trim() : null;
+    const watchedDate = rawWatchedDate?.trim()
+      ? rawWatchedDate.trim()
+      : rawDate?.trim()
+        ? rawDate.trim()
+        : null;
     if (watchedDate) withWatchedDates++;
 
     const rawRewatch = colRewatch !== -1 && row[colRewatch] ? row[colRewatch] : undefined;
     const isRewatch = rawRewatch
-      ? rawRewatch.toLowerCase() === 'yes' || rawRewatch === '1' || rawRewatch.toLowerCase() === 'true'
+      ? rawRewatch.toLowerCase() === 'yes' ||
+        rawRewatch === '1' ||
+        rawRewatch.toLowerCase() === 'true'
       : false;
 
     const rawTags = colTags !== -1 && row[colTags] ? row[colTags] : undefined;

@@ -6,7 +6,8 @@ import {
   Image,
   Pressable,
   ScrollView,
-  StyleProp,
+  type DimensionValue,
+  type StyleProp,
   StyleSheet,
   Text,
   TextInput,
@@ -16,7 +17,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 
-import { ThemeOverride, useTheme } from '../providers/theme-provider';
+import { useTheme } from '../providers/theme-provider';
 
 export { ThemeOverride, useTheme } from '../providers/theme-provider';
 
@@ -66,7 +67,9 @@ export function BrandHeader({
           {showLogo ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
               <BrandLogo size="sm" variant="mark" />
-              {eyebrow ? <Text style={[styles.eyebrow, { color: colors.brand }]}>{eyebrow}</Text> : null}
+              {eyebrow ? (
+                <Text style={[styles.eyebrow, { color: colors.brand }]}>{eyebrow}</Text>
+              ) : null}
             </View>
           ) : eyebrow ? (
             <Text style={[styles.eyebrow, { color: colors.brand }]}>{eyebrow}</Text>
@@ -206,14 +209,8 @@ export function Card({
   style?: StyleProp<ViewStyle>;
 }>) {
   const colors = useColors();
-  const bg =
-    variant === 'raised'
-      ? colors.surfaceRaised
-      : colors.surface;
-  const borderColor =
-    variant === 'highlight'
-      ? colors.brand
-      : colors.border;
+  const bg = variant === 'raised' ? colors.surfaceRaised : colors.surface;
+  const borderColor = variant === 'highlight' ? colors.brand : colors.border;
 
   return (
     <View
@@ -277,9 +274,7 @@ export function EmptyState({
           ]}
         >
           <Ionicons name="sparkles" size={16} color={colors.onBrand} />
-          <Text style={[styles.emptyActionBtnText, { color: colors.onBrand }]}>
-            {actionLabel}
-          </Text>
+          <Text style={[styles.emptyActionBtnText, { color: colors.onBrand }]}>{actionLabel}</Text>
         </Pressable>
       ) : null}
     </View>
@@ -452,8 +447,8 @@ export function Skeleton({
     <Animated.View
       style={[
         {
-          width: width as any,
-          height: height as any,
+          width: width as DimensionValue,
+          height: height as DimensionValue,
           borderRadius: rounded,
           backgroundColor: colors.surfaceRaised,
           opacity,

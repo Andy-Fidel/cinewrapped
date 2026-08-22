@@ -1,21 +1,17 @@
 import type { StorySlideData, StorySlideRankingItem } from '@cinewrapped/shared-types';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { Dimensions, Image, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 
 import { getStoryTheme } from './story-theme';
 import { BrandLogo } from '../brand-logo';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-
 export function StorySlideRenderer({
   slide,
   userHandle,
-  isExport = false,
 }: {
   slide: StorySlideData;
   userHandle?: string;
-  isExport?: boolean;
 }) {
   const theme = getStoryTheme(slide.theme);
 
@@ -44,10 +40,7 @@ export function StorySlideRenderer({
             resizeMode="cover"
           />
           <View
-            style={[
-              StyleSheet.absoluteFillObject,
-              { backgroundColor: 'rgba(7, 6, 14, 0.78)' },
-            ]}
+            style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(7, 6, 14, 0.78)' }]}
           />
         </>
       ) : null}
@@ -71,9 +64,7 @@ export function StorySlideRenderer({
       </View>
 
       {/* Main Slide Content Based on Layout */}
-      <View style={styles.contentArea}>
-        {renderLayoutContent(slide, theme)}
-      </View>
+      <View style={styles.contentArea}>{renderLayoutContent(slide, theme)}</View>
 
       {/* Bottom Footer Attribution */}
       <View style={[styles.footer, { borderTopColor: 'rgba(255, 255, 255, 0.1)' }]}>
@@ -130,7 +121,12 @@ function renderHeroStats(slide: StorySlideData, theme: ReturnType<typeof getStor
       <Text style={[styles.headline, { color: theme.textPrimary }]}>{slide.headline}</Text>
 
       {/* Giant Metric Core */}
-      <View style={[styles.giantMetricCard, { backgroundColor: theme.cardBg, borderColor: theme.cardBorder }]}>
+      <View
+        style={[
+          styles.giantMetricCard,
+          { backgroundColor: theme.cardBg, borderColor: theme.cardBorder },
+        ]}
+      >
         {slide.metric?.badge ? (
           <View style={[styles.metricBadgePill, { backgroundColor: theme.pillBg }]}>
             <Text style={[styles.metricBadgeText, { color: theme.accent }]}>
@@ -165,7 +161,9 @@ function renderHeroStats(slide: StorySlideData, theme: ReturnType<typeof getStor
               ]}
             >
               <Text style={[styles.secondaryValue, { color: theme.textPrimary }]}>{sec.value}</Text>
-              <Text style={[styles.secondaryLabel, { color: theme.textSecondary }]}>{sec.label}</Text>
+              <Text style={[styles.secondaryLabel, { color: theme.textSecondary }]}>
+                {sec.label}
+              </Text>
             </View>
           ))}
         </View>
@@ -207,10 +205,7 @@ function renderTopFiveGrid(slide: StorySlideData, theme: ReturnType<typeof getSt
                 ]}
               >
                 <Text
-                  style={[
-                    styles.rankNumber,
-                    { color: isFirst ? '#000000' : theme.textPrimary },
-                  ]}
+                  style={[styles.rankNumber, { color: isFirst ? '#000000' : theme.textPrimary }]}
                 >
                   #{item.rank}
                 </Text>
@@ -229,7 +224,10 @@ function renderTopFiveGrid(slide: StorySlideData, theme: ReturnType<typeof getSt
                   {item.title}
                 </Text>
                 {item.subtitle ? (
-                  <Text numberOfLines={1} style={[styles.rankingSub, { color: theme.textSecondary }]}>
+                  <Text
+                    numberOfLines={1}
+                    style={[styles.rankingSub, { color: theme.textSecondary }]}
+                  >
                     {item.subtitle}
                   </Text>
                 ) : null}
@@ -285,7 +283,13 @@ function renderCinematicPoster(slide: StorySlideData, theme: ReturnType<typeof g
 
 // 4. RADAR RADIAL LAYOUT
 function renderRadarRadial(slide: StorySlideData, theme: ReturnType<typeof getStoryTheme>) {
-  const tags = slide.vibeTags ?? ['Auteur Cinema', '70mm IMAX', 'Neo-Noir', 'Mind-Bending', 'Slow Cinema'];
+  const tags = slide.vibeTags ?? [
+    'Auteur Cinema',
+    '70mm IMAX',
+    'Neo-Noir',
+    'Mind-Bending',
+    'Slow Cinema',
+  ];
   return (
     <View style={styles.radarContainer}>
       <Text style={[styles.headline, { color: theme.textPrimary }]}>{slide.headline}</Text>
@@ -296,9 +300,19 @@ function renderRadarRadial(slide: StorySlideData, theme: ReturnType<typeof getSt
       ) : null}
 
       {/* Radar Graphic Emulation */}
-      <View style={[styles.radarCircleBox, { borderColor: theme.cardBorder, backgroundColor: theme.cardBg }]}>
+      <View
+        style={[
+          styles.radarCircleBox,
+          { borderColor: theme.cardBorder, backgroundColor: theme.cardBg },
+        ]}
+      >
         <View style={[styles.innerRing, { borderColor: theme.cardBorder }]} />
-        <View style={[styles.innermostRing, { borderColor: theme.accent, backgroundColor: theme.pillBg }]}>
+        <View
+          style={[
+            styles.innermostRing,
+            { borderColor: theme.accent, backgroundColor: theme.pillBg },
+          ]}
+        >
           <Ionicons name="finger-print" size={32} color={theme.accent} />
           <Text style={[styles.radarCenterLabel, { color: theme.accent }]}>TASTE RADAR</Text>
         </View>
@@ -318,10 +332,7 @@ function renderRadarRadial(slide: StorySlideData, theme: ReturnType<typeof getSt
             ]}
           >
             <Text
-              style={[
-                styles.vibeText,
-                { color: idx === 0 ? theme.accent : theme.textPrimary },
-              ]}
+              style={[styles.vibeText, { color: idx === 0 ? theme.accent : theme.textPrimary }]}
             >
               {tag}
             </Text>
@@ -336,7 +347,12 @@ function renderRadarRadial(slide: StorySlideData, theme: ReturnType<typeof getSt
 function renderQuoteSpotlight(slide: StorySlideData, theme: ReturnType<typeof getStoryTheme>) {
   return (
     <View style={styles.quoteContainer}>
-      <Ionicons name="chatbubble-ellipses-outline" size={36} color={theme.accent} style={{ opacity: 0.8 }} />
+      <Ionicons
+        name="chatbubble-ellipses-outline"
+        size={36}
+        color={theme.accent}
+        style={{ opacity: 0.8 }}
+      />
       <Text style={[styles.quoteText, { color: theme.textPrimary }]}>
         "{slide.media?.quote ?? slide.headline}"
       </Text>
@@ -363,7 +379,9 @@ function renderQuoteSpotlight(slide: StorySlideData, theme: ReturnType<typeof ge
 function renderBadgeCeremony(slide: StorySlideData, theme: ReturnType<typeof getStoryTheme>) {
   return (
     <View style={styles.ceremonyContainer}>
-      <View style={[styles.trophyAura, { backgroundColor: theme.pillBg, borderColor: theme.accent }]}>
+      <View
+        style={[styles.trophyAura, { backgroundColor: theme.pillBg, borderColor: theme.accent }]}
+      >
         <Ionicons name="trophy" size={54} color={theme.accent} />
       </View>
 
@@ -395,15 +413,18 @@ function renderSummaryCard(slide: StorySlideData, theme: ReturnType<typeof getSt
         {slide.headline}
       </Text>
 
-      <View style={[styles.summaryBox, { backgroundColor: theme.cardBg, borderColor: theme.cardBorder }]}>
+      <View
+        style={[
+          styles.summaryBox,
+          { backgroundColor: theme.cardBg, borderColor: theme.cardBorder },
+        ]}
+      >
         {slide.secondaryMetrics?.map((m, idx) => (
           <View key={`sum-m-${idx}`} style={styles.summaryMetricRow}>
             <Text style={[styles.summaryMetricLabel, { color: theme.textSecondary }]}>
               {m.label}
             </Text>
-            <Text style={[styles.summaryMetricValue, { color: theme.accent }]}>
-              {m.value}
-            </Text>
+            <Text style={[styles.summaryMetricValue, { color: theme.accent }]}>{m.value}</Text>
           </View>
         ))}
       </View>
@@ -413,7 +434,10 @@ function renderSummaryCard(slide: StorySlideData, theme: ReturnType<typeof getSt
           {slide.vibeTags.slice(0, 4).map((tag, idx) => (
             <View
               key={`sum-tag-${idx}`}
-              style={[styles.vibePill, { backgroundColor: theme.cardBg, borderColor: theme.cardBorder }]}
+              style={[
+                styles.vibePill,
+                { backgroundColor: theme.cardBg, borderColor: theme.cardBorder },
+              ]}
             >
               <Text style={[styles.vibeText, { color: theme.textPrimary }]}>{tag}</Text>
             </View>

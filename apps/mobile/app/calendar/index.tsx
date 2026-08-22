@@ -6,17 +6,11 @@ import type {
 } from '@cinewrapped/shared-types';
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { File, Paths } from 'expo-file-system';
-import * as Linking from 'expo-linking';
 import { Redirect, Stack, router, useLocalSearchParams } from 'expo-router';
-import * as Sharing from 'expo-sharing';
 import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Image,
-  Platform,
   Pressable,
-  ScrollView,
   Share,
   StyleSheet,
   Text,
@@ -31,10 +25,7 @@ import { MonthlyViewingCalendar } from '../../src/components/monthly-viewing-cal
 import { PosterImage, Screen, useColors } from '../../src/components/ui';
 import { api } from '../../src/lib/api';
 import { nextClockTime, nextWeekdayTime } from '../../src/lib/calendar-dates';
-import {
-  openAppleCalendar,
-  openGoogleCalendar,
-} from '../../src/lib/calendar-integration';
+import { openAppleCalendar, openGoogleCalendar } from '../../src/lib/calendar-integration';
 import { errorMessage } from '../../src/lib/error-message';
 import { haptics } from '../../src/lib/haptics';
 import { useAuth } from '../../src/providers/auth-provider';
@@ -140,14 +131,16 @@ export default function CalendarScreen() {
   }>();
 
   // Mode switcher
-  const [mode, setMode] = useState<CalendarMode>(params.title || params.mediaId ? 'PLANNER' : 'HISTORY');
+  const [mode, setMode] = useState<CalendarMode>(
+    params.title || params.mediaId ? 'PLANNER' : 'HISTORY',
+  );
 
   // Heatmap & Viewing History states
   const currentYear = new Date().getFullYear();
-  const [selectedYear, setSelectedYear] = useState<number>(currentYear);
+  const [selectedYear] = useState<number>(currentYear);
   const [selectedDayKey, setSelectedDayKey] = useState<string | null>(null);
   const [selectedDayActivity, setSelectedDayActivity] = useState<ActivityHeatmapDay | null>(null);
-  const [annualGoal, setAnnualGoal] = useState<number>(100);
+  const [annualGoal] = useState<number>(100);
 
   // Form states
   const [isPlanningOpen, setIsPlanningOpen] = useState(Boolean(params.title || params.mediaId));
@@ -155,12 +148,10 @@ export default function CalendarScreen() {
   const [linkedMediaId, setLinkedMediaId] = useState<string | null>(params.mediaId ?? null);
   const [notes, setNotes] = useState('');
   const [selectedQuickDateIndex, setSelectedQuickDateIndex] = useState(0);
-  const [eventType, setEventType] = useState<CalendarEventType>(
+  const [eventType] = useState<CalendarEventType>(
     params.eventType === 'RELEASE_REMINDER' ? 'RELEASE_REMINDER' : 'WATCH_PLAN',
   );
-  const [reminderOption, setReminderOption] = useState<number>(60);
-  const [exportingId, setExportingId] = useState<string | null>(null);
-  const [exportError, setExportError] = useState<string | null>(null);
+  const [reminderOption] = useState<number>(60);
   const [selectedSyncEvent, setSelectedSyncEvent] = useState<CalendarEventSummary | null>(null);
 
   // Filtering states
@@ -223,9 +214,7 @@ export default function CalendarScreen() {
       setIsPlanningOpen(false);
       await queryClient.invalidateQueries({ queryKey: ['calendar'] });
       // Prompt user to sync to Google / Apple Calendar immediately
-      if (createdEvent) {
-        setSelectedSyncEvent(createdEvent);
-      }
+      setSelectedSyncEvent(createdEvent);
     },
     onError: (error) => showError('Could not schedule event', errorMessage(error)),
   });
@@ -238,35 +227,6 @@ export default function CalendarScreen() {
     onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['calendar'] }),
     onError: (error) => showError('Could not remove event', errorMessage(error)),
   });
-
-  // Export event to standard .ics file
-  const handleExportIcs = async (event: CalendarEventSummary) => {
-    try {
-      haptics.selection();
-      setExportingId(event.id);
-      setExportError(null);
-      const icsData = await api.requestText(`calendar/${event.id}/ics`);
-
-      const filename = `cinewrapped-${event.id.slice(0, 8)}.ics`;
-      const file = new File(Paths.cache, filename);
-      file.create();
-      file.write(icsData);
-
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(file.uri, {
-          mimeType: 'text/calendar',
-          dialogTitle: `Export ${event.title}`,
-          UTI: 'com.apple.ical.ics',
-        });
-      } else {
-        await Linking.openURL(`data:text/calendar;charset=utf8,${encodeURIComponent(icsData)}`);
-      }
-    } catch (err) {
-      setExportError(errorMessage(err));
-    } finally {
-      setExportingId(null);
-    }
-  };
 
   // Filtered event list
   const filteredEvents = useMemo(() => {
@@ -282,8 +242,15 @@ export default function CalendarScreen() {
     const totalViewings = heatmap.data?.totalViewings ?? 0;
     const now = new Date();
     const startOfYear = new Date(now.getFullYear(), 0, 1);
-    const dayOfYear = Math.max(1, Math.floor((now.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24)));
-    const totalDays = ((now.getFullYear() % 4 === 0 && now.getFullYear() % 100 !== 0) || now.getFullYear() % 400 === 0) ? 366 : 365;
+    const dayOfYear = Math.max(
+      1,
+      Math.floor((now.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24)),
+    );
+    const totalDays =
+      (now.getFullYear() % 4 === 0 && now.getFullYear() % 100 !== 0) ||
+      now.getFullYear() % 400 === 0
+        ? 366
+        : 365;
 
     const projectedTotal = Math.round((totalViewings / dayOfYear) * totalDays);
     const delta = projectedTotal - annualGoal;
@@ -334,7 +301,12 @@ export default function CalendarScreen() {
         />
 
         {/* Mode Switcher Tabs */}
-        <View style={[styles.modeSwitcher, { backgroundColor: colors.surfaceRaised, borderColor: colors.border }]}>
+        <View
+          style={[
+            styles.modeSwitcher,
+            { backgroundColor: colors.surfaceRaised, borderColor: colors.border },
+          ]}
+        >
           <Pressable
             accessibilityRole="tab"
             onPress={() => {
@@ -343,7 +315,12 @@ export default function CalendarScreen() {
             }}
             style={[
               styles.modeTab,
-              mode === 'HISTORY' && { backgroundColor: colors.surface, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 4 },
+              mode === 'HISTORY' && {
+                backgroundColor: colors.surface,
+                shadowColor: '#000',
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+              },
             ]}
           >
             <Ionicons
@@ -354,7 +331,10 @@ export default function CalendarScreen() {
             <Text
               style={[
                 styles.modeTabText,
-                { color: mode === 'HISTORY' ? colors.textPrimary : colors.textSecondary, fontWeight: mode === 'HISTORY' ? '800' : '600' },
+                {
+                  color: mode === 'HISTORY' ? colors.textPrimary : colors.textSecondary,
+                  fontWeight: mode === 'HISTORY' ? '800' : '600',
+                },
               ]}
             >
               Viewing History
@@ -369,7 +349,12 @@ export default function CalendarScreen() {
             }}
             style={[
               styles.modeTab,
-              mode === 'PLANNER' && { backgroundColor: colors.surface, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 4 },
+              mode === 'PLANNER' && {
+                backgroundColor: colors.surface,
+                shadowColor: '#000',
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+              },
             ]}
           >
             <Ionicons
@@ -380,7 +365,10 @@ export default function CalendarScreen() {
             <Text
               style={[
                 styles.modeTabText,
-                { color: mode === 'PLANNER' ? colors.textPrimary : colors.textSecondary, fontWeight: mode === 'PLANNER' ? '800' : '600' },
+                {
+                  color: mode === 'PLANNER' ? colors.textPrimary : colors.textSecondary,
+                  fontWeight: mode === 'PLANNER' ? '800' : '600',
+                },
               ]}
             >
               Watch Planner
@@ -402,8 +390,15 @@ export default function CalendarScreen() {
               <>
                 {/* Streaks & Activity Stats Banner */}
                 <View style={styles.statsGrid}>
-                  <View style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                    <View style={[styles.statIconBox, { backgroundColor: 'rgba(239, 68, 68, 0.15)' }]}>
+                  <View
+                    style={[
+                      styles.statCard,
+                      { backgroundColor: colors.surface, borderColor: colors.border },
+                    ]}
+                  >
+                    <View
+                      style={[styles.statIconBox, { backgroundColor: 'rgba(239, 68, 68, 0.15)' }]}
+                    >
                       <Ionicons name="flame" size={20} color="#EF4444" />
                     </View>
                     <Text style={[styles.statValue, { color: colors.textPrimary }]}>
@@ -414,8 +409,15 @@ export default function CalendarScreen() {
                     </Text>
                   </View>
 
-                  <View style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                    <View style={[styles.statIconBox, { backgroundColor: 'rgba(245, 158, 11, 0.15)' }]}>
+                  <View
+                    style={[
+                      styles.statCard,
+                      { backgroundColor: colors.surface, borderColor: colors.border },
+                    ]}
+                  >
+                    <View
+                      style={[styles.statIconBox, { backgroundColor: 'rgba(245, 158, 11, 0.15)' }]}
+                    >
                       <Ionicons name="flash" size={20} color="#F59E0B" />
                     </View>
                     <Text style={[styles.statValue, { color: colors.textPrimary }]}>
@@ -426,8 +428,15 @@ export default function CalendarScreen() {
                     </Text>
                   </View>
 
-                  <View style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                    <View style={[styles.statIconBox, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
+                  <View
+                    style={[
+                      styles.statCard,
+                      { backgroundColor: colors.surface, borderColor: colors.border },
+                    ]}
+                  >
+                    <View
+                      style={[styles.statIconBox, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}
+                    >
                       <Ionicons name="checkmark-circle" size={20} color="#10B981" />
                     </View>
                     <Text style={[styles.statValue, { color: colors.textPrimary }]}>
@@ -440,7 +449,12 @@ export default function CalendarScreen() {
                 </View>
 
                 {/* Annual Pace & Goal Tracker Card */}
-                <View style={[styles.goalCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <View
+                  style={[
+                    styles.goalCard,
+                    { backgroundColor: colors.surface, borderColor: colors.border },
+                  ]}
+                >
                   <View style={styles.goalHeaderRow}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                       <Ionicons name="trophy" size={18} color="#F59E0B" />
@@ -448,23 +462,49 @@ export default function CalendarScreen() {
                         {selectedYear} Cinema Pace & Goal
                       </Text>
                     </View>
-                    <View style={[styles.goalPaceBadge, { backgroundColor: paceStats.isOnPace ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)' }]}>
-                      <Text style={{ color: paceStats.isOnPace ? '#10B981' : '#F59E0B', fontSize: 11, fontWeight: '800' }}>
-                        {paceStats.isOnPace ? `🔥 +${paceStats.delta} Ahead of Pace` : `🎯 ${Math.abs(paceStats.delta)} to Catch Pace`}
+                    <View
+                      style={[
+                        styles.goalPaceBadge,
+                        {
+                          backgroundColor: paceStats.isOnPace
+                            ? 'rgba(16, 185, 129, 0.15)'
+                            : 'rgba(245, 158, 11, 0.15)',
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={{
+                          color: paceStats.isOnPace ? '#10B981' : '#F59E0B',
+                          fontSize: 11,
+                          fontWeight: '800',
+                        }}
+                      >
+                        {paceStats.isOnPace
+                          ? `🔥 +${paceStats.delta} Ahead of Pace`
+                          : `🎯 ${Math.abs(paceStats.delta)} to Catch Pace`}
                       </Text>
                     </View>
                   </View>
 
                   <View style={styles.goalProgressRow}>
                     <View style={[styles.goalTrack, { backgroundColor: colors.surfaceRaised }]}>
-                      <View style={[styles.goalFill, { width: `${paceStats.progressPercent}%`, backgroundColor: colors.brand }]} />
+                      <View
+                        style={[
+                          styles.goalFill,
+                          { width: `${paceStats.progressPercent}%`, backgroundColor: colors.brand },
+                        ]}
+                      />
                     </View>
                     <Text style={[styles.goalProgressText, { color: colors.textPrimary }]}>
                       {heatmapData.totalViewings} / {annualGoal}
                     </Text>
                   </View>
                   <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
-                    On pace to finish with <Text style={{ fontWeight: '800', color: colors.textPrimary }}>{paceStats.projectedTotal} films</Text> by December 31.
+                    On pace to finish with{' '}
+                    <Text style={{ fontWeight: '800', color: colors.textPrimary }}>
+                      {paceStats.projectedTotal} films
+                    </Text>{' '}
+                    by December 31.
                   </Text>
                 </View>
 
@@ -479,7 +519,12 @@ export default function CalendarScreen() {
                 />
 
                 {/* Circadian Cinema Clock (24-Hour Viewing Rhythm) */}
-                <View style={[styles.circadianCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <View
+                  style={[
+                    styles.circadianCard,
+                    { backgroundColor: colors.surface, borderColor: colors.border },
+                  ]}
+                >
                   <View style={styles.circadianHeader}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                       <Ionicons name="time" size={18} color="#8B5CF6" />
@@ -487,7 +532,9 @@ export default function CalendarScreen() {
                         Circadian Cinema Clock
                       </Text>
                     </View>
-                    <View style={[styles.personaBadge, { backgroundColor: 'rgba(139, 92, 246, 0.15)' }]}>
+                    <View
+                      style={[styles.personaBadge, { backgroundColor: 'rgba(139, 92, 246, 0.15)' }]}
+                    >
                       <Text style={styles.personaBadgeText}>
                         🎭 {heatmapData.circadianRhythm.persona}
                       </Text>
@@ -498,16 +545,48 @@ export default function CalendarScreen() {
                   <View style={styles.quadrantBarsWrap}>
                     <View style={[styles.quadrantTrack, { backgroundColor: colors.surfaceRaised }]}>
                       {heatmapData.circadianRhythm.morningPercent > 0 ? (
-                        <View style={[styles.quadrantSegment, { width: `${heatmapData.circadianRhythm.morningPercent}%`, backgroundColor: '#F59E0B' }]} />
+                        <View
+                          style={[
+                            styles.quadrantSegment,
+                            {
+                              width: `${heatmapData.circadianRhythm.morningPercent}%`,
+                              backgroundColor: '#F59E0B',
+                            },
+                          ]}
+                        />
                       ) : null}
                       {heatmapData.circadianRhythm.afternoonPercent > 0 ? (
-                        <View style={[styles.quadrantSegment, { width: `${heatmapData.circadianRhythm.afternoonPercent}%`, backgroundColor: '#06B6D4' }]} />
+                        <View
+                          style={[
+                            styles.quadrantSegment,
+                            {
+                              width: `${heatmapData.circadianRhythm.afternoonPercent}%`,
+                              backgroundColor: '#06B6D4',
+                            },
+                          ]}
+                        />
                       ) : null}
                       {heatmapData.circadianRhythm.eveningPercent > 0 ? (
-                        <View style={[styles.quadrantSegment, { width: `${heatmapData.circadianRhythm.eveningPercent}%`, backgroundColor: '#8B5CF6' }]} />
+                        <View
+                          style={[
+                            styles.quadrantSegment,
+                            {
+                              width: `${heatmapData.circadianRhythm.eveningPercent}%`,
+                              backgroundColor: '#8B5CF6',
+                            },
+                          ]}
+                        />
                       ) : null}
                       {heatmapData.circadianRhythm.nightPercent > 0 ? (
-                        <View style={[styles.quadrantSegment, { width: `${heatmapData.circadianRhythm.nightPercent}%`, backgroundColor: '#EC4899' }]} />
+                        <View
+                          style={[
+                            styles.quadrantSegment,
+                            {
+                              width: `${heatmapData.circadianRhythm.nightPercent}%`,
+                              backgroundColor: '#EC4899',
+                            },
+                          ]}
+                        />
                       ) : null}
                     </View>
 
@@ -552,7 +631,12 @@ export default function CalendarScreen() {
                 />
 
                 {/* Most Active Weekdays Breakdown */}
-                <View style={[styles.weekdayCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <View
+                  style={[
+                    styles.weekdayCard,
+                    { backgroundColor: colors.surface, borderColor: colors.border },
+                  ]}
+                >
                   <View style={styles.weekdayHeaderRow}>
                     <View style={styles.weekdayTitleWrap}>
                       <Ionicons name="stats-chart" size={18} color="#10B981" />
@@ -560,7 +644,9 @@ export default function CalendarScreen() {
                         Most Active Weekdays
                       </Text>
                     </View>
-                    <View style={[styles.peakBadge, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
+                    <View
+                      style={[styles.peakBadge, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}
+                    >
                       <Text style={styles.peakBadgeText}>
                         👑 Peak: {heatmapData.mostActiveWeekday.name}
                       </Text>
@@ -569,30 +655,45 @@ export default function CalendarScreen() {
 
                   {/* Weekday Bars */}
                   <View style={styles.weekdayBarsList}>
-                    {heatmapData.weekdayDistribution.map((item: ActivityHeatmapSummary['weekdayDistribution'][number]) => {
-                      const isPeak = item.fullDay === heatmapData.mostActiveWeekday.name && item.count > 0;
-                      return (
-                        <View key={item.day} style={styles.weekdayBarRow}>
-                          <Text style={[styles.dayLabel, { color: isPeak ? '#10B981' : colors.textSecondary }]}>
-                            {item.day}
-                          </Text>
-                          <View style={[styles.barTrack, { backgroundColor: colors.surfaceRaised }]}>
-                            <View
+                    {heatmapData.weekdayDistribution.map(
+                      (item: ActivityHeatmapSummary['weekdayDistribution'][number]) => {
+                        const isPeak =
+                          item.fullDay === heatmapData.mostActiveWeekday.name && item.count > 0;
+                        return (
+                          <View key={item.day} style={styles.weekdayBarRow}>
+                            <Text
                               style={[
-                                styles.barFill,
-                                {
-                                  width: `${Math.max(item.percent, item.count > 0 ? 8 : 0)}%`,
-                                  backgroundColor: isPeak ? '#10B981' : colors.brand,
-                                },
+                                styles.dayLabel,
+                                { color: isPeak ? '#10B981' : colors.textSecondary },
                               ]}
-                            />
+                            >
+                              {item.day}
+                            </Text>
+                            <View
+                              style={[styles.barTrack, { backgroundColor: colors.surfaceRaised }]}
+                            >
+                              <View
+                                style={[
+                                  styles.barFill,
+                                  {
+                                    width: `${Math.max(item.percent, item.count > 0 ? 8 : 0)}%`,
+                                    backgroundColor: isPeak ? '#10B981' : colors.brand,
+                                  },
+                                ]}
+                              />
+                            </View>
+                            <Text
+                              style={[
+                                styles.barCount,
+                                { color: isPeak ? colors.textPrimary : colors.textSecondary },
+                              ]}
+                            >
+                              {item.count} ({item.percent}%)
+                            </Text>
                           </View>
-                          <Text style={[styles.barCount, { color: isPeak ? colors.textPrimary : colors.textSecondary }]}>
-                            {item.count} ({item.percent}%)
-                          </Text>
-                        </View>
-                      );
-                    })}
+                        );
+                      },
+                    )}
                   </View>
                 </View>
 
@@ -608,43 +709,63 @@ export default function CalendarScreen() {
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                         <Ionicons name="film" size={18} color="#10B981" />
                         <Text style={[styles.selectedLogTitle, { color: colors.textPrimary }]}>
-                          Log for {new Date(`${selectedDayKey}T00:00:00.000Z`).toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' })}
+                          Log for{' '}
+                          {new Date(`${selectedDayKey}T00:00:00.000Z`).toLocaleDateString([], {
+                            month: 'long',
+                            day: 'numeric',
+                            year: 'numeric',
+                          })}
                         </Text>
                       </View>
-                      <Pressable onPress={() => {
-                        setSelectedDayKey(null);
-                        setSelectedDayActivity(null);
-                      }}>
+                      <Pressable
+                        onPress={() => {
+                          setSelectedDayKey(null);
+                          setSelectedDayActivity(null);
+                        }}
+                      >
                         <Ionicons name="close-circle" size={20} color={colors.textSecondary} />
                       </Pressable>
                     </View>
 
                     {selectedDayActivity && selectedDayActivity.viewings.length > 0 ? (
                       <View style={styles.viewingsList}>
-                        {selectedDayActivity.viewings.map((v: ActivityHeatmapDay['viewings'][number]) => (
-                          <Pressable
-                            accessibilityRole="button"
-                            key={v.id}
-                            onPress={() => router.push(`/media/${v.mediaId}`)}
-                            style={({ pressed }) => [
-                              styles.viewingItem,
-                              { backgroundColor: colors.surfaceRaised, opacity: pressed ? 0.8 : 1 },
-                            ]}
-                          >
-                            <View style={styles.viewingPosterWrap}>
-                              <PosterImage uri={v.posterUrl} size="fill" rounded={8} />
-                            </View>
-                            <View style={{ flex: 1, gap: 4 }}>
-                              <Text numberOfLines={1} style={[styles.viewingTitle, { color: colors.textPrimary }]}>
-                                {v.title}
-                              </Text>
-                              <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
-                                {v.mediaType === 'MOVIE' ? 'Movie' : 'TV Episode'} · Watched at {formatEventTime(v.watchedAt)}
-                              </Text>
-                            </View>
-                            <Ionicons name="chevron-forward" size={18} color={colors.textDisabled} />
-                          </Pressable>
-                        ))}
+                        {selectedDayActivity.viewings.map(
+                          (v: ActivityHeatmapDay['viewings'][number]) => (
+                            <Pressable
+                              accessibilityRole="button"
+                              key={v.id}
+                              onPress={() => router.push(`/media/${v.mediaId}`)}
+                              style={({ pressed }) => [
+                                styles.viewingItem,
+                                {
+                                  backgroundColor: colors.surfaceRaised,
+                                  opacity: pressed ? 0.8 : 1,
+                                },
+                              ]}
+                            >
+                              <View style={styles.viewingPosterWrap}>
+                                <PosterImage uri={v.posterUrl} size="fill" rounded={8} />
+                              </View>
+                              <View style={{ flex: 1, gap: 4 }}>
+                                <Text
+                                  numberOfLines={1}
+                                  style={[styles.viewingTitle, { color: colors.textPrimary }]}
+                                >
+                                  {v.title}
+                                </Text>
+                                <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
+                                  {v.mediaType === 'MOVIE' ? 'Movie' : 'TV Episode'} · Watched at{' '}
+                                  {formatEventTime(v.watchedAt)}
+                                </Text>
+                              </View>
+                              <Ionicons
+                                name="chevron-forward"
+                                size={18}
+                                color={colors.textDisabled}
+                              />
+                            </Pressable>
+                          ),
+                        )}
                       </View>
                     ) : (
                       /* Retroactive Quick Logger Callout for Empty Past Day */
@@ -690,11 +811,7 @@ export default function CalendarScreen() {
                 { backgroundColor: colors.brand, opacity: pressed ? 0.85 : 1 },
               ]}
             >
-              <Ionicons
-                name={isPlanningOpen ? 'close' : 'add'}
-                size={20}
-                color={colors.onBrand}
-              />
+              <Ionicons name={isPlanningOpen ? 'close' : 'add'} size={20} color={colors.onBrand} />
               <Text style={[styles.addPlanText, { color: colors.onBrand }]}>
                 {isPlanningOpen ? 'Close Scheduler' : 'Schedule Movie Night'}
               </Text>
@@ -745,9 +862,7 @@ export default function CalendarScreen() {
                           styles.quickDateChip,
                           {
                             backgroundColor:
-                              selectedQuickDateIndex === idx
-                                ? colors.brand
-                                : colors.surfaceRaised,
+                              selectedQuickDateIndex === idx ? colors.brand : colors.surfaceRaised,
                             borderColor: colors.border,
                           },
                         ]}
@@ -820,9 +935,7 @@ export default function CalendarScreen() {
                   {create.isPending ? (
                     <ActivityIndicator size="small" color={colors.onBrand} />
                   ) : (
-                    <Text style={[styles.submitText, { color: colors.onBrand }]}>
-                      Confirm Plan
-                    </Text>
+                    <Text style={[styles.submitText, { color: colors.onBrand }]}>Confirm Plan</Text>
                   )}
                 </Pressable>
               </View>
@@ -840,8 +953,7 @@ export default function CalendarScreen() {
                   style={[
                     styles.filterChip,
                     {
-                      backgroundColor:
-                        activeFilter === f ? colors.brand : colors.surfaceRaised,
+                      backgroundColor: activeFilter === f ? colors.brand : colors.surfaceRaised,
                     },
                   ]}
                 >
@@ -849,17 +961,12 @@ export default function CalendarScreen() {
                     style={[
                       styles.filterChipText,
                       {
-                        color:
-                          activeFilter === f ? colors.onBrand : colors.textSecondary,
+                        color: activeFilter === f ? colors.onBrand : colors.textSecondary,
                         fontWeight: activeFilter === f ? '700' : '500',
                       },
                     ]}
                   >
-                    {f === 'ALL'
-                      ? 'All'
-                      : f === 'WATCH_PLAN'
-                        ? 'Watch Plans'
-                        : 'Release Reminders'}
+                    {f === 'ALL' ? 'All' : f === 'WATCH_PLAN' ? 'Watch Plans' : 'Release Reminders'}
                   </Text>
                 </Pressable>
               ))}
@@ -882,12 +989,7 @@ export default function CalendarScreen() {
                       },
                     ]}
                   >
-                    <View
-                      style={[
-                        styles.eventDateBox,
-                        { backgroundColor: colors.surfaceRaised },
-                      ]}
-                    >
+                    <View style={[styles.eventDateBox, { backgroundColor: colors.surfaceRaised }]}>
                       <Text style={[styles.eventDayName, { color: colors.brand }]}>
                         {dateInfo.dayName}
                       </Text>
@@ -933,7 +1035,10 @@ export default function CalendarScreen() {
                             haptics.selection();
                             void openAppleCalendar(event);
                           }}
-                          style={[styles.calendarActionBtn, { backgroundColor: colors.surfaceRaised }]}
+                          style={[
+                            styles.calendarActionBtn,
+                            { backgroundColor: colors.surfaceRaised },
+                          ]}
                         >
                           <Ionicons name="logo-apple" size={13} color={colors.textPrimary} />
                           <Text style={[styles.calendarActionText, { color: colors.textPrimary }]}>
@@ -956,7 +1061,10 @@ export default function CalendarScreen() {
                               mediaTitle: event.media?.title,
                             });
                           }}
-                          style={[styles.calendarActionBtn, { backgroundColor: 'rgba(66, 133, 244, 0.12)' }]}
+                          style={[
+                            styles.calendarActionBtn,
+                            { backgroundColor: 'rgba(66, 133, 244, 0.12)' },
+                          ]}
                         >
                           <Ionicons name="logo-google" size={12} color="#4285F4" />
                           <Text style={[styles.calendarActionText, { color: '#4285F4' }]}>
@@ -969,7 +1077,10 @@ export default function CalendarScreen() {
                           accessibilityLabel="More export options"
                           accessibilityRole="button"
                           onPress={() => setSelectedSyncEvent(event)}
-                          style={[styles.calendarActionBtn, { backgroundColor: colors.surfaceRaised }]}
+                          style={[
+                            styles.calendarActionBtn,
+                            { backgroundColor: colors.surfaceRaised },
+                          ]}
                         >
                           <Ionicons name="share-outline" size={13} color={colors.brand} />
                           <Text style={[styles.calendarActionText, { color: colors.brand }]}>
@@ -981,16 +1092,21 @@ export default function CalendarScreen() {
                         <Pressable
                           accessibilityLabel="Delete event"
                           accessibilityRole="button"
-                          onPress={async () => {
-                            const confirmed = await confirm({
-                              title: 'Delete Event',
-                              message: `Remove "${event.title}" from your calendar?`,
-                              confirmLabel: 'Remove',
-                              destructive: true,
-                            });
-                            if (confirmed) remove.mutate(event.id);
-                          }}
-                          style={[styles.deleteActionBtn, { backgroundColor: colors.surfaceRaised }]}
+                          onPress={() =>
+                            void (async () => {
+                              const confirmed = await confirm({
+                                title: 'Delete Event',
+                                message: `Remove "${event.title}" from your calendar?`,
+                                confirmLabel: 'Remove',
+                                destructive: true,
+                              });
+                              if (confirmed) remove.mutate(event.id);
+                            })()
+                          }
+                          style={[
+                            styles.deleteActionBtn,
+                            { backgroundColor: colors.surfaceRaised },
+                          ]}
                         >
                           <Ionicons name="trash-outline" size={13} color={colors.danger} />
                         </Pressable>
@@ -1001,7 +1117,12 @@ export default function CalendarScreen() {
               })}
 
               {filteredEvents.length === 0 ? (
-                <View style={[styles.emptyBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <View
+                  style={[
+                    styles.emptyBox,
+                    { backgroundColor: colors.surface, borderColor: colors.border },
+                  ]}
+                >
                   <Ionicons name="calendar-outline" size={32} color={colors.textDisabled} />
                   <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
                     No scheduled events in this filter.

@@ -1,6 +1,6 @@
 'use client';
 
-import { Bell, Search, ShieldCheck, UserCheck } from 'lucide-react';
+import { Search, ShieldCheck } from 'lucide-react';
 
 import { useAdmin } from '../lib/admin-context';
 import type { AdminRole } from '../lib/admin-store';

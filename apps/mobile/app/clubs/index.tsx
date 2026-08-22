@@ -175,7 +175,7 @@ export default function ClubsScreen() {
   // Calculate society metrics
   const metrics = useMemo(() => {
     const list = clubs.data ?? [];
-    const totalMembers = list.reduce((acc, curr) => acc + (curr.memberCount ?? 0), 0);
+    const totalMembers = list.reduce((acc, curr) => acc + curr.memberCount, 0);
     const joinedCount = list.filter((c) => c.membership !== null).length;
     return {
       totalClubs: list.length,

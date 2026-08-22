@@ -861,9 +861,7 @@ export default function DiscoverScreen() {
         {searching && search.isPending ? (
           <ActivityIndicator color={colors.brand} style={styles.loading} />
         ) : null}
-        {!searching && trending.isPending ? (
-          <TrendingBentoGridSkeleton />
-        ) : null}
+        {!searching && trending.isPending ? <TrendingBentoGridSkeleton /> : null}
         {(searching ? search : trending).isError ? (
           <Pressable
             accessibilityRole="button"

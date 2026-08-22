@@ -1,6 +1,6 @@
 'use client';
 
-import { Award, Check, Plus, Sparkles, ToggleLeft } from 'lucide-react';
+import { Award, Plus } from 'lucide-react';
 import { useState } from 'react';
 
 import { Badge } from '../../../components/ui/badge';
@@ -61,7 +61,8 @@ export default function AchievementsPage() {
             Achievement & Badges Management
           </h1>
           <p className="text-sm text-zinc-400 mt-1">
-            Configure CineWrapped gamification rewards, points, unlocked tiers, and eligibility criteria.
+            Configure CineWrapped gamification rewards, points, unlocked tiers, and eligibility
+            criteria.
           </p>
         </div>
         <Button variant="primary" size="sm" onClick={() => setIsCreateOpen(true)}>
@@ -103,12 +104,15 @@ export default function AchievementsPage() {
               </div>
 
               <div className="bg-zinc-950/60 p-2.5 rounded-lg border border-zinc-800/80 text-[11px] text-zinc-400">
-                <span className="font-semibold text-zinc-300">Criteria:</span> {ach.criteriaDescription}
+                <span className="font-semibold text-zinc-300">Criteria:</span>{' '}
+                {ach.criteriaDescription}
               </div>
             </div>
 
             <div className="flex items-center justify-between pt-3 border-t border-zinc-800/80 text-xs">
-              <span className="text-zinc-500 font-medium">{ach.unlockedCount} cinephiles unlocked</span>
+              <span className="text-zinc-500 font-medium">
+                {ach.unlockedCount} cinephiles unlocked
+              </span>
               <Button
                 variant={ach.isActive ? 'outline' : 'secondary'}
                 size="sm"
@@ -131,7 +135,9 @@ export default function AchievementsPage() {
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-zinc-300 uppercase mb-1">Badge Code</label>
+              <label className="block text-xs font-semibold text-zinc-300 uppercase mb-1">
+                Badge Code
+              </label>
               <input
                 type="text"
                 placeholder="e.g. HORROR_DEVOTEE"
@@ -141,7 +147,9 @@ export default function AchievementsPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-zinc-300 uppercase mb-1">Emoji Icon</label>
+              <label className="block text-xs font-semibold text-zinc-300 uppercase mb-1">
+                Emoji Icon
+              </label>
               <input
                 type="text"
                 value={newEmoji}
@@ -152,7 +160,9 @@ export default function AchievementsPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-zinc-300 uppercase mb-1">Badge Title</label>
+            <label className="block text-xs font-semibold text-zinc-300 uppercase mb-1">
+              Badge Title
+            </label>
             <input
               type="text"
               placeholder="e.g. Horror Devotee"
@@ -163,7 +173,9 @@ export default function AchievementsPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-zinc-300 uppercase mb-1">Description</label>
+            <label className="block text-xs font-semibold text-zinc-300 uppercase mb-1">
+              Description
+            </label>
             <textarea
               placeholder="Explain how users unlock this badge..."
               value={newDesc}
@@ -175,7 +187,9 @@ export default function AchievementsPage() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-zinc-300 uppercase mb-1">Tier</label>
+              <label className="block text-xs font-semibold text-zinc-300 uppercase mb-1">
+                Tier
+              </label>
               <select
                 value={newTier}
                 onChange={(e) => setNewTier(e.target.value as ManagedAchievement['tier'])}
@@ -188,7 +202,9 @@ export default function AchievementsPage() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-zinc-300 uppercase mb-1">Points</label>
+              <label className="block text-xs font-semibold text-zinc-300 uppercase mb-1">
+                Points
+              </label>
               <input
                 type="number"
                 value={newPoints}

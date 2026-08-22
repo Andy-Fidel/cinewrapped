@@ -28,9 +28,7 @@ export function NetflixTop10ShelfSkeleton({
             <Text style={styles.top10SquareText}>TOP</Text>
             <Text style={styles.top10SquareNum}>10</Text>
           </View>
-          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
-            {title}
-          </Text>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{title}</Text>
         </View>
       </View>
       <ScrollView
@@ -41,9 +39,7 @@ export function NetflixTop10ShelfSkeleton({
         {[1, 2, 3, 4].map((num) => (
           <View key={num} style={styles.itemCard}>
             <View style={styles.rankNumberContainer}>
-              <Text style={[styles.rankNumber, { color: 'rgba(150, 150, 150, 0.2)' }]}>
-                {num}
-              </Text>
+              <Text style={[styles.rankNumber, { color: 'rgba(150, 150, 150, 0.2)' }]}>{num}</Text>
             </View>
             <View style={styles.posterWrap}>
               <Skeleton width={100} height={145} rounded={8} />
@@ -80,9 +76,7 @@ export function NetflixTop10Shelf({
             <Text style={styles.top10SquareText}>TOP</Text>
             <Text style={styles.top10SquareNum}>10</Text>
           </View>
-          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
-            {title}
-          </Text>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{title}</Text>
         </View>
       </View>
 
@@ -109,20 +103,13 @@ export function NetflixTop10Shelf({
                 setSelectedMedia(media);
                 setSelectedScore(rec.score);
               }}
-              style={({ pressed }) => [
-                styles.itemCard,
-                { opacity: pressed ? 0.85 : 1 },
-              ]}
+              style={({ pressed }) => [styles.itemCard, { opacity: pressed ? 0.85 : 1 }]}
             >
               {/* Giant Stylized Rank Numeral (Outlined Layered Style) */}
               <View style={styles.rankNumberContainer}>
                 {/* Outlined Shadow Effect */}
-                <Text style={[styles.rankNumberStroke, { color: '#000000' }]}>
-                  {rank}
-                </Text>
-                <Text style={styles.rankNumber}>
-                  {rank}
-                </Text>
+                <Text style={[styles.rankNumberStroke, { color: '#000000' }]}>{rank}</Text>
+                <Text style={styles.rankNumber}>{rank}</Text>
               </View>
 
               {/* 2:3 Vertical Movie Poster */}

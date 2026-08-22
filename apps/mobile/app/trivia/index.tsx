@@ -3,18 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Redirect, Stack, router } from 'expo-router';
 import { useState } from 'react';
-import {
-  ActivityIndicator,
-  Animated,
-  Dimensions,
-  Image,
-  Pressable,
-  ScrollView,
-  Share,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 
 import { Screen, useColors } from '../../src/components/ui';
 import { api } from '../../src/lib/api';
@@ -90,7 +79,7 @@ const TRIVIA_SET: {
 export default function CinemaTriviaScreen() {
   const colors = useColors();
   const queryClient = useQueryClient();
-  const { session, user } = useAuth();
+  const { session } = useAuth();
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
@@ -182,7 +171,12 @@ export default function CinemaTriviaScreen() {
 
       {/* Header */}
       <View style={styles.header}>
-        <View style={[styles.themePill, { backgroundColor: 'rgba(245, 158, 11, 0.15)', borderColor: '#F59E0B' }]}>
+        <View
+          style={[
+            styles.themePill,
+            { backgroundColor: 'rgba(245, 158, 11, 0.15)', borderColor: '#F59E0B' },
+          ]}
+        >
           <Ionicons name="film" size={12} color="#F59E0B" />
           <Text style={styles.themePillText}>{TRIVIA_SET.themeBadge}</Text>
         </View>
@@ -197,10 +191,7 @@ export default function CinemaTriviaScreen() {
       {/* Quiz Card */}
       {!isCompleted ? (
         <View
-          style={[
-            styles.quizCard,
-            { backgroundColor: colors.surface, borderColor: colors.border },
-          ]}
+          style={[styles.quizCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
           {/* Progress Header */}
           <View style={styles.quizProgressRow}>
@@ -260,14 +251,24 @@ export default function CinemaTriviaScreen() {
                     style={[
                       styles.optionLetterBox,
                       {
-                        backgroundColor: isCorrect && hasAnswered ? '#10B981' : isSelected && hasAnswered ? '#EF4444' : colors.surface,
+                        backgroundColor:
+                          isCorrect && hasAnswered
+                            ? '#10B981'
+                            : isSelected && hasAnswered
+                              ? '#EF4444'
+                              : colors.surface,
                       },
                     ]}
                   >
                     <Text
                       style={[
                         styles.optionLetter,
-                        { color: (isCorrect || isSelected) && hasAnswered ? '#FFFFFF' : colors.textPrimary },
+                        {
+                          color:
+                            (isCorrect || isSelected) && hasAnswered
+                              ? '#FFFFFF'
+                              : colors.textPrimary,
+                        },
                       ]}
                     >
                       {String.fromCharCode(65 + idx)}
@@ -291,7 +292,10 @@ export default function CinemaTriviaScreen() {
             <View
               style={[
                 styles.loreCard,
-                { backgroundColor: 'rgba(245, 158, 11, 0.1)', borderColor: 'rgba(245, 158, 11, 0.3)' },
+                {
+                  backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                  borderColor: 'rgba(245, 158, 11, 0.3)',
+                },
               ]}
             >
               <View style={styles.loreHeader}>
@@ -367,7 +371,11 @@ export default function CinemaTriviaScreen() {
               onPress={handleRestart}
               style={({ pressed }) => [
                 styles.retryBtn,
-                { backgroundColor: colors.surfaceRaised, borderColor: colors.border, opacity: pressed ? 0.85 : 1 },
+                {
+                  backgroundColor: colors.surfaceRaised,
+                  borderColor: colors.border,
+                  opacity: pressed ? 0.85 : 1,
+                },
               ]}
             >
               <Ionicons name="refresh" size={18} color={colors.textPrimary} />
@@ -384,7 +392,9 @@ export default function CinemaTriviaScreen() {
             Active Community Challenges
           </Text>
           <Pressable onPress={() => router.push('/gamification')}>
-            <Text style={{ color: colors.brand, fontSize: 13, fontWeight: '700' }}>Trophy Cabinet →</Text>
+            <Text style={{ color: colors.brand, fontSize: 13, fontWeight: '700' }}>
+              Trophy Cabinet →
+            </Text>
           </Pressable>
         </View>
 
@@ -423,7 +433,9 @@ export default function CinemaTriviaScreen() {
                   </Text>
 
                   {challenge.joined ? (
-                    <View style={[styles.joinedBadge, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
+                    <View
+                      style={[styles.joinedBadge, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}
+                    >
                       <Text style={{ color: '#10B981', fontWeight: '800', fontSize: 11 }}>
                         {challenge.completedAt === null ? '✓ Active' : '🏆 Completed'}
                       </Text>
@@ -435,7 +447,10 @@ export default function CinemaTriviaScreen() {
                       onPress={() => joinChallenge.mutate(challenge.id)}
                       style={({ pressed }) => [
                         styles.joinBtn,
-                        { backgroundColor: colors.brand, opacity: pressed || joinChallenge.isPending ? 0.8 : 1 },
+                        {
+                          backgroundColor: colors.brand,
+                          opacity: pressed || joinChallenge.isPending ? 0.8 : 1,
+                        },
                       ]}
                     >
                       {isJoining ? (

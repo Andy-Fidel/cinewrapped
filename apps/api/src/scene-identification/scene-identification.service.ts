@@ -10,6 +10,7 @@ import { z } from 'zod';
 
 import type { AuthPrincipal } from '../auth/auth.types.js';
 import { AppException } from '../common/app.exception.js';
+import { validateRemoteFile } from '../common/file-upload-security.js';
 import type { ApiEnvironment } from '@cinewrapped/config';
 import { API_ENVIRONMENT } from '../config/environment.module.js';
 import { PrismaService } from '../database/prisma.service.js';
@@ -123,6 +124,13 @@ export class SceneIdentificationService {
       input.storagePath,
       input.signedImageUrl,
     );
+    await validateRemoteFile({
+      signedUrl: input.signedImageUrl,
+      mimeType: input.mimeType,
+      fileName: input.storagePath,
+      maxSizeBytes: 10 * 1024 * 1024,
+      expectedSizeBytes: input.byteSize,
+    });
     const startedAt = Date.now();
     const result = await this.vision.identify(input.signedImageUrl);
     const candidates: StoredCandidate[] = [];

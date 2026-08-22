@@ -1,6 +1,6 @@
 'use client';
 
-import { BellRing, CheckCircle2, Clock, Plus, Send, Users } from 'lucide-react';
+import { BellRing, Plus, Send } from 'lucide-react';
 import { useState } from 'react';
 
 import { Badge } from '../../components/ui/badge';
@@ -76,11 +76,19 @@ export default function NotificationCampaignsPage() {
                 </p>
 
                 <div className="flex items-center gap-4 text-xs text-zinc-500 pt-1">
-                  <span>Delivered: <strong className="text-zinc-300">{camp.deliveredCount.toLocaleString()} devices</strong></span>
+                  <span>
+                    Delivered:{' '}
+                    <strong className="text-zinc-300">
+                      {camp.deliveredCount.toLocaleString()} devices
+                    </strong>
+                  </span>
                   {camp.openRatePercent > 0 && (
                     <>
                       <span>•</span>
-                      <span>Open rate: <strong className="text-emerald-400">{camp.openRatePercent}%</strong></span>
+                      <span>
+                        Open rate:{' '}
+                        <strong className="text-emerald-400">{camp.openRatePercent}%</strong>
+                      </span>
                     </>
                   )}
                   {camp.sentAt && (
@@ -104,7 +112,9 @@ export default function NotificationCampaignsPage() {
       >
         <div className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-zinc-300 uppercase mb-1">Notification Title</label>
+            <label className="block text-xs font-semibold text-zinc-300 uppercase mb-1">
+              Notification Title
+            </label>
             <input
               type="text"
               placeholder="e.g. 🏆 Your Mid-Year Cinema Recap is Ready!"
@@ -115,7 +125,9 @@ export default function NotificationCampaignsPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-zinc-300 uppercase mb-1">Message Body</label>
+            <label className="block text-xs font-semibold text-zinc-300 uppercase mb-1">
+              Message Body
+            </label>
             <textarea
               placeholder="Write the message text..."
               value={body}
@@ -127,7 +139,9 @@ export default function NotificationCampaignsPage() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-zinc-300 uppercase mb-1">Audience Segment</label>
+              <label className="block text-xs font-semibold text-zinc-300 uppercase mb-1">
+                Audience Segment
+              </label>
               <select
                 value={segment}
                 onChange={(e) => setSegment(e.target.value as NotificationCampaign['segment'])}
@@ -140,7 +154,9 @@ export default function NotificationCampaignsPage() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-zinc-300 uppercase mb-1">Delivery Channel</label>
+              <label className="block text-xs font-semibold text-zinc-300 uppercase mb-1">
+                Delivery Channel
+              </label>
               <select
                 value={channel}
                 onChange={(e) => setChannel(e.target.value as NotificationCampaign['channel'])}

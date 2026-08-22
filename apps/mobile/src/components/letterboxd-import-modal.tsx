@@ -13,10 +13,7 @@ import {
 } from 'react-native';
 
 import { haptics } from '../lib/haptics';
-import {
-  parseLetterboxdCsv,
-  type LetterboxdImportSummary,
-} from '../lib/letterboxd-importer';
+import { parseLetterboxdCsv, type LetterboxdImportSummary } from '../lib/letterboxd-importer';
 import { useColors } from './ui';
 import { useDialog } from '../providers/dialog-provider';
 
@@ -102,17 +99,29 @@ export function LetterboxdImportModal({ visible, onClose }: LetterboxdImportModa
             </Pressable>
           </View>
 
-          <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
             {/* Explainer Card */}
             <View
               style={[
                 styles.infoCard,
-                { backgroundColor: 'rgba(0, 224, 84, 0.08)', borderColor: 'rgba(0, 224, 84, 0.25)' },
+                {
+                  backgroundColor: 'rgba(0, 224, 84, 0.08)',
+                  borderColor: 'rgba(0, 224, 84, 0.25)',
+                },
               ]}
             >
               <Ionicons name="information-circle" size={18} color="#00E054" />
               <Text style={[styles.infoText, { color: colors.textPrimary }]}>
-                Export your data from <Text style={{ fontWeight: '800' }}>Letterboxd Settings → Import & Export → Export Your Data</Text>, then paste the contents of your <Text style={{ fontWeight: '800' }}>diary.csv</Text> or <Text style={{ fontWeight: '800' }}>ratings.csv</Text> below.
+                Export your data from{' '}
+                <Text style={{ fontWeight: '800' }}>
+                  Letterboxd Settings → Import & Export → Export Your Data
+                </Text>
+                , then paste the contents of your{' '}
+                <Text style={{ fontWeight: '800' }}>diary.csv</Text> or{' '}
+                <Text style={{ fontWeight: '800' }}>ratings.csv</Text> below.
               </Text>
             </View>
 
@@ -184,7 +193,9 @@ export function LetterboxdImportModal({ visible, onClose }: LetterboxdImportModa
                     <Text style={[styles.statValue, { color: '#A855F7' }]}>
                       {summary.withWatchedDates}
                     </Text>
-                    <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Diary Dates</Text>
+                    <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+                      Diary Dates
+                    </Text>
                   </View>
                 </View>
 
@@ -195,12 +206,13 @@ export function LetterboxdImportModal({ visible, onClose }: LetterboxdImportModa
                   </Text>
                   {summary.entries.slice(0, 3).map((e, idx) => (
                     <View key={idx} style={styles.entryRow}>
-                      <Text numberOfLines={1} style={[styles.entryTitle, { color: colors.textPrimary }]}>
+                      <Text
+                        numberOfLines={1}
+                        style={[styles.entryTitle, { color: colors.textPrimary }]}
+                      >
                         {e.title} {e.releaseYear ? `(${e.releaseYear})` : ''}
                       </Text>
-                      {e.rating ? (
-                        <Text style={styles.entryRating}>★ {e.rating}</Text>
-                      ) : null}
+                      {e.rating ? <Text style={styles.entryRating}>★ {e.rating}</Text> : null}
                     </View>
                   ))}
                 </View>
@@ -226,11 +238,12 @@ export function LetterboxdImportModal({ visible, onClose }: LetterboxdImportModa
             <View style={styles.actionWrap}>
               <Pressable
                 disabled={!summary || summary.totalParsed === 0 || isImporting}
-                onPress={handleStartImport}
+                onPress={() => void handleStartImport()}
                 style={({ pressed }) => [
                   styles.importBtn,
                   {
-                    backgroundColor: summary && summary.totalParsed > 0 ? '#00E054' : colors.surfaceRaised,
+                    backgroundColor:
+                      summary && summary.totalParsed > 0 ? '#00E054' : colors.surfaceRaised,
                     opacity: pressed || isImporting ? 0.8 : 1,
                   },
                 ]}

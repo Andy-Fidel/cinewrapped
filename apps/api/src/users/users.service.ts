@@ -12,6 +12,7 @@ import type { z } from 'zod';
 
 import type { AuthPrincipal } from '../auth/auth.types.js';
 import { AppException } from '../common/app.exception.js';
+import { SupabaseAdminService } from '../common/supabase-admin.service.js';
 import { PrismaService } from '../database/prisma.service.js';
 import { toCurrentUser } from './user.mapper.js';
 
@@ -75,7 +76,10 @@ function toPreferences(preferences: PreferencesWithRelations): UserPreferences {
 
 @Injectable()
 export class UsersService {
-  public constructor(private readonly prisma: PrismaService) {}
+  public constructor(
+    private readonly prisma: PrismaService,
+    private readonly supabaseAdmin: SupabaseAdminService,
+  ) {}
 
   public async getCurrentUser(principal: AuthPrincipal): Promise<CurrentUser> {
     return toCurrentUser(await this.requireUser(principal.subject));
@@ -352,28 +356,56 @@ export class UsersService {
     return this.getCurrentUser(principal);
   }
 
-  public async deleteCurrentUser(principal: AuthPrincipal): Promise<{ success: true; deletedAt: string }> {
+  public async deleteCurrentUser(
+    principal: AuthPrincipal,
+  ): Promise<{ success: true; deletedAt: string }> {
     const user = await this.requireUser(principal.subject);
     const now = new Date();
 
+    this.supabaseAdmin.assertConfigured();
+    await this.supabaseAdmin.eraseUserStorage(principal.subject);
+    await this.supabaseAdmin.deleteIdentity(principal.subject);
+
     await this.prisma.$transaction(async (tx) => {
-      // Soft-delete and anonymize user profile to satisfy GDPR/Apple Guideline 5.1.1(v)
-      await tx.user.update({
-        where: { id: user.id },
+      const ownedClubs = await tx.club.findMany({
+        where: { ownerId: user.id },
+        select: { id: true },
+      });
+      const ownedClubIds = ownedClubs.map((club) => club.id);
+      const authoredPosts = await tx.clubPost.findMany({
+        where: { authorId: user.id, clubId: { notIn: ownedClubIds } },
+        select: { id: true },
+      });
+      const authoredPostIds = authoredPosts.map((post) => post.id);
+
+      if (authoredPostIds.length > 0) {
+        await tx.comment.deleteMany({
+          where: { parentType: 'CLUB_POST', parentId: { in: authoredPostIds } },
+        });
+        await tx.reaction.deleteMany({
+          where: { targetType: 'CLUB_POST', targetId: { in: authoredPostIds } },
+        });
+      }
+      await tx.clubPost.deleteMany({ where: { authorId: user.id } });
+      await tx.clubPoll.deleteMany({ where: { createdById: user.id } });
+      await tx.clubWatchlistItem.deleteMany({ where: { suggestedById: user.id } });
+      await tx.clubWatchEvent.deleteMany({ where: { createdById: user.id } });
+      await tx.watchlistItem.deleteMany({ where: { addedByUserId: user.id } });
+      await tx.club.deleteMany({ where: { ownerId: user.id } });
+      await tx.auditLog.updateMany({
+        where: { actorUserId: user.id },
+        data: { actorSubject: null, reason: null, metadataJson: {} },
+      });
+      await tx.user.delete({ where: { id: user.id } });
+      await tx.auditLog.create({
         data: {
-          deletedAt: now,
-          displayName: 'Deleted Cinephile',
-          username: `deleted_${user.id.slice(0, 8)}`,
-          usernameNormalized: `deleted_${user.id.slice(0, 8)}`,
-          avatarUrl: null,
-          bio: null,
+          actorType: 'SYSTEM',
+          action: 'ACCOUNT_PURGED',
+          targetType: 'USER',
+          targetId: user.id,
+          reason: 'USER_REQUESTED_ERASURE',
         },
       });
-
-      // Clear active sessions, push devices, and notifications
-      await tx.authSession.deleteMany({ where: { userId: user.id } });
-      await tx.pushDevice.deleteMany({ where: { userId: user.id } });
-      await tx.notification.deleteMany({ where: { userId: user.id } });
     });
 
     return { success: true, deletedAt: now.toISOString() };

@@ -3,16 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import {
-  ActivityIndicator,
-  Image,
-  Modal,
-  Pressable,
-  Share,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Image, Modal, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 
 import { api } from '../lib/api';
 import { haptics } from '../lib/haptics';
@@ -88,16 +79,14 @@ export function NetflixQuickPreviewModal({
 
   if (!media) return null;
 
-  const matchPercent = matchScore
-    ? Math.min(99, Math.max(88, Math.round(matchScore * 100)))
-    : 96;
+  const matchPercent = matchScore ? Math.min(99, Math.max(88, Math.round(matchScore * 100))) : 96;
 
   const releaseYear = media.releaseYear ? String(media.releaseYear) : '';
   const runtimeLabel = media.runtimeMinutes
     ? `${Math.floor(media.runtimeMinutes / 60)}h ${media.runtimeMinutes % 60}m`
     : '';
 
-  const genreNames = (media.genreIds ?? [])
+  const genreNames = media.genreIds
     .map((gid) => GENRE_MAP[gid] ?? gid)
     .filter(Boolean)
     .slice(0, 4);
@@ -126,17 +115,17 @@ export function NetflixQuickPreviewModal({
   };
 
   return (
-    <Modal
-      animationType="slide"
-      onRequestClose={onClose}
-      transparent
-      visible={visible}
-    >
+    <Modal animationType="slide" onRequestClose={onClose} transparent visible={visible}>
       <View style={styles.modalOverlay}>
         <Pressable style={styles.backdropDismiss} onPress={onClose} />
 
         {/* Floating Quick Preview Card */}
-        <View style={[styles.cardContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <View
+          style={[
+            styles.cardContainer,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}
+        >
           {/* Backdrop Header Image */}
           <View style={styles.imageHeader}>
             <Image
@@ -167,10 +156,7 @@ export function NetflixQuickPreviewModal({
             <Pressable
               accessibilityRole="button"
               onPress={handlePlanWatch}
-              style={({ pressed }) => [
-                styles.centerPlayCircle,
-                { opacity: pressed ? 0.8 : 1 },
-              ]}
+              style={({ pressed }) => [styles.centerPlayCircle, { opacity: pressed ? 0.8 : 1 }]}
             >
               <Ionicons name="play" size={24} color="#000000" style={{ marginLeft: 3 }} />
             </Pressable>
@@ -208,7 +194,10 @@ export function NetflixQuickPreviewModal({
 
             {/* Overview / Teaser */}
             {media.overview ? (
-              <Text numberOfLines={3} style={[styles.overviewText, { color: colors.textSecondary }]}>
+              <Text
+                numberOfLines={3}
+                style={[styles.overviewText, { color: colors.textSecondary }]}
+              >
                 {media.overview}
               </Text>
             ) : null}
@@ -221,9 +210,7 @@ export function NetflixQuickPreviewModal({
                     key={idx}
                     style={[styles.genrePill, { backgroundColor: colors.surfaceRaised }]}
                   >
-                    <Text style={[styles.genrePillText, { color: colors.textPrimary }]}>
-                      {g}
-                    </Text>
+                    <Text style={[styles.genrePillText, { color: colors.textPrimary }]}>{g}</Text>
                   </View>
                 ))}
               </View>
@@ -235,10 +222,7 @@ export function NetflixQuickPreviewModal({
               <Pressable
                 accessibilityRole="button"
                 onPress={handlePlanWatch}
-                style={({ pressed }) => [
-                  styles.primaryPlayBtn,
-                  { opacity: pressed ? 0.85 : 1 },
-                ]}
+                style={({ pressed }) => [styles.primaryPlayBtn, { opacity: pressed ? 0.85 : 1 }]}
               >
                 <Ionicons name="play" size={18} color="#000000" />
                 <Text style={styles.primaryPlayBtnText}>Plan Watch</Text>

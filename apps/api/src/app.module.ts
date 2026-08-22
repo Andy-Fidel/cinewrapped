@@ -8,6 +8,7 @@ import { AuthModule } from './auth/auth.module.js';
 import { ClubsModule } from './clubs/clubs.module.js';
 import { ApiExceptionFilter } from './common/api-exception.filter.js';
 import { PerformanceMonitoringInterceptor } from './common/performance-monitoring.interceptor.js';
+import { IdempotencyInterceptor } from './common/idempotency.interceptor.js';
 import { EnvironmentModule } from './config/environment.module.js';
 import { DatabaseModule } from './database/database.module.js';
 import { GamificationModule } from './gamification/gamification.module.js';
@@ -16,6 +17,7 @@ import { InsightsModule } from './insights/insights.module.js';
 import { JournalModule } from './journal/journal.module.js';
 import { MediaProviderModule } from './media-provider/media-provider.module.js';
 import { RecommendationsModule } from './recommendations/recommendations.module.js';
+import { ReportsModule } from './reports/reports.module.js';
 import { SceneIdentificationModule } from './scene-identification/scene-identification.module.js';
 import { SearchModule } from './search/search.module.js';
 import { SocialModule } from './social/social.module.js';
@@ -40,6 +42,7 @@ import { UsersModule } from './users/users.module.js';
     MediaProviderModule,
     LibraryModule,
     RecommendationsModule,
+    ReportsModule,
     SceneIdentificationModule,
     SearchModule,
     SocialModule,
@@ -49,6 +52,7 @@ import { UsersModule } from './users/users.module.js';
   controllers: [AppController],
   providers: [
     { provide: APP_FILTER, useClass: ApiExceptionFilter },
+    { provide: APP_INTERCEPTOR, useClass: IdempotencyInterceptor },
     { provide: APP_INTERCEPTOR, useClass: PerformanceMonitoringInterceptor },
   ],
 })

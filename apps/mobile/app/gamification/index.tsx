@@ -175,16 +175,27 @@ export default function GamificationScreen() {
                     },
                   ]}
                 >
-                  <View style={[styles.triviaIconBox, { backgroundColor: 'rgba(245, 158, 11, 0.15)' }]}>
+                  <View
+                    style={[styles.triviaIconBox, { backgroundColor: 'rgba(245, 158, 11, 0.15)' }]}
+                  >
                     <Ionicons name="sparkles" size={22} color="#F59E0B" />
                   </View>
                   <View style={{ flex: 1, gap: 2 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Text style={{ color: '#F59E0B', fontSize: 10, fontWeight: '800', letterSpacing: 0.8 }}>
+                      <Text
+                        style={{
+                          color: '#F59E0B',
+                          fontSize: 10,
+                          fontWeight: '800',
+                          letterSpacing: 0.8,
+                        }}
+                      >
                         FEATURED QUIZ
                       </Text>
                       <View style={[styles.pointsBadge, { backgroundColor: colors.surfaceRaised }]}>
-                        <Text style={{ color: colors.brand, fontSize: 10, fontWeight: '800' }}>+150 PTS</Text>
+                        <Text style={{ color: colors.brand, fontSize: 10, fontWeight: '800' }}>
+                          +150 PTS
+                        </Text>
                       </View>
                     </View>
                     <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: '800' }}>

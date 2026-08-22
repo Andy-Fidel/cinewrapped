@@ -42,11 +42,7 @@ export function MediaCard({ media }: { media: MediaSummary }) {
         ]}
       >
         <View style={styles.posterContainer}>
-          <PosterImage
-            uri={media.posterUrl}
-            size="fill"
-            rounded={12}
-          />
+          <PosterImage uri={media.posterUrl} size="fill" rounded={12} />
           {media.averageProviderRating !== null ? (
             <View style={styles.ratingWrapper}>
               <StarRating rating={media.averageProviderRating} size="sm" />

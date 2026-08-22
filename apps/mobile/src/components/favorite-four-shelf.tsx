@@ -14,7 +14,7 @@ interface FavoriteFourShelfProps {
   username: string;
 }
 
-export function FavoriteFourShelf({ favorites = [], isSelf, username }: FavoriteFourShelfProps) {
+export function FavoriteFourShelf({ favorites = [], isSelf }: FavoriteFourShelfProps) {
   const colors = useColors();
   const router = useRouter();
   const [isPickerOpen, setIsPickerOpen] = useState(false);
@@ -26,14 +26,14 @@ export function FavoriteFourShelf({ favorites = [], isSelf, username }: Favorite
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+    <View
+      style={[styles.container, { backgroundColor: colors.surface, borderColor: colors.border }]}
+    >
       {/* Header Bar */}
       <View style={styles.header}>
         <View style={styles.titleWrap}>
           <Ionicons name="star" size={16} color="#F59E0B" />
-          <Text style={[styles.title, { color: colors.textPrimary }]}>
-            Favorite 4
-          </Text>
+          <Text style={[styles.title, { color: colors.textPrimary }]}>Favorite 4</Text>
         </View>
 
         {isSelf ? (
@@ -95,7 +95,9 @@ export function FavoriteFourShelf({ favorites = [], isSelf, username }: Favorite
                     color={colors.textSecondary}
                   />
                   {isSelf ? (
-                    <Text style={[styles.addText, { color: colors.textSecondary }]}>Add #{idx + 1}</Text>
+                    <Text style={[styles.addText, { color: colors.textSecondary }]}>
+                      Add #{idx + 1}
+                    </Text>
                   ) : null}
                 </View>
               )}

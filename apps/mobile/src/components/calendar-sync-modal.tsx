@@ -1,14 +1,7 @@
 import type { CalendarEventSummary } from '@cinewrapped/shared-types';
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
-import {
-  ActivityIndicator,
-  Modal,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import {
   type CalendarEventPayload,
@@ -85,12 +78,7 @@ export function CalendarSyncModal({ visible, onClose, event }: CalendarSyncModal
   });
 
   return (
-    <Modal
-      animationType="fade"
-      onRequestClose={onClose}
-      transparent
-      visible={visible}
-    >
+    <Modal animationType="fade" onRequestClose={onClose} transparent visible={visible}>
       <Pressable onPress={onClose} style={styles.overlay}>
         <Pressable
           onPress={(e) => e.stopPropagation()}
@@ -103,9 +91,7 @@ export function CalendarSyncModal({ visible, onClose, event }: CalendarSyncModal
                 <Ionicons name="calendar" size={22} color={colors.brand} />
               </View>
               <View>
-                <Text style={[styles.title, { color: colors.textPrimary }]}>
-                  Add to Calendar
-                </Text>
+                <Text style={[styles.title, { color: colors.textPrimary }]}>Add to Calendar</Text>
                 <Text numberOfLines={1} style={[styles.subtitle, { color: colors.textSecondary }]}>
                   {event.title}
                 </Text>
@@ -122,7 +108,12 @@ export function CalendarSyncModal({ visible, onClose, event }: CalendarSyncModal
           </View>
 
           {/* Time Chip */}
-          <View style={[styles.timeBox, { backgroundColor: colors.surfaceRaised, borderColor: colors.border }]}>
+          <View
+            style={[
+              styles.timeBox,
+              { backgroundColor: colors.surfaceRaised, borderColor: colors.border },
+            ]}
+          >
             <Ionicons name="time-outline" size={16} color={colors.brand} />
             <Text style={[styles.timeText, { color: colors.textPrimary }]}>
               {formattedTime} · {event.durationMinutes ?? 120} min

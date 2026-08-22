@@ -1,9 +1,5 @@
 export type AdminRole =
-  | 'SUPER_ADMINISTRATOR'
-  | 'CONTENT_MODERATOR'
-  | 'COMMUNITY_MODERATOR'
-  | 'SUPPORT_AGENT'
-  | 'ANALYST';
+  'SUPER_ADMINISTRATOR' | 'CONTENT_MODERATOR' | 'COMMUNITY_MODERATOR' | 'SUPPORT_AGENT' | 'ANALYST';
 
 export interface AdminUserSession {
   id: string;
@@ -54,7 +50,8 @@ export interface ModerationReport {
   authorId: string;
   reporterName: string;
   reporterId: string;
-  reason: 'SPOILER_UNMARKED' | 'HARASSMENT' | 'HATE_SPEECH' | 'SPAM' | 'EXPLICIT_CONTENT' | 'COPYRIGHT';
+  reason:
+    'SPOILER_UNMARKED' | 'HARASSMENT' | 'HATE_SPEECH' | 'SPAM' | 'EXPLICIT_CONTENT' | 'COPYRIGHT';
   severity: 'HIGH' | 'MEDIUM' | 'LOW';
   status: 'PENDING' | 'RESOLVED' | 'DISMISSED';
   createdAt: string;
@@ -310,7 +307,8 @@ const INITIAL_REPORTS: ModerationReport[] = [
     targetType: 'REVIEW',
     targetId: 'rev-201',
     targetTitle: 'Dune: Part Two Review by troll_bot99',
-    targetSnippet: 'At the end of the film, Paul does this unexpected duel and completely destroys...',
+    targetSnippet:
+      'At the end of the film, Paul does this unexpected duel and completely destroys...',
     authorName: 'troll_bot99',
     authorId: 'usr-4',
     reporterName: 'elena_rodriguez',
@@ -325,7 +323,8 @@ const INITIAL_REPORTS: ModerationReport[] = [
     targetType: 'COMMENT',
     targetId: 'com-301',
     targetTitle: 'Comment in A24 Fanatics Club',
-    targetSnippet: 'Anyone who likes this movie is completely clueless and has zero taste in cinema!',
+    targetSnippet:
+      'Anyone who likes this movie is completely clueless and has zero taste in cinema!',
     authorName: 'spammer_crypto',
     authorId: 'usr-6',
     reporterName: 'marcus_vibe',
@@ -442,7 +441,8 @@ const INITIAL_COMMENTS: ManagedComment[] = [
     authorId: 'usr-3',
     authorUsername: 'marcus_vibe',
     authorAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
-    content: 'The 70mm IMAX sequence during Trinity was absolutely breathtaking. Complete silence in our theater.',
+    content:
+      'The 70mm IMAX sequence during Trinity was absolutely breathtaking. Complete silence in our theater.',
     isFlagged: false,
     isHidden: false,
     isPinned: true,
@@ -456,7 +456,8 @@ const INITIAL_CLUBS: ManagedClub[] = [
     id: 'club-401',
     name: 'A24 Film Society',
     slug: 'a24-film-society',
-    description: 'A sanctuary for lovers of avant-garde, indie cinema and visionary auteur directors.',
+    description:
+      'A sanctuary for lovers of avant-garde, indie cinema and visionary auteur directors.',
     coverImageUrl: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=600',
     privacy: 'PUBLIC',
     ownerUsername: 'sophia_film',
@@ -471,7 +472,8 @@ const INITIAL_CLUBS: ManagedClub[] = [
     id: 'club-402',
     name: 'Midnight Horror Club',
     slug: 'midnight-horror-club',
-    description: 'Psychological terror, body horror, cosmic dread, and cult classics screened after dark.',
+    description:
+      'Psychological terror, body horror, cosmic dread, and cult classics screened after dark.',
     coverImageUrl: 'https://images.unsplash.com/photo-1509281373149-e957c6296406?w=600',
     privacy: 'PUBLIC',
     ownerUsername: 'marcus_vibe',
@@ -486,7 +488,8 @@ const INITIAL_CLUBS: ManagedClub[] = [
     id: 'club-403',
     name: 'Criterion 4K Collectors',
     slug: 'criterion-4k-collectors',
-    description: 'Restoration quality, packaging reviews, supplements, and physical disc collectors lounge.',
+    description:
+      'Restoration quality, packaging reviews, supplements, and physical disc collectors lounge.',
     coverImageUrl: 'https://images.unsplash.com/photo-1478720568477-152d9b164e26?w=600',
     privacy: 'PUBLIC',
     ownerUsername: 'alex_cinema',
@@ -691,7 +694,8 @@ const INITIAL_JOBS: BackgroundJobQueue[] = [
   {
     id: 'job-1',
     queueName: 'recommendation-refresher',
-    description: 'Nightly re-computation of high-dimensional vector embeddings and personalized radar shelves.',
+    description:
+      'Nightly re-computation of high-dimensional vector embeddings and personalized radar shelves.',
     activeCount: 14,
     waitingCount: 42,
     completed24h: 38900,
@@ -702,7 +706,8 @@ const INITIAL_JOBS: BackgroundJobQueue[] = [
   {
     id: 'job-2',
     queueName: 'scene-radar-indexer',
-    description: 'Processes uploaded screenshots, performs OCR/vector matching, and annotates timestamps.',
+    description:
+      'Processes uploaded screenshots, performs OCR/vector matching, and annotates timestamps.',
     activeCount: 2,
     waitingCount: 5,
     completed24h: 1240,
@@ -713,7 +718,8 @@ const INITIAL_JOBS: BackgroundJobQueue[] = [
   {
     id: 'job-3',
     queueName: 'notification-digest-dispatcher',
-    description: 'Batches weekly activity summaries, club discussion digests, and release countdown alerts.',
+    description:
+      'Batches weekly activity summaries, club discussion digests, and release countdown alerts.',
     activeCount: 0,
     waitingCount: 0,
     completed24h: 52000,
@@ -727,37 +733,59 @@ const INITIAL_FLAGS: FeatureFlagConfig[] = [
   {
     key: 'CALENDAR_INTEGRATION',
     name: 'Calendar & Movie Night Scheduling',
-    description: 'Enables 1-tap Google Calendar & Apple/iOS Calendar sync, RFC-5545 .ics exports, and screening countdowns.',
+    description:
+      'Enables 1-tap Google Calendar & Apple/iOS Calendar sync, RFC-5545 .ics exports, and screening countdowns.',
     isEnabled: true,
     rolloutPercentage: 100,
-    allowedRoles: ['SUPER_ADMINISTRATOR', 'CONTENT_MODERATOR', 'COMMUNITY_MODERATOR', 'SUPPORT_AGENT', 'ANALYST'],
+    allowedRoles: [
+      'SUPER_ADMINISTRATOR',
+      'CONTENT_MODERATOR',
+      'COMMUNITY_MODERATOR',
+      'SUPPORT_AGENT',
+      'ANALYST',
+    ],
     updatedAt: '2026-08-19T18:00:00Z',
     updatedBy: 'Alex Rivers',
   },
   {
     key: 'MOVIE_JOURNAL',
     name: 'Private Cinema Journaling',
-    description: 'Rich journal logs with theater viewing formats, favorite quotes, and cinema vibe tags.',
+    description:
+      'Rich journal logs with theater viewing formats, favorite quotes, and cinema vibe tags.',
     isEnabled: true,
     rolloutPercentage: 100,
-    allowedRoles: ['SUPER_ADMINISTRATOR', 'CONTENT_MODERATOR', 'COMMUNITY_MODERATOR', 'SUPPORT_AGENT', 'ANALYST'],
+    allowedRoles: [
+      'SUPER_ADMINISTRATOR',
+      'CONTENT_MODERATOR',
+      'COMMUNITY_MODERATOR',
+      'SUPPORT_AGENT',
+      'ANALYST',
+    ],
     updatedAt: '2026-08-18T10:00:00Z',
     updatedBy: 'Alex Rivers',
   },
   {
     key: 'SOUNDTRACKS',
     name: 'Apple Music Soundtrack Explorer',
-    description: 'Displays official score soundtracks, tracklists, and 30s audio previews on movie detail pages.',
+    description:
+      'Displays official score soundtracks, tracklists, and 30s audio previews on movie detail pages.',
     isEnabled: true,
     rolloutPercentage: 100,
-    allowedRoles: ['SUPER_ADMINISTRATOR', 'CONTENT_MODERATOR', 'COMMUNITY_MODERATOR', 'SUPPORT_AGENT', 'ANALYST'],
+    allowedRoles: [
+      'SUPER_ADMINISTRATOR',
+      'CONTENT_MODERATOR',
+      'COMMUNITY_MODERATOR',
+      'SUPPORT_AGENT',
+      'ANALYST',
+    ],
     updatedAt: '2026-08-17T12:00:00Z',
     updatedBy: 'Sophia Nolan',
   },
   {
     key: 'AI_SCENE_RADAR',
     name: 'AI Scene Identification Radar',
-    description: 'Upload screenshots to automatically identify exact film titles and timestamp positions.',
+    description:
+      'Upload screenshots to automatically identify exact film titles and timestamp positions.',
     isEnabled: true,
     rolloutPercentage: 80,
     allowedRoles: ['SUPER_ADMINISTRATOR', 'CONTENT_MODERATOR'],
@@ -767,7 +795,8 @@ const INITIAL_FLAGS: FeatureFlagConfig[] = [
   {
     key: 'COMMUNITY_CLUBS',
     name: 'Cinema Community Clubs',
-    description: 'Allows cinephiles to create public and private film clubs with member discussions.',
+    description:
+      'Allows cinephiles to create public and private film clubs with member discussions.',
     isEnabled: true,
     rolloutPercentage: 100,
     allowedRoles: ['SUPER_ADMINISTRATOR', 'CONTENT_MODERATOR', 'COMMUNITY_MODERATOR'],
@@ -886,15 +915,10 @@ class AdminStore {
     const prevStatus = user.status;
     user.status = status;
     if (reason) user.suspensionReason = reason;
-    this.logAudit(
-      actor,
-      `USER_STATUS_${status}`,
-      'USER',
-      userId,
-      user.username,
-      reason,
-      { prevStatus, newStatus: status },
-    );
+    this.logAudit(actor, `USER_STATUS_${status}`, 'USER', userId, user.username, reason, {
+      prevStatus,
+      newStatus: status,
+    });
     return user;
   }
 
@@ -908,15 +932,10 @@ class AdminStore {
     if (!user) throw new Error('User not found');
     const prevRole = user.role;
     user.role = role;
-    this.logAudit(
-      actor,
-      'USER_ROLE_ASSIGNED',
-      'USER',
-      userId,
-      user.username,
-      reason,
-      { prevRole, newRole: role },
-    );
+    this.logAudit(actor, 'USER_ROLE_ASSIGNED', 'USER', userId, user.username, reason, {
+      prevRole,
+      newRole: role,
+    });
     return user;
   }
 
@@ -1055,35 +1074,30 @@ class AdminStore {
     if (!club) throw new Error('Club not found');
     const prevStatus = club.status;
     club.status = status;
-    this.logAudit(
-      actor,
-      `CLUB_STATUS_${status}`,
-      'CLUB',
-      clubId,
-      club.name,
-      reason,
-      { prevStatus, newStatus: status },
-    );
+    this.logAudit(actor, `CLUB_STATUS_${status}`, 'CLUB', clubId, club.name, reason, {
+      prevStatus,
+      newStatus: status,
+    });
     return club;
   }
 
   // Achievements
-  public addAchievement(actor: AdminUserSession, payload: Omit<ManagedAchievement, 'id' | 'unlockedCount'>, reason: string) {
+  public addAchievement(
+    actor: AdminUserSession,
+    payload: Omit<ManagedAchievement, 'id' | 'unlockedCount'>,
+    reason: string,
+  ) {
     const ach: ManagedAchievement = {
       ...payload,
       id: `ach-${Date.now()}`,
       unlockedCount: 0,
     };
     this.achievements.push(ach);
-    this.logAudit(
-      actor,
-      'ACHIEVEMENT_CREATED',
-      'ACHIEVEMENT',
-      ach.id,
-      ach.title,
-      reason,
-      { code: ach.code, tier: ach.tier, points: ach.points },
-    );
+    this.logAudit(actor, 'ACHIEVEMENT_CREATED', 'ACHIEVEMENT', ach.id, ach.title, reason, {
+      code: ach.code,
+      tier: ach.tier,
+      points: ach.points,
+    });
     return ach;
   }
 
@@ -1104,7 +1118,11 @@ class AdminStore {
   }
 
   // Challenges
-  public addChallenge(actor: AdminUserSession, payload: Omit<ManagedChallenge, 'id' | 'participantCount' | 'completionCount'>, reason: string) {
+  public addChallenge(
+    actor: AdminUserSession,
+    payload: Omit<ManagedChallenge, 'id' | 'participantCount' | 'completionCount'>,
+    reason: string,
+  ) {
     const ch: ManagedChallenge = {
       ...payload,
       id: `ch-${Date.now()}`,
@@ -1112,15 +1130,10 @@ class AdminStore {
       completionCount: 0,
     };
     this.challenges.push(ch);
-    this.logAudit(
-      actor,
-      'CHALLENGE_CREATED',
-      'CHALLENGE',
-      ch.id,
-      ch.title,
-      reason,
-      { targetCount: ch.targetCount, category: ch.category },
-    );
+    this.logAudit(actor, 'CHALLENGE_CREATED', 'CHALLENGE', ch.id, ch.title, reason, {
+      targetCount: ch.targetCount,
+      category: ch.category,
+    });
     return ch;
   }
 
@@ -1158,7 +1171,11 @@ class AdminStore {
   }
 
   // Campaigns
-  public createCampaign(actor: AdminUserSession, payload: Omit<NotificationCampaign, 'id' | 'deliveredCount' | 'openRatePercent'>, reason: string) {
+  public createCampaign(
+    actor: AdminUserSession,
+    payload: Omit<NotificationCampaign, 'id' | 'deliveredCount' | 'openRatePercent'>,
+    reason: string,
+  ) {
     const camp: NotificationCampaign = {
       ...payload,
       id: `camp-${Date.now()}`,
@@ -1167,15 +1184,11 @@ class AdminStore {
       sentAt: payload.status === 'SENT' ? new Date().toISOString() : null,
     };
     this.campaigns.unshift(camp);
-    this.logAudit(
-      actor,
-      'CAMPAIGN_CREATED',
-      'CAMPAIGN',
-      camp.id,
-      camp.title,
-      reason,
-      { segment: camp.segment, channel: camp.channel, status: camp.status },
-    );
+    this.logAudit(actor, 'CAMPAIGN_CREATED', 'CAMPAIGN', camp.id, camp.title, reason, {
+      segment: camp.segment,
+      channel: camp.channel,
+      status: camp.status,
+    });
     return camp;
   }
 
@@ -1231,15 +1244,10 @@ class AdminStore {
     flag.rolloutPercentage = rolloutPercentage;
     flag.updatedAt = new Date().toISOString();
     flag.updatedBy = actor.name;
-    this.logAudit(
-      actor,
-      'FLAG_UPDATED',
-      'FEATURE_FLAG',
-      key,
-      flag.name,
-      reason,
-      { previous: prev, updated: { isEnabled, rolloutPercentage } },
-    );
+    this.logAudit(actor, 'FLAG_UPDATED', 'FEATURE_FLAG', key, flag.name, reason, {
+      previous: prev,
+      updated: { isEnabled, rolloutPercentage },
+    });
     return flag;
   }
 }

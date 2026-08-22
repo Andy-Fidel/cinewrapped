@@ -35,7 +35,12 @@ export class CacheService implements OnModuleDestroy {
     return value;
   }
 
-  public async consume(key: string, limit: number, windowSeconds: number): Promise<boolean> {
+  public async consume(
+    key: string,
+    limit: number,
+    windowSeconds: number,
+    failClosed = false,
+  ): Promise<boolean> {
     try {
       if (this.#redis.status === 'wait') await this.#redis.connect();
       const count = await this.#redis.eval(
@@ -46,7 +51,7 @@ export class CacheService implements OnModuleDestroy {
       );
       return typeof count === 'number' && count <= limit;
     } catch {
-      return true;
+      return !failClosed;
     }
   }
 

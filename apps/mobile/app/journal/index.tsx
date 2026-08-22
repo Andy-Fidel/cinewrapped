@@ -43,8 +43,8 @@ export default function JournalScreen() {
     const list = journal.data ?? [];
     const completed = list.filter((e) => e.status === 'COMPLETED').length;
     const drafts = list.filter((e) => e.status === 'DRAFT').length;
-    const totalStubs = list.reduce((acc, curr) => acc + (curr.attachments?.length ?? 0), 0);
-    const totalCompanions = new Set(list.flatMap((e) => e.companionNames ?? [])).size;
+    const totalStubs = list.reduce((acc, curr) => acc + curr.attachments.length, 0);
+    const totalCompanions = new Set(list.flatMap((e) => e.companionNames)).size;
 
     return {
       total: list.length,
@@ -60,9 +60,8 @@ export default function JournalScreen() {
     const list = journal.data ?? [];
     if (activeFilter === 'COMPLETED') return list.filter((e) => e.status === 'COMPLETED');
     if (activeFilter === 'DRAFT') return list.filter((e) => e.status === 'DRAFT');
-    if (activeFilter === 'WITH_STUBS') return list.filter((e) => (e.attachments?.length ?? 0) > 0);
-    if (activeFilter === 'WITH_COMPANIONS')
-      return list.filter((e) => (e.companionNames?.length ?? 0) > 0);
+    if (activeFilter === 'WITH_STUBS') return list.filter((e) => e.attachments.length > 0);
+    if (activeFilter === 'WITH_COMPANIONS') return list.filter((e) => e.companionNames.length > 0);
     return list;
   }, [journal.data, activeFilter]);
 
@@ -240,15 +239,12 @@ export default function JournalScreen() {
 
             const hasAtmosphere =
               entry.viewingLocation ||
-              (entry.companionNames && entry.companionNames.length > 0) ||
+              entry.companionNames.length > 0 ||
               entry.moodBefore ||
               entry.moodAfter ||
-              (entry.attachments && entry.attachments.length > 0);
+              entry.attachments.length > 0;
 
-            const topQuote =
-              entry.memorableQuotes && entry.memorableQuotes.length > 0
-                ? entry.memorableQuotes[0]
-                : null;
+            const topQuote = entry.memorableQuotes.length > 0 ? entry.memorableQuotes[0] : null;
 
             return (
               <Pressable
@@ -265,7 +261,7 @@ export default function JournalScreen() {
                 ]}
               >
                 {/* Left Poster Thumbnail */}
-                {entry.media?.posterUrl ? (
+                {entry.media.posterUrl ? (
                   <Image
                     source={{ uri: entry.media.posterUrl }}
                     style={styles.poster}
@@ -291,7 +287,7 @@ export default function JournalScreen() {
                       numberOfLines={1}
                       style={[styles.cardTitle, { color: colors.textPrimary }]}
                     >
-                      {entry.title || entry.media?.title || 'Untitled Memory'}
+                      {entry.title || entry.media.title || 'Untitled Memory'}
                     </Text>
 
                     <View
@@ -314,8 +310,7 @@ export default function JournalScreen() {
 
                   {/* Movie Year & Date Info */}
                   <Text style={[styles.dateMeta, { color: colors.textSecondary }]}>
-                    {entry.media?.title} ({entry.media?.releaseYear ?? 'TBA'}) · Watched{' '}
-                    {watchedDate}
+                    {entry.media.title} ({entry.media.releaseYear ?? 'TBA'}) · Watched {watchedDate}
                   </Text>
 
                   {/* Atmosphere Chips (Location, Companions, Moods, Stubs) */}
@@ -333,7 +328,7 @@ export default function JournalScreen() {
                         </View>
                       )}
 
-                      {entry.companionNames && entry.companionNames.length > 0 && (
+                      {entry.companionNames.length > 0 && (
                         <View style={[styles.tagChip, { backgroundColor: colors.surfaceRaised }]}>
                           <Ionicons name="people" size={10} color="#A78BFA" />
                           <Text
@@ -362,7 +357,7 @@ export default function JournalScreen() {
                         </View>
                       )}
 
-                      {entry.attachments && entry.attachments.length > 0 && (
+                      {entry.attachments.length > 0 && (
                         <View style={[styles.tagChip, { backgroundColor: colors.surfaceRaised }]}>
                           <Ionicons name="ticket" size={10} color="#EC4899" />
                           <Text style={[styles.tagChipText, { color: colors.textPrimary }]}>

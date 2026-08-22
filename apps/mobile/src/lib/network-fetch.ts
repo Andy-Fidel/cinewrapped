@@ -13,14 +13,50 @@ function isNetworkFailure(error: unknown): boolean {
 
 const retryDelay: Wait = () => new Promise((resolve) => setTimeout(resolve, 600));
 
-export function withNetworkRetry(fetcher: Fetcher, wait: Wait = retryDelay): Fetcher {
+async function fetchWithTimeout(
+  fetcher: Fetcher,
+  input: RequestInfo | URL,
+  init: RequestInit | undefined,
+  timeoutMs: number,
+): Promise<Response> {
+  const controller = new AbortController();
+  const upstreamSignal = init?.signal;
+  const abortFromUpstream = () => controller.abort(upstreamSignal?.reason);
+  if (upstreamSignal?.aborted === true) abortFromUpstream();
+  else upstreamSignal?.addEventListener('abort', abortFromUpstream, { once: true });
+  const timer = setTimeout(
+    () => controller.abort(new Error('Network request timed out')),
+    timeoutMs,
+  );
+  try {
+    return await fetcher(input, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+    upstreamSignal?.removeEventListener('abort', abortFromUpstream);
+  }
+}
+
+export function withNetworkRetry(
+  fetcher: Fetcher,
+  wait: Wait = retryDelay,
+  timeoutMs = 15_000,
+): Fetcher {
   return async (...arguments_) => {
+    const request = arguments_[0] instanceof Request ? arguments_[0] : null;
+    const init = arguments_[1];
+    const method = (init?.method ?? request?.method ?? 'GET').toUpperCase();
+    const headers = new Headers(init?.headers ?? request?.headers);
+    const retryAllowed =
+      method === 'GET' ||
+      method === 'HEAD' ||
+      method === 'OPTIONS' ||
+      headers.has('Idempotency-Key');
     try {
-      return await fetcher(...arguments_);
+      return await fetchWithTimeout(fetcher, arguments_[0], arguments_[1], timeoutMs);
     } catch (error) {
-      if (!isNetworkFailure(error)) throw error;
+      if (!retryAllowed || !isNetworkFailure(error)) throw error;
       await wait();
-      return fetcher(...arguments_);
+      return fetchWithTimeout(fetcher, arguments_[0], arguments_[1], timeoutMs);
     }
   };
 }

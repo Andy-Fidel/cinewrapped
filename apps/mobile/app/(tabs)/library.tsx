@@ -1,8 +1,4 @@
-import type {
-  LibraryItem,
-  SavedSoundtrackSummary,
-  WatchStatus,
-} from '@cinewrapped/shared-types';
+import type { LibraryItem, SavedSoundtrackSummary, WatchStatus } from '@cinewrapped/shared-types';
 import { Ionicons } from '@expo/vector-icons';
 import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
@@ -93,12 +89,7 @@ export default function LibraryScreen() {
                 },
               ]}
             >
-              <View
-                style={[
-                  styles.vaultIconBox,
-                  { backgroundColor: 'rgba(245, 158, 11, 0.15)' },
-                ]}
-              >
+              <View style={[styles.vaultIconBox, { backgroundColor: 'rgba(245, 158, 11, 0.15)' }]}>
                 <Ionicons name="musical-notes" size={13} color="#F59E0B" />
               </View>
               <Text style={[styles.vaultShortcutText, { color: colors.textPrimary }]}>
@@ -122,12 +113,7 @@ export default function LibraryScreen() {
                 },
               ]}
             >
-              <View
-                style={[
-                  styles.vaultIconBox,
-                  { backgroundColor: 'rgba(139, 92, 246, 0.15)' },
-                ]}
-              >
+              <View style={[styles.vaultIconBox, { backgroundColor: 'rgba(139, 92, 246, 0.15)' }]}>
                 <Ionicons name="book" size={13} color="#8B5CF6" />
               </View>
               <Text style={[styles.vaultShortcutText, { color: colors.textPrimary }]}>
@@ -151,12 +137,7 @@ export default function LibraryScreen() {
                 },
               ]}
             >
-              <View
-                style={[
-                  styles.vaultIconBox,
-                  { backgroundColor: 'rgba(16, 185, 129, 0.15)' },
-                ]}
-              >
+              <View style={[styles.vaultIconBox, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
                 <Ionicons name="calendar" size={13} color="#10B981" />
               </View>
               <Text style={[styles.vaultShortcutText, { color: colors.textPrimary }]}>

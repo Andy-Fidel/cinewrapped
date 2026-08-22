@@ -66,10 +66,7 @@ export function FavoriteFourPickerModal({
       await queryClient.invalidateQueries({ queryKey: ['public-profile'] });
       await queryClient.invalidateQueries({ queryKey: ['preferences'] });
       haptics.celebration();
-      showInfo(
-        'Favorite 4 Updated',
-        'Your profile pinned showcase has been saved.',
-      );
+      showInfo('Favorite 4 Updated', 'Your profile pinned showcase has been saved.');
       onClose();
     },
   });
@@ -150,8 +147,15 @@ export function FavoriteFourPickerModal({
                     },
                   ]}
                 >
-                  <View style={[styles.slotBadge, { backgroundColor: isSelected ? '#F59E0B' : 'rgba(0,0,0,0.6)' }]}>
-                    <Text style={[styles.slotBadgeText, { color: isSelected ? '#000000' : '#FFFFFF' }]}>
+                  <View
+                    style={[
+                      styles.slotBadge,
+                      { backgroundColor: isSelected ? '#F59E0B' : 'rgba(0,0,0,0.6)' },
+                    ]}
+                  >
+                    <Text
+                      style={[styles.slotBadgeText, { color: isSelected ? '#000000' : '#FFFFFF' }]}
+                    >
                       {slotIdx + 1}
                     </Text>
                   </View>
@@ -192,7 +196,8 @@ export function FavoriteFourPickerModal({
           <View style={styles.activeSlotHint}>
             <Ionicons name="sparkles" size={14} color="#F59E0B" />
             <Text style={[styles.activeSlotHintText, { color: colors.textSecondary }]}>
-              Selecting film for <Text style={{ color: '#F59E0B', fontWeight: '800' }}>Slot #{activeSlot + 1}</Text>
+              Selecting film for{' '}
+              <Text style={{ color: '#F59E0B', fontWeight: '800' }}>Slot #{activeSlot + 1}</Text>
             </Text>
           </View>
 
@@ -245,11 +250,15 @@ export function FavoriteFourPickerModal({
                       <PosterImage uri={item.posterUrl ?? null} size="fill" rounded={6} />
                     </View>
                     <View style={styles.resultMeta}>
-                      <Text numberOfLines={1} style={[styles.resultTitle, { color: colors.textPrimary }]}>
+                      <Text
+                        numberOfLines={1}
+                        style={[styles.resultTitle, { color: colors.textPrimary }]}
+                      >
                         {item.title}
                       </Text>
                       <Text style={[styles.resultYear, { color: colors.textSecondary }]}>
-                        {item.releaseYear ?? 'Unknown'} · {item.mediaType === 'TV' ? 'TV Series' : 'Film'}
+                        {item.releaseYear ?? 'Unknown'} ·{' '}
+                        {item.mediaType === 'TV' ? 'TV Series' : 'Film'}
                       </Text>
                     </View>
                     <Ionicons name="add-circle-outline" size={22} color="#F59E0B" />

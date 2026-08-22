@@ -7,7 +7,7 @@ import type {
 import { api } from './api';
 import type { LocalUploadAsset, UploadPhase } from './media-upload';
 import { uploadOwnedObject } from './media-upload';
-import { deletePrivateObject } from './private-storage';
+import { createPrivateObjectUrl, deletePrivateObject } from './private-storage';
 
 export async function uploadJournalImage(input: {
   entryId: string;
@@ -37,6 +37,7 @@ export async function uploadJournalImage(input: {
       body: {
         attachmentType: input.attachmentType,
         storagePath: uploaded.path,
+        signedUrl: await createPrivateObjectUrl('journal-attachments', uploaded.path, 300),
         fileName: uploaded.fileName,
         mimeType: uploaded.mimeType,
         byteSize: uploaded.byteSize,

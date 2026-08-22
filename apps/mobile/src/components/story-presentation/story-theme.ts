@@ -77,5 +77,5 @@ export const STORY_THEMES: Record<StoryThemePreset, StoryThemeColors> = {
 };
 
 export function getStoryTheme(preset?: StoryThemePreset): StoryThemeColors {
-  return STORY_THEMES[preset ?? 'MIDNIGHT_GOLD'] ?? STORY_THEMES.MIDNIGHT_GOLD;
+  return STORY_THEMES[preset ?? 'MIDNIGHT_GOLD'];
 }

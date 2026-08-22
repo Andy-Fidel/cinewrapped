@@ -8,6 +8,7 @@ export interface ApiClientOptions {
   baseUrl: string;
   accessTokenProvider: AccessTokenProvider;
   fetchImplementation?: typeof fetch;
+  idempotencyKeyProvider?: () => string;
 }
 
 export interface ApiRequestOptions extends Omit<RequestInit, 'body' | 'headers'> {
@@ -51,11 +52,13 @@ export class ApiClient {
   readonly #baseUrl: string;
   readonly #accessTokenProvider: AccessTokenProvider;
   readonly #fetch: typeof fetch;
+  readonly #idempotencyKeyProvider: (() => string) | undefined;
 
   public constructor(options: ApiClientOptions) {
     this.#baseUrl = options.baseUrl.replace(/\/$/u, '');
     this.#accessTokenProvider = options.accessTokenProvider;
     this.#fetch = options.fetchImplementation ?? fetch;
+    this.#idempotencyKeyProvider = options.idempotencyKeyProvider;
   }
 
   public async request<TData>(path: string, options: ApiRequestOptions = {}): Promise<TData> {
@@ -65,8 +68,14 @@ export class ApiClient {
     headers.set('Accept', 'application/json');
     if (accessToken !== null) headers.set('Authorization', `Bearer ${accessToken}`);
     if (body !== undefined) headers.set('Content-Type', 'application/json');
-    if (idempotencyKey !== undefined) {
-      headers.set('Idempotency-Key', idempotencyKey);
+    const method = requestInit.method?.toUpperCase() ?? 'GET';
+    const effectiveIdempotencyKey =
+      idempotencyKey ??
+      (method === 'GET' || method === 'HEAD' || method === 'OPTIONS'
+        ? undefined
+        : this.#idempotencyKeyProvider?.());
+    if (effectiveIdempotencyKey !== undefined) {
+      headers.set('Idempotency-Key', effectiveIdempotencyKey);
     }
 
     const response = await this.#fetch(`${this.#baseUrl}/${path.replace(/^\//u, '')}`, {
@@ -108,7 +117,14 @@ export class ApiClient {
     headers.set('Accept', 'text/calendar, text/plain;q=0.9');
     if (accessToken !== null) headers.set('Authorization', `Bearer ${accessToken}`);
     if (body !== undefined) headers.set('Content-Type', 'application/json');
-    if (idempotencyKey !== undefined) headers.set('Idempotency-Key', idempotencyKey);
+    const method = requestInit.method?.toUpperCase() ?? 'GET';
+    const effectiveIdempotencyKey =
+      idempotencyKey ??
+      (method === 'GET' || method === 'HEAD' || method === 'OPTIONS'
+        ? undefined
+        : this.#idempotencyKeyProvider?.());
+    if (effectiveIdempotencyKey !== undefined)
+      headers.set('Idempotency-Key', effectiveIdempotencyKey);
 
     const response = await this.#fetch(`${this.#baseUrl}/${path.replace(/^\//u, '')}`, {
       ...requestInit,

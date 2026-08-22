@@ -74,6 +74,17 @@ export class AuthService {
           expiresAt: principal.expiresAt,
         },
       });
+      await transaction.auditLog.create({
+        data: {
+          actorType: 'USER',
+          actorUserId: member.id,
+          actorSubject: principal.subject,
+          action: 'AUTH_LOGIN',
+          targetType: 'AUTH_SESSION',
+          targetId: principal.sessionId,
+          reason: 'SESSION_BOOTSTRAPPED',
+        },
+      });
       return member;
     });
     return toCurrentUser(user);
@@ -106,6 +117,16 @@ export class AuthService {
     if (result.count === 0) {
       throw new AppException(404, 'AUTH_SESSION_NOT_FOUND', 'The session was not found.');
     }
+    await this.prisma.auditLog.create({
+      data: {
+        actorType: 'USER',
+        actorUserId: userId,
+        actorSubject: principal.subject,
+        action: 'SESSION_REVOKED',
+        targetType: 'AUTH_SESSION',
+        targetId: sessionId,
+      },
+    });
   }
 
   public async revokeOtherSessions(principal: AuthPrincipal): Promise<number> {
@@ -113,6 +134,17 @@ export class AuthService {
     const result = await this.prisma.authSession.updateMany({
       where: { userId, id: { not: principal.sessionId }, revokedAt: null },
       data: { revokedAt: new Date() },
+    });
+    await this.prisma.auditLog.create({
+      data: {
+        actorType: 'USER',
+        actorUserId: userId,
+        actorSubject: principal.subject,
+        action: 'ALL_SESSIONS_REVOKED',
+        targetType: 'AUTH_SESSION',
+        targetId: principal.sessionId,
+        metadataJson: { revokedCount: result.count },
+      },
     });
     return result.count;
   }

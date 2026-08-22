@@ -1,7 +1,9 @@
-import type {
-  NotificationInboxResponse,
-  RegisterPushDeviceDto,
-} from '@cinewrapped/shared-types';
+import type { NotificationInboxResponse, RegisterPushDeviceDto } from '@cinewrapped/shared-types';
+import {
+  notificationInboxQuerySchema,
+  registerPushDeviceSchema,
+  uuidSchema,
+} from '@cinewrapped/validation';
 import {
   Body,
   Controller,
@@ -16,9 +18,11 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type { FastifyRequest } from 'fastify';
+import type { z } from 'zod';
 
 import type { AuthPrincipal } from '../auth/auth.types.js';
 import { CurrentPrincipal } from '../auth/current-principal.decorator.js';
+import { ZodValidationPipe } from '../common/zod-validation.pipe.js';
 import { NotificationsService } from './notifications.service.js';
 
 @ApiTags('Notifications')
@@ -30,12 +34,13 @@ export class NotificationsController {
   @Get()
   public async getInbox(
     @CurrentPrincipal() principal: AuthPrincipal,
-    @Query('filter') filter: 'all' | 'unread' = 'all',
+    @Query(new ZodValidationPipe(notificationInboxQuerySchema))
+    query: z.output<typeof notificationInboxQuerySchema>,
     @Req() request: FastifyRequest,
   ) {
     const data: NotificationInboxResponse = await this.notificationsService.getInbox(
       principal,
-      filter,
+      query.filter,
     );
     return {
       success: true as const,
@@ -47,7 +52,7 @@ export class NotificationsController {
   @Patch(':id/read')
   public async markAsRead(
     @CurrentPrincipal() principal: AuthPrincipal,
-    @Param('id') id: string,
+    @Param('id', new ZodValidationPipe(uuidSchema)) id: string,
     @Req() request: FastifyRequest,
   ) {
     const data = await this.notificationsService.markAsRead(principal, id);
@@ -76,7 +81,7 @@ export class NotificationsController {
   @HttpCode(HttpStatus.OK)
   public async registerDevice(
     @CurrentPrincipal() principal: AuthPrincipal,
-    @Body() dto: RegisterPushDeviceDto,
+    @Body(new ZodValidationPipe(registerPushDeviceSchema)) dto: RegisterPushDeviceDto,
     @Req() request: FastifyRequest,
   ) {
     const data = await this.notificationsService.registerDevice(principal, dto);

@@ -27,7 +27,7 @@ export default function WrapStoryScreen() {
 
     const wrapYear = new Date(wrap.data.periodStart).getFullYear() || 2026;
     const rawSlides = wrap.data.storySlides ?? [];
-    const formattedSlides: StorySlideData[] = rawSlides.map((s, idx) => {
+    const formattedSlides: StorySlideData[] = rawSlides.map((s) => {
       // Map accent to theme preset
       const themePreset =
         s.accent === 'CORAL'
@@ -39,10 +39,10 @@ export default function WrapStoryScreen() {
               : 'AMETHYST_DREAM';
 
       const slideObj: StorySlideData = {
-        id: s.id ?? `slide-${idx}`,
+        id: s.id,
         layout: s.media?.posterUrl ? 'CINEMATIC_POSTER' : 'HERO_STATS',
         theme: themePreset,
-        eyebrow: s.eyebrow ?? 'CINEMA WRAPPED',
+        eyebrow: s.eyebrow,
         headline: s.title,
         description: s.body,
         footer: {

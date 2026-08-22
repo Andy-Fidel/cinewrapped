@@ -3,12 +3,15 @@ import { Redirect, Stack, router, useLocalSearchParams } from 'expo-router';
 import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { StoryViewer, generateAnnualWrapPresentation } from '../../src/components/story-presentation';
+import {
+  StoryViewer,
+  generateAnnualWrapPresentation,
+} from '../../src/components/story-presentation';
 import { useAuth } from '../../src/providers/auth-provider';
 
 export default function StoryPresentationScreen() {
   const { session, user } = useAuth();
-  const { presentationId, year } = useLocalSearchParams<{
+  const { year } = useLocalSearchParams<{
     presentationId?: string;
     year?: string;
   }>();

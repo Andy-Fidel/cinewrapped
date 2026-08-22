@@ -290,7 +290,12 @@ export function TrackingPanel({
                 },
               ]}
             >
-              <Text style={{ color: selected ? colors.onBrand : colors.textPrimary, fontWeight: selected ? '800' : '600' }}>
+              <Text
+                style={{
+                  color: selected ? colors.onBrand : colors.textPrimary,
+                  fontWeight: selected ? '800' : '600',
+                }}
+              >
                 {status.label}
               </Text>
             </Pressable>
@@ -342,7 +347,13 @@ export function TrackingPanel({
                   size={24}
                   color={isSelected ? '#F59E0B' : colors.textDisabled}
                 />
-                <Text style={{ color: isSelected ? '#F59E0B' : colors.textSecondary, fontSize: 11, fontWeight: '700' }}>
+                <Text
+                  style={{
+                    color: isSelected ? '#F59E0B' : colors.textSecondary,
+                    fontSize: 11,
+                    fontWeight: '700',
+                  }}
+                >
                   {value}★
                 </Text>
               </Pressable>
@@ -415,7 +426,13 @@ export function TrackingPanel({
                   },
                 ]}
               >
-                <Text style={{ color: isSelected ? colors.onBrand : colors.textSecondary, fontWeight: isSelected ? '800' : '500', fontSize: 12 }}>
+                <Text
+                  style={{
+                    color: isSelected ? colors.onBrand : colors.textSecondary,
+                    fontWeight: isSelected ? '800' : '500',
+                    fontSize: 12,
+                  }}
+                >
                   {fmt.label}
                 </Text>
               </Pressable>
@@ -426,13 +443,22 @@ export function TrackingPanel({
 
       {/* Favorite Quote Pullout Input */}
       <View style={{ gap: 6 }}>
-        <Text style={[styles.label, { color: colors.textPrimary }]}>Favorite Dialogue / Quote (Optional)</Text>
+        <Text style={[styles.label, { color: colors.textPrimary }]}>
+          Favorite Dialogue / Quote (Optional)
+        </Text>
         <TextInput
           accessibilityLabel="Favorite Quote"
           onChangeText={setFavoriteQuote}
           placeholder="« Add your favorite line from the movie… »"
           placeholderTextColor={colors.textDisabled}
-          style={[styles.quoteInput, { borderColor: colors.border, color: colors.textPrimary, backgroundColor: colors.surfaceRaised }]}
+          style={[
+            styles.quoteInput,
+            {
+              borderColor: colors.border,
+              color: colors.textPrimary,
+              backgroundColor: colors.surfaceRaised,
+            },
+          ]}
           value={favoriteQuote}
         />
       </View>
@@ -450,7 +476,14 @@ export function TrackingPanel({
           }}
           placeholder="What did you think of the cinematography, story, and performances?"
           placeholderTextColor={colors.textDisabled}
-          style={[styles.review, { borderColor: colors.border, color: colors.textPrimary, backgroundColor: colors.surfaceRaised }]}
+          style={[
+            styles.review,
+            {
+              borderColor: colors.border,
+              color: colors.textPrimary,
+              backgroundColor: colors.surfaceRaised,
+            },
+          ]}
           value={currentReviewBody}
         />
       </View>
@@ -475,7 +508,9 @@ export function TrackingPanel({
                   },
                 ]}
               >
-                <Text style={{ color: selected ? colors.onBrand : colors.textPrimary, fontSize: 12 }}>
+                <Text
+                  style={{ color: selected ? colors.onBrand : colors.textPrimary, fontSize: 12 }}
+                >
                   {style.replaceAll('_', ' ').toLowerCase()}
                 </Text>
               </Pressable>
@@ -524,7 +559,9 @@ export function TrackingPanel({
           size={20}
           color={containsSpoilers ? '#EF4444' : colors.textSecondary}
         />
-        <Text style={{ color: containsSpoilers ? '#EF4444' : colors.textSecondary, fontWeight: '600' }}>
+        <Text
+          style={{ color: containsSpoilers ? '#EF4444' : colors.textSecondary, fontWeight: '600' }}
+        >
           Contains spoilers (Will activate Spoiler Shield for readers)
         </Text>
       </Pressable>

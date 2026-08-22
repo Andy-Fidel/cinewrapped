@@ -32,7 +32,7 @@ export class SceneIdentificationController {
     @Body(new ZodValidationPipe(identifySceneSchema)) input: z.output<typeof identifySceneSchema>,
     @Req() request: FastifyRequest,
   ) {
-    if (!(await this.cache.consume(`scene-identification:${principal.subject}`, 10, 3_600)))
+    if (!(await this.cache.consume(`scene-identification:${principal.subject}`, 10, 3_600, true)))
       throw new AppException(
         429,
         'SCENE_IDENTIFICATION_RATE_LIMITED',

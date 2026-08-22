@@ -1,6 +1,6 @@
 'use client';
 
-import { CheckCircle2, Lock, Shield, Snowflake, Trash2, Users } from 'lucide-react';
+import { CheckCircle2, Snowflake, Trash2, Users } from 'lucide-react';
 import { useState } from 'react';
 
 import { Badge } from '../../../components/ui/badge';

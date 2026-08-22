@@ -1,11 +1,9 @@
-import type { PublicReviewItem } from '@cinewrapped/shared-types';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Image,
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -16,7 +14,6 @@ import {
 import { haptics } from '../lib/haptics';
 import { shareCineWrappedGraphicCard } from '../lib/share-card-generator';
 import { PosterImage, useColors } from './ui';
-import { useDialog } from '../providers/dialog-provider';
 
 export type CardTheme = 'MIDNIGHT' | 'CRIMSON' | 'CYAN' | 'GOLD';
 
@@ -29,11 +26,13 @@ interface ReviewShareCardModalProps {
     ratingValue?: number | null | undefined;
     vibeTags?: string[] | undefined;
     quote?: string | null | undefined;
-    user?: {
-      displayName?: string | null | undefined;
-      handle?: string | null | undefined;
-      avatarUrl?: string | null | undefined;
-    } | undefined;
+    user?:
+      | {
+          displayName?: string | null | undefined;
+          handle?: string | null | undefined;
+          avatarUrl?: string | null | undefined;
+        }
+      | undefined;
   };
   media: {
     id: string;
@@ -96,7 +95,6 @@ export function ReviewShareCardModal({
   media,
 }: ReviewShareCardModalProps) {
   const colors = useColors();
-  const { showInfo } = useDialog();
   const [activeTheme, setActiveTheme] = useState<CardTheme>('MIDNIGHT');
   const [isSharing, setIsSharing] = useState(false);
 
@@ -131,12 +129,7 @@ export function ReviewShareCardModal({
   };
 
   return (
-    <Modal
-      animationType="slide"
-      onRequestClose={onClose}
-      transparent
-      visible={visible}
-    >
+    <Modal animationType="slide" onRequestClose={onClose} transparent visible={visible}>
       <View style={styles.modalOverlay}>
         <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
           {/* Header Bar */}
@@ -182,7 +175,10 @@ export function ReviewShareCardModal({
                   <Text
                     style={[
                       styles.themeName,
-                      { color: isSelected ? colors.textPrimary : colors.textSecondary, fontWeight: isSelected ? '800' : '600' },
+                      {
+                        color: isSelected ? colors.textPrimary : colors.textSecondary,
+                        fontWeight: isSelected ? '800' : '600',
+                      },
                     ]}
                   >
                     {t.name}
@@ -222,12 +218,7 @@ export function ReviewShareCardModal({
 
               {/* Floating 2:3 Movie Poster + Backdrop Glow */}
               <View style={styles.posterSection}>
-                <View
-                  style={[
-                    styles.posterGlowBackplate,
-                    { backgroundColor: theme.glow },
-                  ]}
-                />
+                <View style={[styles.posterGlowBackplate, { backgroundColor: theme.glow }]} />
                 <View style={styles.posterFrame}>
                   <PosterImage uri={media.posterUrl ?? null} size="fill" rounded={14} />
                 </View>
@@ -240,7 +231,10 @@ export function ReviewShareCardModal({
                 </Text>
                 <Text style={[styles.filmMeta, { color: 'rgba(255,255,255,0.6)' }]}>
                   {releaseYear ? `${releaseYear} · ` : ''}
-                  {(media.genres ?? []).map((g) => g.name).slice(0, 2).join(' / ')}
+                  {(media.genres ?? [])
+                    .map((g) => g.name)
+                    .slice(0, 2)
+                    .join(' / ')}
                 </Text>
               </View>
 
@@ -256,9 +250,7 @@ export function ReviewShareCardModal({
                     />
                   ))}
                 </View>
-                <Text style={styles.numericRating}>
-                  {starCount}.0 / 5.0
-                </Text>
+                <Text style={styles.numericRating}>{starCount}.0 / 5.0</Text>
               </View>
 
               {/* Review Pull-Quote & Body */}
@@ -278,9 +270,13 @@ export function ReviewShareCardModal({
                   {review.user?.avatarUrl ? (
                     <Image source={{ uri: review.user.avatarUrl }} style={styles.reviewerAvatar} />
                   ) : (
-                    <View style={[styles.reviewerAvatarFallback, { backgroundColor: theme.accent }]}>
+                    <View
+                      style={[styles.reviewerAvatarFallback, { backgroundColor: theme.accent }]}
+                    >
                       <Text style={styles.reviewerInitials}>
-                        {(review.user?.displayName || review.user?.handle || 'CW').slice(0, 2).toUpperCase()}
+                        {(review.user?.displayName || review.user?.handle || 'CW')
+                          .slice(0, 2)
+                          .toUpperCase()}
                       </Text>
                     </View>
                   )}
@@ -307,7 +303,7 @@ export function ReviewShareCardModal({
               {/* WhatsApp */}
               <Pressable
                 accessibilityRole="button"
-                onPress={handleShareCard}
+                onPress={() => void handleShareCard()}
                 style={({ pressed }) => [
                   styles.platformButton,
                   {
@@ -324,7 +320,7 @@ export function ReviewShareCardModal({
               {/* Instagram */}
               <Pressable
                 accessibilityRole="button"
-                onPress={handleShareCard}
+                onPress={() => void handleShareCard()}
                 style={({ pressed }) => [
                   styles.platformButton,
                   {
@@ -341,7 +337,7 @@ export function ReviewShareCardModal({
               {/* X / Twitter */}
               <Pressable
                 accessibilityRole="button"
-                onPress={handleShareCard}
+                onPress={() => void handleShareCard()}
                 style={({ pressed }) => [
                   styles.platformButton,
                   {

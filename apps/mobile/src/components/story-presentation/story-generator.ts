@@ -29,9 +29,7 @@ export interface GenerateWrapStoryInput {
   };
 }
 
-export function generateAnnualWrapPresentation(
-  input: GenerateWrapStoryInput,
-): StoryPresentation {
+export function generateAnnualWrapPresentation(input: GenerateWrapStoryInput): StoryPresentation {
   const year = input.year ?? new Date().getFullYear();
   const filmsCount = input.totalFilms ?? 142;
   const screenHours = input.totalHours ?? 318;
@@ -47,7 +45,8 @@ export function generateAnnualWrapPresentation(
       theme: 'MIDNIGHT_GOLD',
       eyebrow: `${year} CINEMA WRAPPED`,
       headline: `${input.user.displayName}'s Year in Film`,
-      description: 'Your bespoke 365-day cinematic journey, engineered from your viewing logs and ratings.',
+      description:
+        'Your bespoke 365-day cinematic journey, engineered from your viewing logs and ratings.',
       metric: {
         value: filmsCount,
         label: 'FILMS & SEASONS LOGGED',
@@ -73,51 +72,53 @@ export function generateAnnualWrapPresentation(
       eyebrow: 'YOUR PRESTIGE LEADERBOARD',
       headline: 'Top 5 Films of the Year',
       description: 'The definitive ranking of your most acclaimed 5-star viewings in 2026.',
-      rankingItems: input.topFilms && input.topFilms.length > 0
-        ? input.topFilms.map((f) => ({
-            rank: f.rank,
-            title: f.title,
-            score: f.rating ?? '9.8',
-            posterUrl: f.posterUrl ?? 'https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg',
-            subtitle: f.tag ?? 'Masterpiece Selection',
-          }))
-        : [
-            {
-              rank: 1,
-              title: 'Oppenheimer',
-              subtitle: 'Directed by Christopher Nolan',
-              score: '9.9',
-              posterUrl: 'https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg',
-            },
-            {
-              rank: 2,
-              title: 'Dune: Part Two',
-              subtitle: 'IMAX 70mm Presentation',
-              score: '9.8',
-              posterUrl: 'https://image.tmdb.org/t/p/w500/1pdfLvkbY9ohJlCjQH2CZjjYVvJ.jpg',
-            },
-            {
-              rank: 3,
-              title: 'Anatomy of a Fall',
-              subtitle: 'Palme d’Or Winner',
-              score: '9.5',
-              posterUrl: 'https://image.tmdb.org/t/p/w500/5aTCkVRzkgfT8y0fF67dO01jSgX.jpg',
-            },
-            {
-              rank: 4,
-              title: 'Past Lives',
-              subtitle: 'Romantic Masterclass',
-              score: '9.4',
-              posterUrl: 'https://image.tmdb.org/t/p/w500/k3waqVXSnvCZWfJYNtdamTgTtTA.jpg',
-            },
-            {
-              rank: 5,
-              title: 'Zone of Interest',
-              subtitle: 'Grand Prix Laureate',
-              score: '9.3',
-              posterUrl: 'https://image.tmdb.org/t/p/w500/AbHVsB5YQW4767JgRjPskqF4c2Y.jpg',
-            },
-          ],
+      rankingItems:
+        input.topFilms && input.topFilms.length > 0
+          ? input.topFilms.map((f) => ({
+              rank: f.rank,
+              title: f.title,
+              score: f.rating ?? '9.8',
+              posterUrl:
+                f.posterUrl ?? 'https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg',
+              subtitle: f.tag ?? 'Masterpiece Selection',
+            }))
+          : [
+              {
+                rank: 1,
+                title: 'Oppenheimer',
+                subtitle: 'Directed by Christopher Nolan',
+                score: '9.9',
+                posterUrl: 'https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg',
+              },
+              {
+                rank: 2,
+                title: 'Dune: Part Two',
+                subtitle: 'IMAX 70mm Presentation',
+                score: '9.8',
+                posterUrl: 'https://image.tmdb.org/t/p/w500/1pdfLvkbY9ohJlCjQH2CZjjYVvJ.jpg',
+              },
+              {
+                rank: 3,
+                title: 'Anatomy of a Fall',
+                subtitle: 'Palme d’Or Winner',
+                score: '9.5',
+                posterUrl: 'https://image.tmdb.org/t/p/w500/5aTCkVRzkgfT8y0fF67dO01jSgX.jpg',
+              },
+              {
+                rank: 4,
+                title: 'Past Lives',
+                subtitle: 'Romantic Masterclass',
+                score: '9.4',
+                posterUrl: 'https://image.tmdb.org/t/p/w500/k3waqVXSnvCZWfJYNtdamTgTtTA.jpg',
+              },
+              {
+                rank: 5,
+                title: 'Zone of Interest',
+                subtitle: 'Grand Prix Laureate',
+                score: '9.3',
+                posterUrl: 'https://image.tmdb.org/t/p/w500/AbHVsB5YQW4767JgRjPskqF4c2Y.jpg',
+              },
+            ],
       footer: {
         branding: 'Top Rated Rankings',
         handle: `@${input.user.username}`,
@@ -153,16 +154,18 @@ export function generateAnnualWrapPresentation(
       theme: 'AMETHYST_DREAM',
       eyebrow: 'NEURAL TASTE RADAR',
       headline: `Persona: ${personality}`,
-      description: 'Your aesthetic taste aligns with high-concept auteur thrillers and complex non-linear storytelling.',
-      vibeTags: input.topGenres && input.topGenres.length > 0
-        ? input.topGenres
-        : [
-            '🎬 Auteur Cinema (98%)',
-            '🤯 Mind-Bending (94%)',
-            '🎞️ 70mm IMAX (89%)',
-            '🕵️ Neo-Noir (86%)',
-            '🌌 Existential Sci-Fi (82%)',
-          ],
+      description:
+        'Your aesthetic taste aligns with high-concept auteur thrillers and complex non-linear storytelling.',
+      vibeTags:
+        input.topGenres && input.topGenres.length > 0
+          ? input.topGenres
+          : [
+              '🎬 Auteur Cinema (98%)',
+              '🤯 Mind-Bending (94%)',
+              '🎞️ 70mm IMAX (89%)',
+              '🕵️ Neo-Noir (86%)',
+              '🌌 Existential Sci-Fi (82%)',
+            ],
       footer: {
         branding: 'AI Taste Matrix',
         handle: `@${input.user.username}`,

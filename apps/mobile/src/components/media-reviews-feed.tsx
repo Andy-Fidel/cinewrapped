@@ -49,7 +49,9 @@ export function MediaReviewsFeed({
   const reviews = reviewsQuery.data ?? [];
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+    <View
+      style={[styles.container, { backgroundColor: colors.surface, borderColor: colors.border }]}
+    >
       {/* Header */}
       <View style={styles.header}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -99,7 +101,9 @@ export function MediaReviewsFeed({
                     ) : (
                       <View style={[styles.avatarPlaceholder, { backgroundColor: colors.brand }]}>
                         <Text style={[styles.avatarInitials, { color: colors.onBrand }]}>
-                          {(review.user.displayName || review.user.handle || 'U').slice(0, 2).toUpperCase()}
+                          {(review.user.displayName || review.user.handle || 'U')
+                            .slice(0, 2)
+                            .toUpperCase()}
                         </Text>
                       </View>
                     )}
@@ -116,11 +120,14 @@ export function MediaReviewsFeed({
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                     {/* Rating Stars */}
                     {review.ratingValue !== null ? (
-                      <View style={[styles.ratingBadge, { backgroundColor: 'rgba(245, 158, 11, 0.15)' }]}>
+                      <View
+                        style={[
+                          styles.ratingBadge,
+                          { backgroundColor: 'rgba(245, 158, 11, 0.15)' },
+                        ]}
+                      >
                         <Ionicons name="star" size={13} color="#F59E0B" />
-                        <Text style={styles.ratingText}>
-                          {review.ratingValue}.0
-                        </Text>
+                        <Text style={styles.ratingText}>{review.ratingValue}.0</Text>
                       </View>
                     ) : null}
 
@@ -138,10 +145,7 @@ export function MediaReviewsFeed({
                           authorName: review.user.handle,
                         });
                       }}
-                      style={({ pressed }) => [
-                        styles.reportBtn,
-                        { opacity: pressed ? 0.6 : 0.8 },
-                      ]}
+                      style={({ pressed }) => [styles.reportBtn, { opacity: pressed ? 0.6 : 0.8 }]}
                     >
                       <Ionicons name="flag-outline" size={14} color={colors.textDisabled} />
                     </Pressable>
@@ -220,7 +224,9 @@ export function MediaReviewsFeed({
                       style={({ pressed }) => [
                         styles.likeBtn,
                         {
-                          backgroundColor: isLiked ? 'rgba(239, 68, 68, 0.15)' : 'rgba(255,255,255,0.06)',
+                          backgroundColor: isLiked
+                            ? 'rgba(239, 68, 68, 0.15)'
+                            : 'rgba(255,255,255,0.06)',
                           opacity: pressed ? 0.8 : 1,
                         },
                       ]}

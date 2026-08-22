@@ -96,7 +96,9 @@ export function MonthlyViewingCalendar({
   }, [calendarGrid]);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+    <View
+      style={[styles.container, { backgroundColor: colors.surface, borderColor: colors.border }]}
+    >
       {/* Month Navigation Header */}
       <View style={styles.header}>
         <View>
@@ -144,7 +146,7 @@ export function MonthlyViewingCalendar({
 
       {/* Calendar Grid */}
       <View style={styles.grid}>
-        {calendarGrid.map((cell, idx) => {
+        {calendarGrid.map((cell) => {
           if (cell.dayNumber === null) {
             return <View key={cell.dateKey} style={styles.emptyCell} />;
           }
@@ -168,11 +170,7 @@ export function MonthlyViewingCalendar({
                     : cell.isToday
                       ? colors.surfaceRaised
                       : 'transparent',
-                  borderColor: isSelected
-                    ? '#10B981'
-                    : cell.isToday
-                      ? colors.brand
-                      : 'transparent',
+                  borderColor: isSelected ? '#10B981' : cell.isToday ? colors.brand : 'transparent',
                   borderWidth: isSelected || cell.isToday ? 1.5 : 0,
                   opacity: pressed ? 0.7 : 1,
                 },

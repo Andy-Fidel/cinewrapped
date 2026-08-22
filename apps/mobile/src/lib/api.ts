@@ -1,4 +1,5 @@
 import { ApiClient } from '@cinewrapped/api-client';
+import { randomUUID } from 'expo-crypto';
 
 import { withNetworkRetry } from './network-fetch';
 import { supabase } from './supabase';
@@ -14,6 +15,7 @@ if (apiBaseUrl === undefined) {
 export const api = new ApiClient({
   baseUrl: apiBaseUrl,
   fetchImplementation: withNetworkRetry(fetch),
+  idempotencyKeyProvider: () => randomUUID(),
   accessTokenProvider: {
     getAccessToken: async () =>
       (await supabase.auth.getSession()).data.session?.access_token ?? null,

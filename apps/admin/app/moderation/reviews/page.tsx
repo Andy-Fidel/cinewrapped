@@ -19,7 +19,11 @@ export default function ReviewModerationPage() {
   };
 
   const handleToggleVisibility = (id: string) => {
-    adminStore.toggleReviewVisibility(session, id, 'Toggled review visibility for moderation compliance');
+    adminStore.toggleReviewVisibility(
+      session,
+      id,
+      'Toggled review visibility for moderation compliance',
+    );
     setRerender((v) => v + 1);
   };
 
@@ -36,7 +40,8 @@ export default function ReviewModerationPage() {
           Review Moderation & Spoiler Controls
         </h1>
         <p className="text-sm text-zinc-400 mt-1">
-          Inspect cinephile film reviews, toggle spoiler alerts, hide non-compliant posts, and audit ratings.
+          Inspect cinephile film reviews, toggle spoiler alerts, hide non-compliant posts, and audit
+          ratings.
         </p>
       </div>
 
@@ -61,7 +66,9 @@ export default function ReviewModerationPage() {
                     )}
                     {rev.containsSpoilers && <Badge variant="warning">⚠️ Spoilers Tagged</Badge>}
                     {rev.isHidden && <Badge variant="danger">Hidden from Feed</Badge>}
-                    {rev.flagCount > 0 && <Badge variant="danger">{rev.flagCount} User Flags</Badge>}
+                    {rev.flagCount > 0 && (
+                      <Badge variant="danger">{rev.flagCount} User Flags</Badge>
+                    )}
                   </div>
                   <span className="text-xs text-zinc-500 font-mono">
                     {new Date(rev.createdAt).toLocaleDateString()}
@@ -74,7 +81,9 @@ export default function ReviewModerationPage() {
                     alt={rev.authorUsername}
                     className="h-5 w-5 rounded-full object-cover"
                   />
-                  <span>By <strong className="text-zinc-200">@{rev.authorUsername}</strong></span>
+                  <span>
+                    By <strong className="text-zinc-200">@{rev.authorUsername}</strong>
+                  </span>
                   <span>•</span>
                   <span>{rev.likeCount} likes</span>
                 </div>
@@ -85,11 +94,7 @@ export default function ReviewModerationPage() {
 
                 {/* Actions */}
                 <div className="flex flex-wrap items-center gap-2 pt-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleToggleSpoiler(rev.id)}
-                  >
+                  <Button variant="outline" size="sm" onClick={() => handleToggleSpoiler(rev.id)}>
                     <Flag className="h-3.5 w-3.5" />
                     {rev.containsSpoilers ? 'Remove Spoiler Tag' : 'Mark as Spoiler'}
                   </Button>
@@ -98,14 +103,14 @@ export default function ReviewModerationPage() {
                     size="sm"
                     onClick={() => handleToggleVisibility(rev.id)}
                   >
-                    {rev.isHidden ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                    {rev.isHidden ? (
+                      <Eye className="h-3.5 w-3.5" />
+                    ) : (
+                      <EyeOff className="h-3.5 w-3.5" />
+                    )}
                     {rev.isHidden ? 'Restore to Public' : 'Hide from Public'}
                   </Button>
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    onClick={() => handleDelete(rev.id)}
-                  >
+                  <Button variant="danger" size="sm" onClick={() => handleDelete(rev.id)}>
                     <Trash2 className="h-3.5 w-3.5" />
                     Delete Review
                   </Button>

@@ -13,7 +13,7 @@ import { tap } from 'rxjs/operators';
 export class PerformanceMonitoringInterceptor implements NestInterceptor {
   private readonly logger = new Logger('PerformanceMonitor');
 
-  public intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+  public intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const start = process.hrtime.bigint();
     const http = context.switchToHttp();
     const request = http.getRequest<FastifyRequest>();
@@ -47,7 +47,7 @@ export class PerformanceMonitoringInterceptor implements NestInterceptor {
             );
           }
         },
-        error: (err) => {
+        error: () => {
           const end = process.hrtime.bigint();
           const durationMs = Math.round((Number(end - start) / 1_000_000) * 100) / 100;
           try {

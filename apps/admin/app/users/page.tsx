@@ -1,22 +1,11 @@
 'use client';
 
-import {
-  AlertTriangle,
-  Ban,
-  CheckCircle,
-  MoreVertical,
-  Search,
-  Shield,
-  ShieldAlert,
-  UserCheck,
-  UserX,
-  Users,
-} from 'lucide-react';
+import { Ban, Search, Shield, UserCheck, Users } from 'lucide-react';
 import { useState } from 'react';
 
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
-import { Card, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
+import { Card } from '../../components/ui/card';
 import { Modal } from '../../components/ui/modal';
 import { useAdmin } from '../../lib/admin-context';
 import { adminStore, type AdminRole, type ManagedUser } from '../../lib/admin-store';
@@ -46,7 +35,12 @@ export default function UsersManagementPage() {
 
   const handleUpdateStatus = () => {
     if (!selectedUser) return;
-    adminStore.updateUserStatus(session, selectedUser.id, targetStatus, adminReason || `Status updated to ${targetStatus}`);
+    adminStore.updateUserStatus(
+      session,
+      selectedUser.id,
+      targetStatus,
+      adminReason || `Status updated to ${targetStatus}`,
+    );
     setActionType(null);
     setSelectedUser(null);
     setAdminReason('');
@@ -55,7 +49,12 @@ export default function UsersManagementPage() {
 
   const handleUpdateRole = () => {
     if (!selectedUser) return;
-    adminStore.updateUserRole(session, selectedUser.id, targetRole, adminReason || `Role updated to ${targetRole}`);
+    adminStore.updateUserRole(
+      session,
+      selectedUser.id,
+      targetRole,
+      adminReason || `Role updated to ${targetRole}`,
+    );
     setActionType(null);
     setSelectedUser(null);
     setAdminReason('');
@@ -202,7 +201,11 @@ export default function UsersManagementPage() {
                         setActionType('STATUS');
                       }}
                     >
-                      {user.status === 'ACTIVE' ? <Ban className="h-3.5 w-3.5" /> : <UserCheck className="h-3.5 w-3.5" />}
+                      {user.status === 'ACTIVE' ? (
+                        <Ban className="h-3.5 w-3.5" />
+                      ) : (
+                        <UserCheck className="h-3.5 w-3.5" />
+                      )}
                       Status
                     </Button>
                   </td>

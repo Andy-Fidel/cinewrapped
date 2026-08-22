@@ -1,4 +1,3 @@
-import type { MediaSummary } from '@cinewrapped/shared-types';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React from 'react';
@@ -21,66 +20,16 @@ export interface WatchlistShortcutItem {
   priority?: 'HIGH' | 'NORMAL';
 }
 
-const DEFAULT_WATCHLIST_ITEMS: WatchlistShortcutItem[] = [
-  {
-    id: 'wl-1',
-    media: {
-      id: 'm-dune-2',
-      title: 'Dune: Part Two',
-      releaseYear: 2024,
-      posterUrl: 'https://image.tmdb.org/t/p/w500/8b8R8l88Qje9dn9OE8PY05Nx1S8.jpg',
-      runtimeMinutes: 166,
-      genres: ['Sci-Fi', 'Adventure'],
-    },
-    addedAt: new Date().toISOString(),
-    priority: 'HIGH',
-  },
-  {
-    id: 'wl-2',
-    media: {
-      id: 'm-poor-things',
-      title: 'Poor Things',
-      releaseYear: 2023,
-      posterUrl: 'https://image.tmdb.org/t/p/w500/kCGlIMHnOm8JPXq3rXM6c5wMxcT.jpg',
-      runtimeMinutes: 141,
-      genres: ['Comedy', 'Romance'],
-    },
-    addedAt: new Date().toISOString(),
-  },
-  {
-    id: 'wl-3',
-    media: {
-      id: 'm-past-lives',
-      title: 'Past Lives',
-      releaseYear: 2023,
-      posterUrl: 'https://image.tmdb.org/t/p/w500/k3waqVXSnvCZWfJYNtdamTgTtTA.jpg',
-      runtimeMinutes: 105,
-      genres: ['Drama', 'Romance'],
-    },
-    addedAt: new Date().toISOString(),
-  },
-  {
-    id: 'wl-4',
-    media: {
-      id: 'm-anatomy-fall',
-      title: 'Anatomy of a Fall',
-      releaseYear: 2023,
-      posterUrl: 'https://image.tmdb.org/t/p/w500/5ywXdHDURzJJ2ox8NxJu8dwhxTn.jpg',
-      runtimeMinutes: 151,
-      genres: ['Mystery', 'Thriller'],
-    },
-    addedAt: new Date().toISOString(),
-  },
-];
-
 export function WatchlistShortcutWidget({
-  items = DEFAULT_WATCHLIST_ITEMS,
-  totalCount = 14,
+  items,
+  totalCount,
 }: {
-  items?: WatchlistShortcutItem[];
-  totalCount?: number;
+  items?: WatchlistShortcutItem[] | undefined;
+  totalCount?: number | undefined;
 }) {
   const colors = useColors();
+
+  if (items === undefined || totalCount === undefined) return null;
 
   const handleOpenWatchlists = () => {
     haptics.selection();
@@ -93,12 +42,7 @@ export function WatchlistShortcutWidget({
   };
 
   return (
-    <View
-      style={[
-        styles.card,
-        { backgroundColor: colors.surface, borderColor: colors.border },
-      ]}
-    >
+    <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       {/* Header Row */}
       <View style={styles.headerRow}>
         <View style={styles.headerTitleGroup}>
@@ -106,7 +50,9 @@ export function WatchlistShortcutWidget({
             <Ionicons name="bookmark" size={15} color={colors.brand} />
           </View>
           <View style={{ gap: 2 }}>
-            <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Watchlist Shortcut</Text>
+            <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
+              Watchlist Shortcut
+            </Text>
             <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
               {totalCount} saved films ready to queue
             </Text>
@@ -116,10 +62,7 @@ export function WatchlistShortcutWidget({
         <Pressable
           accessibilityRole="button"
           onPress={handleOpenWatchlists}
-          style={({ pressed }) => [
-            styles.viewAllButton,
-            { opacity: pressed ? 0.7 : 1 },
-          ]}
+          style={({ pressed }) => [styles.viewAllButton, { opacity: pressed ? 0.7 : 1 }]}
         >
           <Text style={[styles.viewAllText, { color: colors.brand }]}>View All ({totalCount})</Text>
           <Ionicons name="chevron-forward" size={14} color={colors.brand} />
@@ -166,7 +109,8 @@ export function WatchlistShortcutWidget({
                 {item.media.title}
               </Text>
               <Text style={[styles.itemYear, { color: colors.textSecondary }]}>
-                {item.media.releaseYear ?? ''} · {item.media.runtimeMinutes ? `${item.media.runtimeMinutes}m` : ''}
+                {item.media.releaseYear ?? ''} ·{' '}
+                {item.media.runtimeMinutes ? `${item.media.runtimeMinutes}m` : ''}
               </Text>
             </View>
           </Pressable>

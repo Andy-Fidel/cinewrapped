@@ -66,7 +66,7 @@ export class AiController {
   }
 
   private async consume(principal: AuthPrincipal, feature: string, limit: number) {
-    if (!(await this.cache.consume(`ai:${feature}:${principal.subject}`, limit, 3_600))) {
+    if (!(await this.cache.consume(`ai:${feature}:${principal.subject}`, limit, 3_600, true))) {
       throw new AppException(
         429,
         'RATE_LIMITED',

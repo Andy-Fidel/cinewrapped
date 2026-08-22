@@ -1,6 +1,6 @@
 'use client';
 
-import { Eye, EyeOff, Film, Plus, Sparkles, Star } from 'lucide-react';
+import { Sparkles, Star } from 'lucide-react';
 import { useState } from 'react';
 
 import { Badge } from '../../../components/ui/badge';
@@ -26,7 +26,8 @@ export default function CollectionsPage() {
           Curated Cinema Collections
         </h1>
         <p className="text-sm text-zinc-400 mt-1">
-          Build rich thematic film vaults (A24, Criterion, Ghibli, 90s Cyberpunk) with custom artwork.
+          Build rich thematic film vaults (A24, Criterion, Ghibli, 90s Cyberpunk) with custom
+          artwork.
         </p>
       </div>
 
@@ -34,11 +35,7 @@ export default function CollectionsPage() {
         {adminStore.collections.map((col) => (
           <Card key={col.id} className="p-0 overflow-hidden flex flex-col">
             <div className="h-40 relative">
-              <img
-                src={col.backdropUrl}
-                alt={col.title}
-                className="w-full h-full object-cover"
-              />
+              <img src={col.backdropUrl} alt={col.title} className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/40 to-transparent" />
               <div className="absolute top-3 right-3 flex gap-2">
                 {col.isFeatured && <Badge variant="warning">⭐ Hero Featured</Badge>}
@@ -51,7 +48,8 @@ export default function CollectionsPage() {
                 <h3 className="font-extrabold text-lg text-zinc-100">{col.title}</h3>
                 <p className="text-xs text-zinc-400">{col.description}</p>
                 <p className="text-xs text-zinc-500 pt-1">
-                  Contains <strong className="text-zinc-300">{col.movieCount} curated titles</strong>
+                  Contains{' '}
+                  <strong className="text-zinc-300">{col.movieCount} curated titles</strong>
                 </p>
               </div>
 

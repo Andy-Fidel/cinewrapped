@@ -126,7 +126,7 @@ function currentStreakCalc(viewings: ViewingRecord[], timezone: string, now = ne
   yesterday.setDate(yesterday.getDate() - 1);
   const yesterdayKey = dateKey(yesterday, timezone);
 
-  let checkDate: Date | null = activeDaysSet.has(todayKey)
+  const checkDate: Date | null = activeDaysSet.has(todayKey)
     ? new Date(now)
     : activeDaysSet.has(yesterdayKey)
       ? yesterday
@@ -134,14 +134,9 @@ function currentStreakCalc(viewings: ViewingRecord[], timezone: string, now = ne
   if (checkDate === null) return 0;
 
   let streak = 0;
-  while (true) {
-    const key = dateKey(checkDate, timezone);
-    if (activeDaysSet.has(key)) {
-      streak += 1;
-      checkDate.setDate(checkDate.getDate() - 1);
-    } else {
-      break;
-    }
+  while (activeDaysSet.has(dateKey(checkDate, timezone))) {
+    streak += 1;
+    checkDate.setDate(checkDate.getDate() - 1);
   }
   return streak;
 }

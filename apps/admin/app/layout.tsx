@@ -7,7 +7,8 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'CineWrapped Operations & Admin Portal',
-  description: 'Mission-critical administration, moderation, and infrastructure operations for CineWrapped.',
+  description:
+    'Mission-critical administration, moderation, and infrastructure operations for CineWrapped.',
   robots: { index: false, follow: false },
 };
 

@@ -1,8 +1,7 @@
 'use client';
 
-import { Activity, BarChart3, Clock, Film, Globe, TrendingUp, Users } from 'lucide-react';
+import { Activity, Clock, Film, TrendingUp, Users } from 'lucide-react';
 
-import { Badge } from '../../components/ui/badge';
 import { Card, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { StatCard } from '../../components/ui/stat-card';
 
@@ -32,7 +31,8 @@ export default function AnalyticsPage() {
           Application Analytics & Viewing Patterns
         </h1>
         <p className="text-sm text-zinc-400 mt-1">
-          Deep telemetry on cinephile engagement, circadian rhythm viewing distributions, and retention cohorts.
+          Deep telemetry on cinephile engagement, circadian rhythm viewing distributions, and
+          retention cohorts.
         </p>
       </div>
 
@@ -76,7 +76,9 @@ export default function AnalyticsPage() {
         <Card className="p-6 space-y-4">
           <CardHeader className="p-0">
             <CardTitle>Top CineWrapped Genres</CardTitle>
-            <CardDescription>Most watched and rated categories across all active users</CardDescription>
+            <CardDescription>
+              Most watched and rated categories across all active users
+            </CardDescription>
           </CardHeader>
 
           <div className="space-y-3 pt-2">
@@ -84,7 +86,9 @@ export default function AnalyticsPage() {
               <div key={g.name} className="space-y-1">
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-bold text-zinc-200">{g.name}</span>
-                  <span className="text-zinc-400">{g.percent}% ({g.count})</span>
+                  <span className="text-zinc-400">
+                    {g.percent}% ({g.count})
+                  </span>
                 </div>
                 <div className="h-2 w-full rounded-full bg-zinc-950 border border-zinc-800 overflow-hidden">
                   <div
@@ -101,7 +105,9 @@ export default function AnalyticsPage() {
         <Card className="p-6 space-y-4">
           <CardHeader className="p-0">
             <CardTitle>Circadian Screening Heatmap</CardTitle>
-            <CardDescription>Hourly distribution of user viewing starts across local timezones</CardDescription>
+            <CardDescription>
+              Hourly distribution of user viewing starts across local timezones
+            </CardDescription>
           </CardHeader>
 
           <div className="space-y-3 pt-2">

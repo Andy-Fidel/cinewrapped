@@ -45,9 +45,7 @@ export function NotificationBellButton() {
       <Ionicons name="notifications-outline" size={18} color={colors.textPrimary} />
       {unreadCount > 0 ? (
         <View style={[styles.badge, { backgroundColor: colors.brand }]}>
-          <Text style={styles.badgeText}>
-            {unreadCount > 99 ? '99+' : unreadCount}
-          </Text>
+          <Text style={styles.badgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
         </View>
       ) : null}
     </Pressable>

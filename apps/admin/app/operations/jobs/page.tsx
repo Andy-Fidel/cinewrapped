@@ -1,6 +1,6 @@
 'use client';
 
-import { CheckCircle2, Play, RefreshCw, RotateCcw, Server } from 'lucide-react';
+import { RotateCcw, Server } from 'lucide-react';
 import { useState } from 'react';
 
 import { Badge } from '../../../components/ui/badge';
@@ -30,7 +30,8 @@ export default function BackgroundJobsPage() {
           Background Job Workers & Queues
         </h1>
         <p className="text-sm text-zinc-400 mt-1">
-          Monitor asynchronous BullMQ worker queues, recommendation engines, AI scene indexers, and retry failed jobs.
+          Monitor asynchronous BullMQ worker queues, recommendation engines, AI scene indexers, and
+          retry failed jobs.
         </p>
       </div>
 
@@ -41,7 +42,9 @@ export default function BackgroundJobsPage() {
               <div>
                 <div className="flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <h3 className="font-extrabold text-lg text-zinc-100 font-mono">{job.queueName}</h3>
+                  <h3 className="font-extrabold text-lg text-zinc-100 font-mono">
+                    {job.queueName}
+                  </h3>
                   <Badge variant="success">{job.status}</Badge>
                 </div>
                 <p className="text-xs text-zinc-400 mt-1">{job.description}</p>
@@ -54,7 +57,9 @@ export default function BackgroundJobsPage() {
                   disabled={retryingId === job.id || job.failed24h === 0}
                   onClick={() => void handleRetry(job.id)}
                 >
-                  <RotateCcw className={`h-3.5 w-3.5 ${retryingId === job.id ? 'animate-spin' : ''}`} />
+                  <RotateCcw
+                    className={`h-3.5 w-3.5 ${retryingId === job.id ? 'animate-spin' : ''}`}
+                  />
                   {retryingId === job.id ? 'Retrying...' : `Retry Failed (${job.failed24h})`}
                 </Button>
               </div>
@@ -71,7 +76,9 @@ export default function BackgroundJobsPage() {
               </div>
               <div>
                 <p className="text-[10px] uppercase font-bold text-zinc-500">Completed 24h</p>
-                <p className="text-sm font-extrabold text-emerald-400 mt-0.5">{job.completed24h.toLocaleString()}</p>
+                <p className="text-sm font-extrabold text-emerald-400 mt-0.5">
+                  {job.completed24h.toLocaleString()}
+                </p>
               </div>
               <div>
                 <p className="text-[10px] uppercase font-bold text-zinc-500">Avg Duration</p>

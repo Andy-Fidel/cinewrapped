@@ -2,12 +2,7 @@
 
 import { createContext, useContext, useState, type ReactNode } from 'react';
 
-import {
-  type AdminRole,
-  type AdminUserSession,
-  adminStore,
-  hasPermission,
-} from './admin-store';
+import { type AdminRole, type AdminUserSession, hasPermission } from './admin-store';
 
 interface AdminContextValue {
   session: AdminUserSession;

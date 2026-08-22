@@ -1,8 +1,7 @@
-import type { MediaSummary } from '@cinewrapped/shared-types';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View, type GestureResponderEvent } from 'react-native';
 
 import { useColors } from '../ui';
 import { haptics } from '../../lib/haptics';
@@ -25,30 +24,17 @@ export interface ContinueWatchingItem {
   episodeTitle?: string;
 }
 
-const DEFAULT_CONTINUE_ITEM: ContinueWatchingItem = {
-  id: 'cw-1',
-  media: {
-    id: 'm-oppenheimer',
-    title: 'Oppenheimer',
-    releaseYear: 2023,
-    posterUrl: 'https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg',
-    backdropUrl: 'https://image.tmdb.org/t/p/w1280/rLb2cw0iw3159xHe10nbd0jL6jX.jpg',
-    runtimeMinutes: 180,
-    mediaType: 'MOVIE',
-  },
-  progressPercent: 64,
-  lastWatchedAt: new Date().toISOString(),
-};
-
 export function ContinueWatchingWidget({
-  item = DEFAULT_CONTINUE_ITEM,
+  item,
   onFinish,
 }: {
-  item?: ContinueWatchingItem;
+  item?: ContinueWatchingItem | undefined;
   onFinish?: (id: string) => void;
 }) {
   const colors = useColors();
   const [completed, setCompleted] = useState(false);
+
+  if (item === undefined) return null;
 
   const runtime = item.media.runtimeMinutes ?? 120;
   const minutesLeft = Math.max(1, Math.round(runtime * (1 - item.progressPercent / 100)));
@@ -58,8 +44,8 @@ export function ContinueWatchingWidget({
     router.push(`/media/${item.media.id}`);
   };
 
-  const handleMarkFinished = (e: any) => {
-    e.stopPropagation?.();
+  const handleMarkFinished = (event: GestureResponderEvent) => {
+    event.stopPropagation();
     haptics.clapperSnap();
     setCompleted(true);
     if (onFinish) onFinish(item.id);
@@ -89,14 +75,14 @@ export function ContinueWatchingWidget({
           resizeMode="cover"
         />
         <View style={styles.backdropOverlay} />
-        
+
         {/* Top Badges */}
         <View style={styles.topBadgeRow}>
           <View style={[styles.statusPill, { backgroundColor: 'rgba(0, 0, 0, 0.65)' }]}>
             <View style={styles.pulseDot} />
             <Text style={styles.statusPillText}>CONTINUE WATCHING</Text>
           </View>
-          
+
           <View style={[styles.timeLeftPill, { backgroundColor: 'rgba(0, 0, 0, 0.7)' }]}>
             <Ionicons name="time-outline" size={12} color="#FFD700" />
             <Text style={styles.timeLeftText}>{minutesLeft}m left</Text>

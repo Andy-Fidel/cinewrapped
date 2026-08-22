@@ -37,7 +37,11 @@ export function CardTitle({ className, children, ...props }: HTMLAttributes<HTML
   );
 }
 
-export function CardDescription({ className, children, ...props }: HTMLAttributes<HTMLParagraphElement>) {
+export function CardDescription({
+  className,
+  children,
+  ...props
+}: HTMLAttributes<HTMLParagraphElement>) {
   return (
     <p className={twMerge(clsx('text-sm text-zinc-400', className))} {...props}>
       {children}

@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { AuthPrincipal } from '../src/auth/auth.types.js';
 import type { PrismaService } from '../src/database/prisma.service.js';
 import { NotificationsService } from '../src/notifications/notifications.service.js';
+import type { TokenCryptoService } from '../src/common/token-crypto.service.js';
 
 const principal: AuthPrincipal = {
   subject: 'auth-user-1',
@@ -17,6 +18,12 @@ const mockUser = {
   authSubject: principal.subject,
   displayName: 'Cinephile User',
 };
+const hashToken = vi.fn((value: string) => `hash:${value}`);
+const encryptToken = vi.fn((value: string) => `encrypted:${value}`);
+const tokenCrypto = {
+  hash: hashToken,
+  encrypt: encryptToken,
+} as unknown as TokenCryptoService;
 
 describe('NotificationsService', () => {
   it('returns inbox with unread count and items', async () => {
@@ -46,14 +53,14 @@ describe('NotificationsService', () => {
       },
       notification: {
         findMany: vi.fn(() => Promise.resolve([mockNotification])),
-        count: vi.fn((args) => {
+        count: vi.fn((args: { where?: { readAt?: Date | null } }) => {
           if (args.where?.readAt === null) return Promise.resolve(1);
           return Promise.resolve(1);
         }),
       },
     } as unknown as PrismaService;
 
-    const service = new NotificationsService(prisma);
+    const service = new NotificationsService(prisma, tokenCrypto);
     const result = await service.getInbox(principal, 'all');
 
     expect(result.unreadCount).toBe(1);
@@ -73,7 +80,7 @@ describe('NotificationsService', () => {
       },
     } as unknown as PrismaService;
 
-    const service = new NotificationsService(prisma);
+    const service = new NotificationsService(prisma, tokenCrypto);
     const result = await service.markAsRead(principal, 'notif-1');
 
     expect(result.success).toBe(true);
@@ -100,7 +107,7 @@ describe('NotificationsService', () => {
       },
     } as unknown as PrismaService;
 
-    const service = new NotificationsService(prisma);
+    const service = new NotificationsService(prisma, tokenCrypto);
     const result = await service.markAllAsRead(principal);
 
     expect(result.success).toBe(true);
@@ -134,7 +141,7 @@ describe('NotificationsService', () => {
       },
     } as unknown as PrismaService;
 
-    const service = new NotificationsService(prisma);
+    const service = new NotificationsService(prisma, tokenCrypto);
     const result = await service.registerDevice(principal, {
       installationId: 'inst-1',
       platform: 'IOS',
@@ -146,5 +153,7 @@ describe('NotificationsService', () => {
     expect(result.success).toBe(true);
     expect(result.deviceId).toBe('dev-123');
     expect(upsert).toHaveBeenCalled();
+    expect(hashToken).toHaveBeenCalledWith('ExponentPushToken[xxxx]');
+    expect(encryptToken).toHaveBeenCalledWith('ExponentPushToken[xxxx]');
   });
 });

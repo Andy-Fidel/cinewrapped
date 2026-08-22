@@ -1,6 +1,9 @@
 import type {
   CalendarEventSummary,
+  LibraryItem,
   RecommendationSummary,
+  StatisticsSummary,
+  WatchlistDetails,
 } from '@cinewrapped/shared-types';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
@@ -28,11 +31,21 @@ const FILTER_CHIPS: { key: WidgetFilter; label: string; icon: keyof typeof Ionic
 export function HomeWidgetsHub({
   recommendations,
   upcomingEvents,
+  continueWatching,
+  defaultWatchlist,
+  weeklyStatistics,
+  weeklyActivity,
   onAddToWatchlist,
+  onFinishWatching,
 }: {
   recommendations?: RecommendationSummary[] | undefined;
   upcomingEvents?: CalendarEventSummary[] | undefined;
+  continueWatching?: LibraryItem | undefined;
+  defaultWatchlist?: WatchlistDetails | undefined;
+  weeklyStatistics?: StatisticsSummary | undefined;
+  weeklyActivity?: Array<{ date: string; count: number; minutesWatched: number }> | undefined;
   onAddToWatchlist?: ((mediaId: string) => void) | undefined;
+  onFinishWatching?: ((mediaId: string) => void) | undefined;
 }) {
   const colors = useColors();
   const [activeFilter, setActiveFilter] = useState<WidgetFilter>('ALL');
@@ -43,6 +56,52 @@ export function HomeWidgetsHub({
   };
 
   const dailyPick = recommendations && recommendations.length > 0 ? recommendations[0] : undefined;
+  const upcoming = upcomingEvents?.find((event) => event.media !== null);
+  const continueItem =
+    continueWatching === undefined
+      ? undefined
+      : {
+          id: continueWatching.media.id,
+          media: continueWatching.media,
+          progressPercent: continueWatching.progressPercent,
+          lastWatchedAt: continueWatching.lastWatchedAt ?? continueWatching.updatedAt,
+        };
+  const watchlistItems = defaultWatchlist?.items.slice(0, 4).map((item) => ({
+    id: item.id,
+    media: item.media,
+    addedAt: item.createdAt,
+  }));
+  const weeklyStats =
+    weeklyStatistics === undefined || weeklyActivity === undefined
+      ? undefined
+      : {
+          filmsCount: weeklyStatistics.viewingCount,
+          runtimeMinutes: weeklyStatistics.totalMinutes,
+          currentStreakDays: weeklyStatistics.longestStreakDays,
+          topVibe: weeklyStatistics.topGenres[0]?.label ?? 'Your week',
+          dailyActivity: weeklyActivity.map((day) => ({
+            day: new Date(`${day.date}T12:00:00`).toLocaleDateString(undefined, {
+              weekday: 'narrow',
+            }),
+            watched: day.count > 0,
+            minutes: day.minutesWatched,
+          })),
+        };
+  const upcomingRelease =
+    upcoming?.media === null || upcoming?.media === undefined
+      ? undefined
+      : {
+          id: upcoming.id,
+          title: upcoming.title,
+          releaseDate: upcoming.startsAt,
+          format: upcoming.eventType === 'RELEASE_REMINDER' ? 'Release reminder' : 'Watch plan',
+          posterUrl: upcoming.media.posterUrl,
+          backdropUrl: upcoming.media.backdropUrl,
+          ...((upcoming.notes ?? upcoming.media.overview) === null
+            ? {}
+            : { synopsis: upcoming.notes ?? upcoming.media.overview }),
+          mediaId: upcoming.media.id,
+        };
 
   return (
     <View style={styles.container}>
@@ -88,10 +147,7 @@ export function HomeWidgetsHub({
                 color={selected ? colors.onBrand : colors.textPrimary}
               />
               <Text
-                style={[
-                  styles.chipText,
-                  { color: selected ? colors.onBrand : colors.textPrimary },
-                ]}
+                style={[styles.chipText, { color: selected ? colors.onBrand : colors.textPrimary }]}
               >
                 {chip.label}
               </Text>
@@ -104,7 +160,10 @@ export function HomeWidgetsHub({
       <View style={styles.widgetsStack}>
         {/* 1. Continue Watching Widget */}
         {(activeFilter === 'ALL' || activeFilter === 'CONTINUE') && (
-          <ContinueWatchingWidget />
+          <ContinueWatchingWidget
+            item={continueItem}
+            onFinish={(mediaId) => onFinishWatching?.(mediaId)}
+          />
         )}
 
         {/* 2. Recommendation of the Day Widget */}
@@ -117,17 +176,20 @@ export function HomeWidgetsHub({
 
         {/* 3. Watchlist Shortcut Widget */}
         {(activeFilter === 'ALL' || activeFilter === 'WATCHLIST') && (
-          <WatchlistShortcutWidget />
+          <WatchlistShortcutWidget
+            items={watchlistItems}
+            totalCount={defaultWatchlist?.itemCount}
+          />
         )}
 
         {/* 4. Weekly Statistics Widget */}
         {(activeFilter === 'ALL' || activeFilter === 'STATS') && (
-          <WeeklyStatsWidget />
+          <WeeklyStatsWidget stats={weeklyStats} />
         )}
 
         {/* 5. Upcoming Release Countdown Widget */}
         {(activeFilter === 'ALL' || activeFilter === 'COUNTDOWN') && (
-          <UpcomingCountdownWidget />
+          <UpcomingCountdownWidget release={upcomingRelease} />
         )}
       </View>
     </View>

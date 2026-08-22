@@ -3,13 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Link } from 'expo-router';
 import React, { useMemo } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { z } from 'zod';
 
 import {
@@ -61,8 +55,8 @@ export default function RegisterScreen() {
     mode: 'onChange',
   });
 
-  const passwordVal = watch('password') ?? '';
-  const displayNameVal = watch('displayName') ?? '';
+  const passwordVal = watch('password');
+  const displayNameVal = watch('displayName');
 
   // Password criteria computation
   const hasMinLength = passwordVal.length >= 8;
@@ -228,7 +222,16 @@ export default function RegisterScreen() {
             <View style={styles.strengthMeterContainer}>
               {/* Strength Bar */}
               <View style={styles.strengthBarRow}>
-                <View style={[styles.strengthTrack, { backgroundColor: colors.surfaceRaised, borderColor: colors.border, borderWidth: 0.5 }]}>
+                <View
+                  style={[
+                    styles.strengthTrack,
+                    {
+                      backgroundColor: colors.surfaceRaised,
+                      borderColor: colors.border,
+                      borderWidth: 0.5,
+                    },
+                  ]}
+                >
                   <View
                     style={[
                       styles.strengthFill,
@@ -299,9 +302,7 @@ export default function RegisterScreen() {
             </View>
           ) : null}
 
-          {errors.root?.message === undefined ? null : (
-            <ErrorText>{errors.root.message}</ErrorText>
-          )}
+          {errors.root?.message === undefined ? null : <ErrorText>{errors.root.message}</ErrorText>}
 
           {/* Create Account CTA */}
           <Button
@@ -314,9 +315,7 @@ export default function RegisterScreen() {
         {/* Divider */}
         <View style={styles.dividerRow}>
           <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-          <Text style={[styles.dividerText, { color: colors.textSecondary }]}>
-            OR SIGN UP WITH
-          </Text>
+          <Text style={[styles.dividerText, { color: colors.textSecondary }]}>OR SIGN UP WITH</Text>
           <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
         </View>
 

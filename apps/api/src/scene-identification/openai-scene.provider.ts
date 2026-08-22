@@ -152,8 +152,7 @@ export class OpenAiSceneProvider {
       });
       const body = (await response.json()) as OpenAiResponse;
       if (!response.ok) {
-        const quotaExhausted =
-          response.status === 429 && body.error?.code === 'insufficient_quota';
+        const quotaExhausted = response.status === 429 && body.error?.code === 'insufficient_quota';
         const rateLimited = response.status === 429 && !quotaExhausted;
         throw new AppException(
           quotaExhausted ? 503 : rateLimited ? 429 : 502,

@@ -6,14 +6,7 @@ import type {
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import {
-  Image,
-  Pressable,
-  StyleSheet,
-  Text,
-  useWindowDimensions,
-  View,
-} from 'react-native';
+import { Image, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { haptics } from '../lib/haptics';
 import { BrandLogo } from './brand-logo';
@@ -37,7 +30,13 @@ export function HomeBentoRecommendationsSkeleton() {
       <View style={styles.gridContainer}>
         {/* ROW 1 Skeleton */}
         <View style={[styles.row, isWide && styles.rowWide]}>
-          <View style={[styles.card, styles.cardHeroMatch, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View
+            style={[
+              styles.card,
+              styles.cardHeroMatch,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+            ]}
+          >
             <View style={styles.cardHeaderRow}>
               <Skeleton width={110} height={24} rounded={12} />
               <Skeleton width={24} height={24} rounded={12} />
@@ -49,7 +48,13 @@ export function HomeBentoRecommendationsSkeleton() {
             </View>
           </View>
 
-          <View style={[styles.card, styles.cardBillboard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View
+            style={[
+              styles.card,
+              styles.cardBillboard,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+            ]}
+          >
             <View style={{ flex: 1, gap: 8 }}>
               <Skeleton width={100} height={20} rounded={6} />
               <Skeleton width="80%" height={20} rounded={6} />
@@ -60,19 +65,37 @@ export function HomeBentoRecommendationsSkeleton() {
 
         {/* ROW 2 Skeleton */}
         <View style={[styles.row, isWide && styles.rowWide]}>
-          <View style={[styles.card, styles.cardPortrait, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View
+            style={[
+              styles.card,
+              styles.cardPortrait,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+            ]}
+          >
             <Skeleton width="100%" height={160} rounded={16} />
             <Skeleton width="75%" height={20} rounded={6} />
             <Skeleton width="90%" height={14} rounded={4} />
           </View>
 
           <View style={styles.metricColumn}>
-            <View style={[styles.card, styles.cardMetricSquare, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View
+              style={[
+                styles.card,
+                styles.cardMetricSquare,
+                { backgroundColor: colors.surface, borderColor: colors.border },
+              ]}
+            >
               <Skeleton width={80} height={16} rounded={4} />
               <Skeleton width={70} height={32} rounded={8} />
               <Skeleton width={110} height={20} rounded={6} />
             </View>
-            <View style={[styles.card, styles.cardMetricSquare, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View
+              style={[
+                styles.card,
+                styles.cardMetricSquare,
+                { backgroundColor: colors.surface, borderColor: colors.border },
+              ]}
+            >
               <Skeleton width={60} height={30} rounded={6} />
               <Skeleton width="100%" height={24} rounded={12} />
             </View>
@@ -168,11 +191,7 @@ export function HomeBentoRecommendations({
         ]}
       >
         {bgUri ? (
-          <Image
-            source={{ uri: bgUri }}
-            style={StyleSheet.absoluteFillObject}
-            resizeMode="cover"
-          />
+          <Image source={{ uri: bgUri }} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
         ) : null}
 
         <View style={styles.curatedTallScrim} />
@@ -198,7 +217,8 @@ export function HomeBentoRecommendations({
 
         <View style={styles.curatedTallBottom}>
           <Text style={styles.curatedTallMeta}>
-            {rec.media.releaseYear ?? '2026'} · {rec.media.mediaType === 'MOVIE' ? 'Movie' : 'Series'}
+            {rec.media.releaseYear ?? '2026'} ·{' '}
+            {rec.media.mediaType === 'MOVIE' ? 'Movie' : 'Series'}
           </Text>
           <Text numberOfLines={2} style={styles.curatedTallTitle}>
             {rec.media.title}
@@ -269,10 +289,16 @@ export function HomeBentoRecommendations({
           </View>
 
           <View style={{ gap: 2 }}>
-            <Text numberOfLines={1} style={[styles.curatedMiniTitle, { color: colors.textPrimary }]}>
+            <Text
+              numberOfLines={1}
+              style={[styles.curatedMiniTitle, { color: colors.textPrimary }]}
+            >
               {rec.media.title}
             </Text>
-            <Text numberOfLines={1} style={[styles.curatedMiniSub, { color: colors.textSecondary }]}>
+            <Text
+              numberOfLines={1}
+              style={[styles.curatedMiniSub, { color: colors.textSecondary }]}
+            >
               {rec.explanation || `${rec.media.releaseYear ?? ''} · Curated Selection`}
             </Text>
           </View>
@@ -315,11 +341,7 @@ export function HomeBentoRecommendations({
         ]}
       >
         {bgUri ? (
-          <Image
-            source={{ uri: bgUri }}
-            style={StyleSheet.absoluteFillObject}
-            resizeMode="cover"
-          />
+          <Image source={{ uri: bgUri }} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
         ) : null}
 
         <View style={styles.curatedWideScrim} />
@@ -356,7 +378,8 @@ export function HomeBentoRecommendations({
 
         <View style={styles.curatedWideBottomRow}>
           <Text style={styles.curatedWideMeta}>
-            {rec.media.releaseYear ?? '2026'} · {rec.media.mediaType === 'MOVIE' ? 'Feature Film' : 'Series'}
+            {rec.media.releaseYear ?? '2026'} ·{' '}
+            {rec.media.mediaType === 'MOVIE' ? 'Feature Film' : 'Series'}
           </Text>
           {rec.media.averageProviderRating ? (
             <View style={styles.curatedWideRatingPill}>
@@ -430,7 +453,8 @@ export function HomeBentoRecommendations({
                 {item0?.media.title ?? 'Signature Recommendation'}
               </Text>
               <Text numberOfLines={2} style={styles.heroExplanation}>
-                {item0?.explanation ?? 'Perfect alignment with your recent 5-star ratings and genre preferences.'}
+                {item0?.explanation ??
+                  'Perfect alignment with your recent 5-star ratings and genre preferences.'}
               </Text>
 
               <View style={styles.heroActionRow}>
@@ -489,11 +513,18 @@ export function HomeBentoRecommendations({
               <Text style={[styles.billboardEyebrow, { color: colors.textSecondary }]}>
                 HIGH AFFINITY
               </Text>
-              <Text numberOfLines={2} style={[styles.billboardTitle, { color: colors.textPrimary }]}>
+              <Text
+                numberOfLines={2}
+                style={[styles.billboardTitle, { color: colors.textPrimary }]}
+              >
                 {item1?.media.title ?? 'Curated Cinema'}
               </Text>
-              <Text numberOfLines={1} style={[styles.billboardMeta, { color: colors.textSecondary }]}>
-                {item1?.media.genreIds[0] ?? 'Drama'} · {item1?.media.mediaType === 'MOVIE' ? 'Feature' : 'Series'}
+              <Text
+                numberOfLines={1}
+                style={[styles.billboardMeta, { color: colors.textSecondary }]}
+              >
+                {item1?.media.genreIds[0] ?? 'Drama'} ·{' '}
+                {item1?.media.mediaType === 'MOVIE' ? 'Feature' : 'Series'}
               </Text>
             </View>
 
@@ -506,7 +537,9 @@ export function HomeBentoRecommendations({
                   resizeMode="cover"
                 />
               ) : (
-                <View style={[styles.billboardPlaceholder, { backgroundColor: colors.surfaceRaised }]}>
+                <View
+                  style={[styles.billboardPlaceholder, { backgroundColor: colors.surfaceRaised }]}
+                >
                   <Ionicons name="videocam" size={24} color={colors.textDisabled} />
                 </View>
               )}
@@ -544,7 +577,10 @@ export function HomeBentoRecommendations({
               <Text numberOfLines={1} style={[styles.portraitTitle, { color: colors.textPrimary }]}>
                 {item2?.media.title ?? 'Prestige Choice'}
               </Text>
-              <Text numberOfLines={2} style={[styles.portraitExplanation, { color: colors.textSecondary }]}>
+              <Text
+                numberOfLines={2}
+                style={[styles.portraitExplanation, { color: colors.textSecondary }]}
+              >
                 {item2?.explanation ?? 'A masterclass in tension and atmosphere.'}
               </Text>
             </View>
@@ -590,25 +626,50 @@ export function HomeBentoRecommendations({
             >
               <View style={styles.ratingRow}>
                 <Text style={[styles.ratingScore, { color: colors.textPrimary }]}>
-                  {item3?.media.averageProviderRating ? (item3.media.averageProviderRating * 0.98).toFixed(1) : '4.8'}
+                  {item3?.media.averageProviderRating
+                    ? (item3.media.averageProviderRating * 0.98).toFixed(1)
+                    : '4.8'}
                 </Text>
                 <View style={[styles.arrowCircle, { backgroundColor: colors.surfaceRaised }]}>
-                  <Ionicons name="arrow-up-outline" size={14} color={colors.brand} style={{ transform: [{ rotate: '45deg' }] }} />
+                  <Ionicons
+                    name="arrow-up-outline"
+                    size={14}
+                    color={colors.brand}
+                    style={{ transform: [{ rotate: '45deg' }] }}
+                  />
                 </View>
               </View>
 
               {/* Overlapping Community Avatar Stack */}
               <View style={styles.avatarStackRow}>
-                <View style={[styles.avatarCircle, { backgroundColor: '#DE3641', borderColor: colors.surface }]}>
+                <View
+                  style={[
+                    styles.avatarCircle,
+                    { backgroundColor: '#DE3641', borderColor: colors.surface },
+                  ]}
+                >
                   <Text style={styles.avatarInitials}>CW</Text>
                 </View>
-                <View style={[styles.avatarCircle, { backgroundColor: '#6366F1', marginLeft: -8, borderColor: colors.surface }]}>
+                <View
+                  style={[
+                    styles.avatarCircle,
+                    { backgroundColor: '#6366F1', marginLeft: -8, borderColor: colors.surface },
+                  ]}
+                >
                   <Text style={styles.avatarInitials}>NB</Text>
                 </View>
-                <View style={[styles.avatarCircle, { backgroundColor: '#10B981', marginLeft: -8, borderColor: colors.surface }]}>
+                <View
+                  style={[
+                    styles.avatarCircle,
+                    { backgroundColor: '#10B981', marginLeft: -8, borderColor: colors.surface },
+                  ]}
+                >
                   <Text style={styles.avatarInitials}>CR</Text>
                 </View>
-                <Text numberOfLines={1} style={[styles.avatarStackLabel, { color: colors.textSecondary }]}>
+                <Text
+                  numberOfLines={1}
+                  style={[styles.avatarStackLabel, { color: colors.textSecondary }]}
+                >
                   {item3?.media.title ?? 'Critic Favorite'}
                 </Text>
               </View>
@@ -649,8 +710,18 @@ export function HomeBentoRecommendations({
 
             {/* Stylized Waves */}
             <View style={styles.wavesArtContainer}>
-              <View style={[styles.waveRibbon, { backgroundColor: 'rgba(129, 140, 248, 0.25)', top: 12 }]} />
-              <View style={[styles.waveRibbon, { backgroundColor: 'rgba(244, 114, 182, 0.35)', top: 22 }]} />
+              <View
+                style={[
+                  styles.waveRibbon,
+                  { backgroundColor: 'rgba(129, 140, 248, 0.25)', top: 12 },
+                ]}
+              />
+              <View
+                style={[
+                  styles.waveRibbon,
+                  { backgroundColor: 'rgba(244, 114, 182, 0.35)', top: 22 },
+                ]}
+              />
               <View style={[styles.waveRibbon, { backgroundColor: '#6366F1', top: 32 }]} />
             </View>
 
@@ -680,7 +751,10 @@ export function HomeBentoRecommendations({
             <Text style={[styles.editorialEyebrow, { color: colors.brand }]}>
               AI MOOD NAVIGATOR
             </Text>
-            <Text numberOfLines={2} style={[styles.editorialHeadline, { color: colors.textPrimary }]}>
+            <Text
+              numberOfLines={2}
+              style={[styles.editorialHeadline, { color: colors.textPrimary }]}
+            >
               Need a bespoke mood reel tonight?
             </Text>
 

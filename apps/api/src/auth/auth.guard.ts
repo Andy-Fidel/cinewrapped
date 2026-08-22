@@ -38,6 +38,13 @@ export class AuthGuard implements CanActivate {
     if (session?.revokedAt != null) {
       throw new AppException(401, 'AUTH_SESSION_REVOKED', 'This session has been revoked.');
     }
+    if (session === null && !request.url.includes('/auth/bootstrap')) {
+      throw new AppException(
+        401,
+        'AUTH_SESSION_NOT_REGISTERED',
+        'This device session is not registered. Sign in again to continue.',
+      );
+    }
     request.principal = principal;
     return true;
   }

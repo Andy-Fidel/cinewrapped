@@ -1,11 +1,11 @@
 'use client';
 
-import { BookOpen, Calendar, CheckCircle2, Clock, Filter, Search, Shield, User } from 'lucide-react';
+import { BookOpen, Search } from 'lucide-react';
 import { useState } from 'react';
 
 import { Badge } from '../../components/ui/badge';
 import { Card } from '../../components/ui/card';
-import { adminStore, type AuditLogEntry } from '../../lib/admin-store';
+import { adminStore } from '../../lib/admin-store';
 
 export default function AuditLogsPage() {
   const [search, setSearch] = useState('');
@@ -29,7 +29,8 @@ export default function AuditLogsPage() {
           Immutable Administrative Audit Stream
         </h1>
         <p className="text-sm text-zinc-400 mt-1">
-          Cryptographically recorded, append-only operational ledger of every moderation, flag, and configuration change.
+          Cryptographically recorded, append-only operational ledger of every moderation, flag, and
+          configuration change.
         </p>
       </div>
 
@@ -93,8 +94,12 @@ export default function AuditLogsPage() {
                     </span>
                   </td>
                   <td className="p-4 font-sans">
-                    <span className="font-semibold text-zinc-200">{a.targetLabel || a.targetType}</span>
-                    {a.targetId && <p className="text-[10px] text-zinc-500 font-mono">ID: {a.targetId}</p>}
+                    <span className="font-semibold text-zinc-200">
+                      {a.targetLabel || a.targetType}
+                    </span>
+                    {a.targetId && (
+                      <p className="text-[10px] text-zinc-500 font-mono">ID: {a.targetId}</p>
+                    )}
                   </td>
                   <td className="p-4 font-sans space-y-1">
                     <p className="text-zinc-300 italic">"{a.reason}"</p>

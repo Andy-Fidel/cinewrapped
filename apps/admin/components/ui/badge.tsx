@@ -7,7 +7,8 @@ export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
 }
 
 export function Badge({ className, variant = 'default', children, ...props }: BadgeProps) {
-  const base = 'inline-flex items-center gap-1 font-semibold text-xs px-2.5 py-0.5 rounded-full tracking-wide';
+  const base =
+    'inline-flex items-center gap-1 font-semibold text-xs px-2.5 py-0.5 rounded-full tracking-wide';
 
   const variants = {
     default: 'bg-zinc-800/80 text-zinc-300 border border-zinc-700/50',

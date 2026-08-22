@@ -7,21 +7,19 @@ import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
-  Dimensions,
   Pressable,
   SafeAreaView,
   StyleSheet,
   Text,
   View,
+  type DimensionValue,
 } from 'react-native';
 
 import { StoryExportModal } from './story-export-modal';
 import { StorySlideRenderer } from './story-slide-renderer';
 import { getStoryTheme } from './story-theme';
-import { useColors } from '../ui';
 import { haptics } from '../../lib/haptics';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const SLIDE_DURATION_MS = 5000;
 
 export function StoryViewer({
@@ -33,7 +31,6 @@ export function StoryViewer({
   onClose: () => void;
   initialSlideIndex?: number;
 }) {
-  const colors = useColors();
   const [currentSlideIndex, setCurrentSlideIndex] = useState(initialSlideIndex);
   const [isPaused, setIsPaused] = useState(false);
   const [exportModalVisible, setExportModalVisible] = useState(false);
@@ -116,7 +113,7 @@ export function StoryViewer({
       {/* Top Segmented Story Progress Bar */}
       <View style={styles.progressBarContainer}>
         {presentation.slides.map((_, index) => {
-          let barWidth: any = '0%';
+          let barWidth: DimensionValue | Animated.AnimatedInterpolation<string | number> = '0%';
           if (index < currentSlideIndex) {
             barWidth = '100%';
           } else if (index === currentSlideIndex) {
@@ -129,10 +126,7 @@ export function StoryViewer({
           return (
             <View
               key={`prog-bar-${index}`}
-              style={[
-                styles.progressSegmentBg,
-                { backgroundColor: 'rgba(255, 255, 255, 0.25)' },
-              ]}
+              style={[styles.progressSegmentBg, { backgroundColor: 'rgba(255, 255, 255, 0.25)' }]}
             >
               <Animated.View
                 style={[
@@ -150,10 +144,7 @@ export function StoryViewer({
 
       {/* Main Slide Renderer */}
       <View style={styles.slideCanvas}>
-        <StorySlideRenderer
-          slide={activeSlide}
-          userHandle={presentation.author.username}
-        />
+        <StorySlideRenderer slide={activeSlide} userHandle={presentation.author.username} />
 
         {/* Touch Gestures: Left Half = Previous, Right Half = Next, Long Press = Pause */}
         <View style={styles.gestureOverlay}>

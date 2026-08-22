@@ -2,7 +2,7 @@ import type { CreditSummary, MediaSummary } from '@cinewrapped/shared-types';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -64,7 +64,9 @@ export function FilmographyCompletionTracker({
   const totalCount = Math.max(allFilms.length, 1);
   const percentage = Math.round((watchedCount / totalCount) * 100);
 
-  const getTier = (pct: number) => {
+  const getTier = (
+    pct: number,
+  ): { title: string; icon: keyof typeof Ionicons.glyphMap; color: string } => {
     if (pct === 100) return { title: 'Auteur Completionist', icon: 'ribbon', color: '#F59E0B' };
     if (pct >= 75) return { title: 'Gold Scholar', icon: 'medal', color: '#F59E0B' };
     if (pct >= 50) return { title: 'Silver Connoisseur', icon: 'trophy', color: '#E2E8F0' };
@@ -117,7 +119,7 @@ export function FilmographyCompletionTracker({
           >
             <View style={styles.tierRow}>
               <View style={[styles.tierBadge, { backgroundColor: 'rgba(245, 158, 11, 0.15)' }]}>
-                <Ionicons name={tier.icon as any} size={14} color={tier.color} />
+                <Ionicons name={tier.icon} size={14} color={tier.color} />
                 <Text style={[styles.tierTitle, { color: tier.color }]}>{tier.title}</Text>
               </View>
               <Text style={[styles.percentNumber, { color: colors.textPrimary }]}>
@@ -126,7 +128,12 @@ export function FilmographyCompletionTracker({
             </View>
 
             <Text style={[styles.completionSubtext, { color: colors.textSecondary }]}>
-              You've watched <Text style={{ color: '#00E054', fontWeight: '800' }}>{watchedCount}</Text> of <Text style={{ color: colors.textPrimary, fontWeight: '800' }}>{allFilms.length}</Text> catalog works
+              You've watched{' '}
+              <Text style={{ color: '#00E054', fontWeight: '800' }}>{watchedCount}</Text> of{' '}
+              <Text style={{ color: colors.textPrimary, fontWeight: '800' }}>
+                {allFilms.length}
+              </Text>{' '}
+              catalog works
             </Text>
 
             {/* Segmented Progress Bar */}
@@ -170,11 +177,15 @@ export function FilmographyCompletionTracker({
                         <PosterImage uri={item.posterUrl ?? null} size="fill" rounded={8} />
                       </View>
                       <View style={styles.filmMeta}>
-                        <Text numberOfLines={1} style={[styles.filmTitle, { color: colors.textPrimary }]}>
+                        <Text
+                          numberOfLines={1}
+                          style={[styles.filmTitle, { color: colors.textPrimary }]}
+                        >
                           {item.title}
                         </Text>
                         <Text style={[styles.filmYear, { color: colors.textSecondary }]}>
-                          {item.releaseYear ?? 'Unknown'} · {item.mediaType === 'TV' ? 'Series' : 'Film'}
+                          {item.releaseYear ?? 'Unknown'} ·{' '}
+                          {item.mediaType === 'TV' ? 'Series' : 'Film'}
                         </Text>
                       </View>
 

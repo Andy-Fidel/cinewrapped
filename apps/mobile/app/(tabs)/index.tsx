@@ -1,13 +1,19 @@
 import type {
+  ActivityHeatmapSummary,
   CalendarEventSummary,
+  LibraryItem,
   RecommendationFeedbackType,
   RecommendationSummary,
+  StatisticsSummary,
   TasteProfile,
+  WatchlistDetails,
+  WatchlistSummary,
 } from '@cinewrapped/shared-types';
 import { Ionicons } from '@expo/vector-icons';
 import { FlashList } from '@shopify/flash-list';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
+import { useMemo } from 'react';
 import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -16,7 +22,6 @@ import {
   HomeBentoRecommendations,
   HomeBentoRecommendationsSkeleton,
 } from '../../src/components/home-bento-recommendations';
-import { MediaCard } from '../../src/components/media-card';
 import {
   NetflixHeroBillboard,
   NetflixHeroBillboardSkeleton,
@@ -38,6 +43,16 @@ export default function HomeScreen() {
   const { session, user } = useAuth();
   const { isEnabled } = useFeatureFlags();
   const calendarEnabled = isEnabled('CALENDAR_INTEGRATION');
+  const statisticsRange = useMemo(() => {
+    const periodEnd = new Date();
+    const periodStart = new Date(periodEnd);
+    periodStart.setDate(periodStart.getDate() - 7);
+    return {
+      periodStart: periodStart.toISOString(),
+      periodEnd: periodEnd.toISOString(),
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+    };
+  }, []);
   const taste = useQuery({
     queryKey: ['taste-profile'],
     queryFn: () => api.request<TasteProfile>('recommendations/taste-profile'),
@@ -60,6 +75,42 @@ export default function HomeScreen() {
     },
     enabled: session !== null && calendarEnabled,
     staleTime: 60 * 1000,
+  });
+  const continueWatching = useQuery({
+    queryKey: ['library', 'home-continue-watching'],
+    queryFn: () => api.request<LibraryItem[]>('library?status=WATCHING&limit=1'),
+    enabled: session !== null,
+    staleTime: 60 * 1000,
+  });
+  const defaultWatchlist = useQuery({
+    queryKey: ['watchlists', 'home-default'],
+    queryFn: async () => {
+      const lists = await api.request<WatchlistSummary[]>('watchlists');
+      const defaultList = lists.find((list) => list.isDefault);
+      return defaultList === undefined
+        ? undefined
+        : api.request<WatchlistDetails>(`watchlists/${encodeURIComponent(defaultList.id)}`);
+    },
+    enabled: session !== null,
+    staleTime: 60 * 1000,
+  });
+  const weeklyStatistics = useQuery({
+    queryKey: ['statistics', 'home-weekly', statisticsRange],
+    queryFn: () => {
+      const query = new URLSearchParams(statisticsRange);
+      return api.request<StatisticsSummary>(`statistics/summary?${query.toString()}`);
+    },
+    enabled: session !== null,
+    staleTime: 60 * 1000,
+  });
+  const activityHeatmap = useQuery({
+    queryKey: ['statistics', 'home-heatmap', new Date().getFullYear(), statisticsRange.timezone],
+    queryFn: () =>
+      api.request<ActivityHeatmapSummary>(
+        `statistics/heatmap?year=${new Date().getFullYear()}&timezone=${encodeURIComponent(statisticsRange.timezone)}`,
+      ),
+    enabled: session !== null,
+    staleTime: 5 * 60 * 1000,
   });
   const refresh = useMutation({
     mutationFn: () => api.request('recommendations/refresh', { method: 'POST' }),
@@ -97,7 +148,18 @@ export default function HomeScreen() {
       await queryClient.invalidateQueries({ queryKey: ['watchlists'] });
     },
   });
+  const finishWatching = useMutation({
+    mutationFn: (mediaId: string) =>
+      api.request(`library/media/${encodeURIComponent(mediaId)}/status`, {
+        method: 'PUT',
+        body: { status: 'COMPLETED', progressPercent: 100 },
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['library'] });
+    },
+  });
   const upcomingEvent = upcomingEvents.data?.at(0);
+  const featuredRecommendation = recommendations.data?.[0];
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
@@ -112,13 +174,11 @@ export default function HomeScreen() {
             {/* Netflix Cinematic Hero Billboard */}
             {recommendations.isPending ? (
               <NetflixHeroBillboardSkeleton />
-            ) : recommendations.data && recommendations.data.length > 0 && recommendations.data[0] ? (
+            ) : featuredRecommendation ? (
               <NetflixHeroBillboard
-                featured={recommendations.data[0]}
+                featured={featuredRecommendation}
                 onAddToWatchlist={() => {
-                  if (recommendations.data && recommendations.data[0]) {
-                    watchlistMutation.mutate(recommendations.data[0].media.id);
-                  }
+                  watchlistMutation.mutate(featuredRecommendation.media.id);
                 }}
               />
             ) : null}
@@ -127,14 +187,16 @@ export default function HomeScreen() {
             {recommendations.isPending ? (
               <NetflixTop10ShelfSkeleton />
             ) : recommendations.data && recommendations.data.length > 0 ? (
-              <NetflixTop10Shelf
-                items={recommendations.data}
-                title="Top 10 in CineWrapped Today"
-              />
+              <NetflixTop10Shelf items={recommendations.data} title="Top 10 in CineWrapped Today" />
             ) : null}
 
             {/* Prestige Cinephile Header: 'Picks for You' */}
-            <View style={[styles.greetingCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View
+              style={[
+                styles.greetingCard,
+                { backgroundColor: colors.surface, borderColor: colors.border },
+              ]}
+            >
               <View style={styles.greetingHeaderTop}>
                 {/* Eyebrow with CineWrapped Brand Logo & Status Tag */}
                 <View style={styles.eyebrowPillRow}>
@@ -163,7 +225,10 @@ export default function HomeScreen() {
                       <Image source={{ uri: user.avatarUrl }} style={styles.userAvatar} />
                     ) : (
                       <View
-                        style={[styles.userAvatarFallback, { backgroundColor: colors.surfaceRaised }]}
+                        style={[
+                          styles.userAvatarFallback,
+                          { backgroundColor: colors.surfaceRaised },
+                        ]}
                       >
                         <Ionicons name="person" size={18} color={colors.brand} />
                       </View>
@@ -387,7 +452,16 @@ export default function HomeScreen() {
             <HomeWidgetsHub
               recommendations={recommendations.data}
               upcomingEvents={upcomingEvents.data}
+              continueWatching={continueWatching.data?.[0]}
+              defaultWatchlist={defaultWatchlist.data}
+              weeklyStatistics={weeklyStatistics.data}
+              weeklyActivity={activityHeatmap.data?.days.filter(
+                (day) =>
+                  day.date >= statisticsRange.periodStart.slice(0, 10) &&
+                  day.date <= statisticsRange.periodEnd.slice(0, 10),
+              )}
               onAddToWatchlist={(mediaId) => watchlistMutation.mutate(mediaId)}
+              onFinishWatching={(mediaId) => finishWatching.mutate(mediaId)}
             />
 
             {/* Weekly Cinema Trivia Banner */}
@@ -409,8 +483,12 @@ export default function HomeScreen() {
               <View style={styles.triviaCopy}>
                 <View style={styles.triviaEyebrowRow}>
                   <Text style={[styles.triviaEyebrow, { color: '#F59E0B' }]}>WEEKLY TRIVIA</Text>
-                  <View style={[styles.triviaPointsPill, { backgroundColor: colors.surfaceRaised }]}>
-                    <Text style={{ color: colors.brand, fontSize: 10, fontWeight: '800' }}>+150 PTS</Text>
+                  <View
+                    style={[styles.triviaPointsPill, { backgroundColor: colors.surfaceRaised }]}
+                  >
+                    <Text style={{ color: colors.brand, fontSize: 10, fontWeight: '800' }}>
+                      +150 PTS
+                    </Text>
                   </View>
                 </View>
                 <Text numberOfLines={1} style={[styles.triviaTitle, { color: colors.textPrimary }]}>
@@ -448,7 +526,9 @@ export default function HomeScreen() {
           recommendations.data && recommendations.data.length > 0 ? null : (
             <View style={styles.empty}>
               <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>
-                {recommendations.isPending ? 'Building your recommendations…' : 'More signals needed'}
+                {recommendations.isPending
+                  ? 'Building your recommendations…'
+                  : 'More signals needed'}
               </Text>
               <Text
                 style={{

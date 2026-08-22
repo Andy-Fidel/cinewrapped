@@ -288,6 +288,7 @@ export const registerJournalAttachmentSchema = z
       .min(38)
       .max(1_024)
       .regex(/^[0-9a-f-]{36}\/[0-9a-f-]{36}\.[a-z0-9]{1,10}$/iu),
+    signedUrl: z.url({ protocol: /^https$/ }).max(4_096),
     fileName: z.string().trim().min(1).max(255),
     mimeType: z.enum(['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'application/pdf']),
     byteSize: z.number().int().min(1).max(10_485_760),
@@ -439,6 +440,26 @@ export const blockUserSchema = z
     reason: z.string().trim().max(500).nullable().optional(),
   })
   .default({});
+
+export const reportContentSchema = z.object({
+  entityType: z.enum(['REVIEW', 'COMMENT', 'CLUB', 'USER']),
+  entityId: uuidSchema,
+  reason: z.enum(['SPAM', 'HARASSMENT', 'EXPLICIT', 'SPOILERS', 'OTHER']),
+  details: z.string().trim().max(1_000).optional(),
+  blockAuthor: z.boolean().default(false),
+});
+
+export const notificationInboxQuerySchema = z.object({
+  filter: z.enum(['all', 'unread']).default('all'),
+});
+
+export const registerPushDeviceSchema = z.object({
+  installationId: z.string().trim().min(1).max(255),
+  platform: z.enum(['IOS', 'ANDROID', 'WEB', 'UNKNOWN']),
+  pushToken: z.string().trim().min(16).max(4_096).regex(/^\S+$/u),
+  locale: languageTagSchema.optional(),
+  timezone: z.string().trim().min(1).max(64).optional(),
+});
 
 export const statisticsPeriodSchema = z
   .object({

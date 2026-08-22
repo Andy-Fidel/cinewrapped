@@ -1,14 +1,20 @@
 import type { CurrentUser } from '@cinewrapped/shared-types';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
-import { randomUUID } from 'expo-crypto';
 import * as Linking from 'expo-linking';
-import * as SecureStore from 'expo-secure-store';
 import * as WebBrowser from 'expo-web-browser';
 import { router } from 'expo-router';
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { Platform } from 'react-native';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
 import { api } from '../lib/api';
+import { devicePlatform, getInstallationId } from '../lib/installation';
 import { supabase } from '../lib/supabase';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -25,55 +31,55 @@ interface AuthContextValue {
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
-const installationKey = 'cinewrapped.installation-id';
-
-async function installationId(): Promise<string> {
-  if (Platform.OS === 'web') return `web-${randomUUID()}`;
-  const current = await SecureStore.getItemAsync(installationKey);
-  if (current !== null) return current;
-  const created = randomUUID();
-  await SecureStore.setItemAsync(installationKey, created);
-  return created;
-}
-
-function platform(): 'IOS' | 'ANDROID' | 'WEB' | 'UNKNOWN' {
-  if (Platform.OS === 'ios') return 'IOS';
-  if (Platform.OS === 'android') return 'ANDROID';
-  if (Platform.OS === 'web') return 'WEB';
-  return 'UNKNOWN';
-}
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const bootstrapToken = useRef<string | null>(null);
+  const bootstrapInFlight = useRef<Promise<void> | null>(null);
 
-  const bootstrap = useCallback(async (nextSession: Session | null) => {
+  const bootstrap = useCallback(async (nextSession: Session | null, force = false) => {
     setSession(nextSession);
     if (nextSession === null) {
+      bootstrapToken.current = null;
       setUser(null);
       setLoading(false);
       return;
     }
-    setLoading(true);
-    try {
-      const locale = Intl.DateTimeFormat().resolvedOptions().locale || 'en-US';
-      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-      const current = await api.request<CurrentUser>('auth/bootstrap', {
-        method: 'POST',
-        idempotencyKey: `bootstrap-${randomUUID()}`,
-        body: { locale, timezone, platform: platform(), installationId: await installationId() },
-      });
-      setUser(current);
-      setError(null);
-    } catch (reason) {
-      setError(
-        reason instanceof Error ? reason.message : 'Unable to load your CineWrapped profile.',
-      );
-    } finally {
-      setLoading(false);
+    if (!force && bootstrapToken.current === nextSession.access_token) {
+      await bootstrapInFlight.current;
+      return;
     }
+    bootstrapToken.current = nextSession.access_token;
+    const operation = (async () => {
+      setLoading(true);
+      try {
+        const locale = Intl.DateTimeFormat().resolvedOptions().locale || 'en-US';
+        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+        const current = await api.request<CurrentUser>('auth/bootstrap', {
+          method: 'POST',
+          body: {
+            locale,
+            timezone,
+            platform: devicePlatform(),
+            installationId: await getInstallationId(),
+          },
+        });
+        setUser(current);
+        setError(null);
+      } catch (reason) {
+        bootstrapToken.current = null;
+        setError(
+          reason instanceof Error ? reason.message : 'Unable to load your CineWrapped profile.',
+        );
+      } finally {
+        setLoading(false);
+        bootstrapInFlight.current = null;
+      }
+    })();
+    bootstrapInFlight.current = operation;
+    await operation;
   }, []);
 
   useEffect(() => {
@@ -96,7 +102,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     void restoreSession();
     const { data } = supabase.auth.onAuthStateChange((event: AuthChangeEvent, nextSession) => {
       if (event === 'PASSWORD_RECOVERY') router.replace('/(auth)/update-password');
-      void bootstrap(nextSession);
+      if (event === 'TOKEN_REFRESHED' && nextSession !== null) setSession(nextSession);
+      else void bootstrap(nextSession);
     });
     return () => data.subscription.unsubscribe();
   }, [bootstrap]);
@@ -106,7 +113,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const retry = useCallback(async () => {
-    await bootstrap(session);
+    await bootstrap(session, true);
   }, [bootstrap, session]);
 
   const signOut = useCallback(async () => {

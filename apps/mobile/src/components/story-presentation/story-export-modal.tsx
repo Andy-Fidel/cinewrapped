@@ -1,17 +1,8 @@
 import type { StoryPresentation, StorySlideData } from '@cinewrapped/shared-types';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
-import {
-  Modal,
-  Platform,
-  Pressable,
-  Share,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Modal, Platform, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 
-import { getStoryTheme } from './story-theme';
 import { useColors } from '../ui';
 import { haptics } from '../../lib/haptics';
 
@@ -77,18 +68,10 @@ export function StoryExportModal({
   };
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose}>
         <Pressable
-          style={[
-            styles.sheet,
-            { backgroundColor: colors.surface, borderColor: colors.border },
-          ]}
+          style={[styles.sheet, { backgroundColor: colors.surface, borderColor: colors.border }]}
           onPress={(e) => e.stopPropagation()}
         >
           {/* Header */}
@@ -114,7 +97,9 @@ export function StoryExportModal({
           {copiedNotification ? (
             <View style={styles.copiedBanner}>
               <Ionicons name="checkmark-circle" size={16} color="#10B981" />
-              <Text style={styles.copiedBannerText}>Structured Story JSON copied to clipboard!</Text>
+              <Text style={styles.copiedBannerText}>
+                Structured Story JSON copied to clipboard!
+              </Text>
             </View>
           ) : null}
 
@@ -123,7 +108,7 @@ export function StoryExportModal({
             {/* 1. Instagram Stories */}
             <Pressable
               accessibilityRole="button"
-              onPress={() => handleSharePlatform('INSTAGRAM')}
+              onPress={() => void handleSharePlatform('INSTAGRAM')}
               style={({ pressed }) => [
                 styles.platformCard,
                 {
@@ -136,14 +121,18 @@ export function StoryExportModal({
               <View style={[styles.platformIconBox, { backgroundColor: '#E1306C' }]}>
                 <Ionicons name="logo-instagram" size={22} color="#FFFFFF" />
               </View>
-              <Text style={[styles.platformName, { color: colors.textPrimary }]}>Instagram Stories</Text>
-              <Text style={[styles.platformSpec, { color: colors.textSecondary }]}>9:16 Full Bleed</Text>
+              <Text style={[styles.platformName, { color: colors.textPrimary }]}>
+                Instagram Stories
+              </Text>
+              <Text style={[styles.platformSpec, { color: colors.textSecondary }]}>
+                9:16 Full Bleed
+              </Text>
             </Pressable>
 
             {/* 2. WhatsApp Status */}
             <Pressable
               accessibilityRole="button"
-              onPress={() => handleSharePlatform('WHATSAPP')}
+              onPress={() => void handleSharePlatform('WHATSAPP')}
               style={({ pressed }) => [
                 styles.platformCard,
                 {
@@ -156,14 +145,18 @@ export function StoryExportModal({
               <View style={[styles.platformIconBox, { backgroundColor: '#25D366' }]}>
                 <Ionicons name="logo-whatsapp" size={22} color="#FFFFFF" />
               </View>
-              <Text style={[styles.platformName, { color: colors.textPrimary }]}>WhatsApp Status</Text>
-              <Text style={[styles.platformSpec, { color: colors.textSecondary }]}>9:16 Instant Share</Text>
+              <Text style={[styles.platformName, { color: colors.textPrimary }]}>
+                WhatsApp Status
+              </Text>
+              <Text style={[styles.platformSpec, { color: colors.textSecondary }]}>
+                9:16 Instant Share
+              </Text>
             </Pressable>
 
             {/* 3. TikTok */}
             <Pressable
               accessibilityRole="button"
-              onPress={() => handleSharePlatform('TIKTOK')}
+              onPress={() => void handleSharePlatform('TIKTOK')}
               style={({ pressed }) => [
                 styles.platformCard,
                 {
@@ -177,13 +170,15 @@ export function StoryExportModal({
                 <Ionicons name="logo-tiktok" size={22} color="#000000" />
               </View>
               <Text style={[styles.platformName, { color: colors.textPrimary }]}>TikTok</Text>
-              <Text style={[styles.platformSpec, { color: colors.textSecondary }]}>9:16 Slide Deck</Text>
+              <Text style={[styles.platformSpec, { color: colors.textSecondary }]}>
+                9:16 Slide Deck
+              </Text>
             </Pressable>
 
             {/* 4. Download Image Card */}
             <Pressable
               accessibilityRole="button"
-              onPress={() => handleSharePlatform('DOWNLOAD_IMAGE')}
+              onPress={() => void handleSharePlatform('DOWNLOAD_IMAGE')}
               style={({ pressed }) => [
                 styles.platformCard,
                 {
@@ -193,18 +188,31 @@ export function StoryExportModal({
                 },
               ]}
             >
-              <View style={[styles.platformIconBox, { backgroundColor: colors.surfaceRaised, borderWidth: 1, borderColor: colors.border }]}>
+              <View
+                style={[
+                  styles.platformIconBox,
+                  {
+                    backgroundColor: colors.surfaceRaised,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                  },
+                ]}
+              >
                 <Ionicons name="download-outline" size={22} color={colors.brand} />
               </View>
-              <Text style={[styles.platformName, { color: colors.textPrimary }]}>Download Card</Text>
-              <Text style={[styles.platformSpec, { color: colors.textSecondary }]}>Ultra-HD Image</Text>
+              <Text style={[styles.platformName, { color: colors.textPrimary }]}>
+                Download Card
+              </Text>
+              <Text style={[styles.platformSpec, { color: colors.textSecondary }]}>
+                Ultra-HD Image
+              </Text>
             </Pressable>
           </View>
 
           {/* Structured JSON Export Action */}
           <Pressable
             accessibilityRole="button"
-            onPress={() => handleSharePlatform('COPY_JSON')}
+            onPress={() => void handleSharePlatform('COPY_JSON')}
             style={({ pressed }) => [
               styles.jsonExportBtn,
               {

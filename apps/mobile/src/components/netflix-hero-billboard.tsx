@@ -177,10 +177,7 @@ export function NetflixHeroBillboard({
                 params: { eventType: 'WATCH_PLAN', mediaId: media.id, title: media.title },
               });
             }}
-            style={({ pressed }) => [
-              styles.primaryScreeningBtn,
-              { opacity: pressed ? 0.88 : 1 },
-            ]}
+            style={({ pressed }) => [styles.primaryScreeningBtn, { opacity: pressed ? 0.88 : 1 }]}
           >
             <Ionicons name="calendar-outline" size={17} color="#000000" />
             <Text style={styles.primaryBtnText}>Plan Screening</Text>
@@ -204,12 +201,7 @@ export function NetflixHeroBillboard({
               size={18}
               color={isInWatchlist ? '#10B981' : '#FFFFFF'}
             />
-            <Text
-              style={[
-                styles.glassCapsuleText,
-                isInWatchlist && { color: '#10B981' },
-              ]}
-            >
+            <Text style={[styles.glassCapsuleText, isInWatchlist && { color: '#10B981' }]}>
               {isInWatchlist ? 'Listed' : 'Watchlist'}
             </Text>
           </Pressable>
@@ -221,10 +213,7 @@ export function NetflixHeroBillboard({
               haptics.selection();
               router.push(`/media/${media.id}`);
             }}
-            style={({ pressed }) => [
-              styles.glassIconBtn,
-              { opacity: pressed ? 0.8 : 1 },
-            ]}
+            style={({ pressed }) => [styles.glassIconBtn, { opacity: pressed ? 0.8 : 1 }]}
           >
             <Ionicons name="information" size={18} color="#FFFFFF" />
           </Pressable>

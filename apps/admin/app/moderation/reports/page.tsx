@@ -1,13 +1,6 @@
 'use client';
 
-import {
-  AlertTriangle,
-  CheckCircle,
-  Filter,
-  ShieldAlert,
-  Trash2,
-  XCircle,
-} from 'lucide-react';
+import { CheckCircle, ShieldAlert } from 'lucide-react';
 import { useState } from 'react';
 
 import { Badge } from '../../../components/ui/badge';
@@ -20,7 +13,9 @@ import { adminStore, type ModerationReport } from '../../../lib/admin-store';
 export default function ReportsQueuePage() {
   const { session } = useAdmin();
   const [, setRerender] = useState(0);
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'RESOLVED' | 'DISMISSED'>('PENDING');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'RESOLVED' | 'DISMISSED'>(
+    'PENDING',
+  );
   const [severityFilter, setSeverityFilter] = useState('ALL');
 
   const [activeReport, setActiveReport] = useState<ModerationReport | null>(null);
@@ -35,7 +30,12 @@ export default function ReportsQueuePage() {
 
   const handleResolve = () => {
     if (!activeReport) return;
-    adminStore.resolveReport(session, activeReport.id, resolveAction, adminReason || `Report ${resolveAction.toLowerCase()} by moderator`);
+    adminStore.resolveReport(
+      session,
+      activeReport.id,
+      resolveAction,
+      adminReason || `Report ${resolveAction.toLowerCase()} by moderator`,
+    );
     setActiveReport(null);
     setAdminReason('');
     setRerender((v) => v + 1);
@@ -125,7 +125,9 @@ export default function ReportsQueuePage() {
                   <h3 className="text-base font-bold text-zinc-100">{report.targetTitle}</h3>
 
                   <div className="bg-zinc-950/70 border border-zinc-800/80 p-3 rounded-xl">
-                    <p className="text-xs text-zinc-300 font-serif italic">"{report.targetSnippet}"</p>
+                    <p className="text-xs text-zinc-300 font-serif italic">
+                      "{report.targetSnippet}"
+                    </p>
                   </div>
 
                   <div className="flex items-center gap-4 text-xs text-zinc-500">
