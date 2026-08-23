@@ -11,7 +11,16 @@ import { randomUUID } from 'expo-crypto';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Image,
+  Linking,
+  Pressable,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 
 import { BrandHeader, Button, ErrorText, Field, Screen, useColors } from '../../src/components/ui';
 import { api } from '../../src/lib/api';
@@ -58,7 +67,10 @@ function StepProgressBar({ currentStep, totalSteps }: { currentStep: number; tot
         <Text style={[styles.stepEyebrow, { color: colors.brand }]}>
           STEP {currentStep + 1} OF {totalSteps}
         </Text>
-        <Text style={[styles.stepTitleLabel, { color: colors.textSecondary }]}>
+        <Text
+          maxFontSizeMultiplier={1.25}
+          style={[styles.stepTitleLabel, { color: colors.textSecondary }]}
+        >
           {steps[currentStep]}
         </Text>
       </View>
@@ -99,10 +111,13 @@ function Chip({
         />
       ) : null}
       <Text
+        maxFontSizeMultiplier={1.25}
         style={{
           color: selected ? colors.onBrand : colors.textPrimary,
+          flexShrink: 1,
           fontWeight: '600',
           fontSize: 13,
+          textAlign: 'center',
         }}
       >
         {label}
@@ -117,6 +132,8 @@ function toggle(items: string[], id: string): string[] {
 
 export default function OnboardingScreen() {
   const colors = useColors();
+  const { fontScale, width } = useWindowDimensions();
+  const compactLayout = width < 380 || fontScale > 1.15;
   const { session, user, refreshUser } = useAuth();
   const { confirm, showError } = useDialog();
   const draft = useOnboardingStore();
@@ -385,16 +402,34 @@ export default function OnboardingScreen() {
             Select at least 5 genres to help us personalize your recommendations (
             {draft.genreIds.length}/5).
           </Text>
-          <View style={styles.chips}>
-            {genres.data?.map((genre) => (
-              <Chip
-                key={genre.id}
-                label={genre.name}
-                selected={draft.genreIds.includes(genre.id)}
-                onPress={() => draft.patch({ genreIds: toggle(draft.genreIds, genre.id) })}
+          {genres.isPending ? (
+            <View style={styles.loadingRow}>
+              <ActivityIndicator color={colors.brand} />
+              <Text style={{ color: colors.textSecondary }}>Loading genres…</Text>
+            </View>
+          ) : genres.isError ? (
+            <View style={styles.queryError}>
+              <ErrorText>
+                Genres could not be loaded. Check your connection and try again.
+              </ErrorText>
+              <Button
+                label="Retry genres"
+                variant="secondary"
+                onPress={() => void genres.refetch()}
               />
-            ))}
-          </View>
+            </View>
+          ) : (
+            <View style={styles.chips}>
+              {genres.data.map((genre) => (
+                <Chip
+                  key={genre.id}
+                  label={genre.name}
+                  selected={draft.genreIds.includes(genre.id)}
+                  onPress={() => draft.patch({ genreIds: toggle(draft.genreIds, genre.id) })}
+                />
+              ))}
+            </View>
+          )}
         </View>
       )}
 
@@ -433,20 +468,38 @@ export default function OnboardingScreen() {
           <Text style={{ color: colors.textSecondary, fontSize: 14 }}>
             Select any services you use—or continue with none.
           </Text>
-          <View style={styles.chips}>
-            {providers.data?.map((provider) => (
-              <Chip
-                key={provider.id}
-                label={provider.name}
-                selected={draft.streamingProviderIds.includes(provider.id)}
-                onPress={() =>
-                  draft.patch({
-                    streamingProviderIds: toggle(draft.streamingProviderIds, provider.id),
-                  })
-                }
+          {providers.isPending ? (
+            <View style={styles.loadingRow}>
+              <ActivityIndicator color={colors.brand} />
+              <Text style={{ color: colors.textSecondary }}>Loading streaming services…</Text>
+            </View>
+          ) : providers.isError ? (
+            <View style={styles.queryError}>
+              <ErrorText>
+                Streaming services could not be loaded. You can retry or continue.
+              </ErrorText>
+              <Button
+                label="Retry services"
+                variant="secondary"
+                onPress={() => void providers.refetch()}
               />
-            ))}
-          </View>
+            </View>
+          ) : (
+            <View style={styles.chips}>
+              {providers.data.map((provider) => (
+                <Chip
+                  key={provider.id}
+                  label={provider.name}
+                  selected={draft.streamingProviderIds.includes(provider.id)}
+                  onPress={() =>
+                    draft.patch({
+                      streamingProviderIds: toggle(draft.streamingProviderIds, provider.id),
+                    })
+                  }
+                />
+              ))}
+            </View>
+          )}
         </View>
       )}
 
@@ -569,7 +622,7 @@ export default function OnboardingScreen() {
       {message === null ? null : <ErrorText>{message}</ErrorText>}
 
       {/* Action Buttons */}
-      <View style={styles.actions}>
+      <View style={[styles.actions, compactLayout && styles.actionsCompact]}>
         {draft.step === 0 ? null : (
           <Button
             label="Back"
@@ -594,10 +647,15 @@ const styles = StyleSheet.create({
   stepProgressContainer: { gap: 8, marginTop: 10, width: '100%' },
   stepSegmentsRow: { flexDirection: 'row', gap: 6, width: '100%' },
   stepSegment: { borderRadius: 999, flex: 1, height: 4 },
-  stepTextRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
+  stepTextRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12,
+    justifyContent: 'space-between',
+  },
   stepEyebrow: { fontSize: 11, fontWeight: '800', letterSpacing: 1.2 },
-  stepTitleLabel: { fontSize: 12, fontWeight: '600' },
-  stepContentWrap: { gap: 14 },
+  stepTitleLabel: { flexShrink: 1, fontSize: 12, fontWeight: '600', textAlign: 'right' },
+  stepContentWrap: { gap: 14, minWidth: 0 },
   avatarContainer: { alignSelf: 'center', position: 'relative' },
   avatarImage: { borderRadius: 56, height: 112, width: 112 },
   avatarFallback: {
@@ -619,6 +677,8 @@ const styles = StyleSheet.create({
   },
   avatarHint: { fontSize: 13, textAlign: 'center' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  loadingRow: { alignItems: 'center', flexDirection: 'row', gap: 10, paddingVertical: 16 },
+  queryError: { gap: 10 },
   chip: {
     alignItems: 'center',
     borderRadius: 999,
@@ -649,5 +709,6 @@ const styles = StyleSheet.create({
   optionTitle: { fontSize: 16, fontWeight: '800' },
   optionDesc: { fontSize: 13, lineHeight: 18 },
   actions: { flexDirection: 'row', gap: 12, marginTop: 14 },
+  actionsCompact: { flexDirection: 'column-reverse' },
   grow: { flex: 1 },
 });

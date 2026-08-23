@@ -18,6 +18,7 @@ import {
 } from '../../src/components/ui';
 import { errorMessage } from '../../src/lib/error-message';
 import { haptics } from '../../src/lib/haptics';
+import { authCallbackUrl } from '../../src/lib/auth-links';
 import { supabase } from '../../src/lib/supabase';
 import { useAuth } from '../../src/providers/auth-provider';
 
@@ -93,7 +94,10 @@ export default function RegisterScreen() {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { full_name: displayName } },
+        options: {
+          data: { full_name: displayName },
+          emailRedirectTo: authCallbackUrl,
+        },
       });
       if (error !== null) {
         setError('root', { message: error.message });
@@ -405,6 +409,7 @@ const styles = StyleSheet.create({
   handleBadgeRow: {
     alignItems: 'center',
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 6,
     marginTop: -6,
   },
@@ -414,10 +419,12 @@ const styles = StyleSheet.create({
   },
   handlePill: {
     borderRadius: 6,
+    flexShrink: 1,
     paddingHorizontal: 6,
     paddingVertical: 2,
   },
   handlePillText: {
+    flexShrink: 1,
     fontSize: 11,
     fontWeight: '700',
   },
@@ -447,6 +454,7 @@ const styles = StyleSheet.create({
   },
   criteriaRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 14,
   },
   criterionItem: {
@@ -465,16 +473,17 @@ const styles = StyleSheet.create({
     marginVertical: 2,
   },
   dividerLine: { flex: 1, height: 1 },
-  dividerText: { fontSize: 11, fontWeight: '700', letterSpacing: 0.8 },
-  socialButtonsRow: { flexDirection: 'row', gap: 10 },
+  dividerText: { flexShrink: 1, fontSize: 11, fontWeight: '700', letterSpacing: 0.8 },
+  socialButtonsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   socialButton: {
     alignItems: 'center',
     borderRadius: 12,
     borderWidth: 1,
-    flex: 1,
+    flexBasis: 140,
+    flexGrow: 1,
     flexDirection: 'row',
     gap: 8,
-    height: 46,
+    minHeight: 46,
     justifyContent: 'center',
   },
   links: { alignItems: 'center', gap: 12, marginTop: 4 },
@@ -486,5 +495,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 4,
   },
-  securityNoteText: { fontSize: 11, fontWeight: '500' },
+  securityNoteText: { flexShrink: 1, fontSize: 11, fontWeight: '500', textAlign: 'center' },
 });

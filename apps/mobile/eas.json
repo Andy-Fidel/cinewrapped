@@ -9,6 +9,7 @@
       "environment": "preview",
       "node": "22.14.0",
       "pnpm": "11.9.0",
+      "autoIncrement": true,
       "android": {
         "buildType": "apk"
       }

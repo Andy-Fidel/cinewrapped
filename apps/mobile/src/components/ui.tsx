@@ -37,7 +37,20 @@ export function Screen({
       {...(edges === undefined ? {} : { edges })}
       style={[styles.safeArea, { backgroundColor: colors.background }]}
     >
-      {scroll ? <ScrollView keyboardShouldPersistTaps="handled">{body}</ScrollView> : body}
+      {scroll ? (
+        <ScrollView
+          automaticallyAdjustKeyboardInsets
+          contentContainerStyle={styles.scrollContent}
+          keyboardDismissMode="on-drag"
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          style={styles.scroll}
+        >
+          {body}
+        </ScrollView>
+      ) : (
+        body
+      )}
     </SafeAreaView>
   );
 }
@@ -74,14 +87,20 @@ export function BrandHeader({
           ) : eyebrow ? (
             <Text style={[styles.eyebrow, { color: colors.brand }]}>{eyebrow}</Text>
           ) : null}
-          <Text accessibilityRole="header" style={[styles.title, { color: colors.textPrimary }]}>
+          <Text
+            accessibilityRole="header"
+            maxFontSizeMultiplier={1.35}
+            style={[styles.title, { color: colors.textPrimary }]}
+          >
             {title}
           </Text>
         </View>
         {action}
       </View>
       {body === undefined ? null : (
-        <Text style={[styles.body, { color: colors.textSecondary }]}>{body}</Text>
+        <Text maxFontSizeMultiplier={1.4} style={[styles.body, { color: colors.textSecondary }]}>
+          {body}
+        </Text>
       )}
     </View>
   );
@@ -340,7 +359,9 @@ function LabeledInput({
   const { style, ...props } = inputProps;
   return (
     <View style={styles.fieldWrap}>
-      <Text style={[styles.label, { color: colors.textPrimary }]}>{label}</Text>
+      <Text maxFontSizeMultiplier={1.4} style={[styles.label, { color: colors.textPrimary }]}>
+        {label}
+      </Text>
       <View
         style={[
           styles.field,
@@ -360,6 +381,7 @@ function LabeledInput({
             style,
           ]}
           {...props}
+          maxFontSizeMultiplier={props.maxFontSizeMultiplier ?? 1.4}
         />
         {trailing}
       </View>
@@ -404,7 +426,9 @@ export function Button({
       {loading ? (
         <ActivityIndicator color={foreground} />
       ) : (
-        <Text style={[styles.buttonText, { color: foreground }]}>{label}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.buttonText, { color: foreground }]}>
+          {label}
+        </Text>
       )}
     </Pressable>
   );
@@ -491,7 +515,17 @@ export function ErrorText({ children }: PropsWithChildren) {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1 },
-  content: { alignSelf: 'center', gap: 18, maxWidth: 640, padding: 20, width: '100%' },
+  scroll: { flex: 1 },
+  scrollContent: { flexGrow: 1 },
+  content: {
+    alignSelf: 'center',
+    gap: 18,
+    maxWidth: 640,
+    minWidth: 0,
+    padding: 20,
+    paddingBottom: 36,
+    width: '100%',
+  },
   header: { gap: 8, marginBottom: 10, marginTop: 12 },
   headerTopRow: {
     alignItems: 'center',
@@ -499,8 +533,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   eyebrow: { fontSize: 11, fontWeight: '800', letterSpacing: 1.3 },
-  title: { fontSize: 28, fontWeight: '800', letterSpacing: -0.5 },
-  body: { fontSize: 14, lineHeight: 20 },
+  title: { flexShrink: 1, fontSize: 28, fontWeight: '800', letterSpacing: -0.5 },
+  body: { flexShrink: 1, fontSize: 14, lineHeight: 20 },
 
   // Section Header
   sectionHeader: {
@@ -626,5 +660,5 @@ const styles = StyleSheet.create({
     minHeight: 50,
     paddingHorizontal: 20,
   },
-  buttonText: { fontSize: 15, fontWeight: '700' },
+  buttonText: { flexShrink: 1, fontSize: 15, fontWeight: '700', textAlign: 'center' },
 });

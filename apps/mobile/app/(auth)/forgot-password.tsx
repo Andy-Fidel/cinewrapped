@@ -1,9 +1,9 @@
-import * as Linking from 'expo-linking';
 import { Link } from 'expo-router';
 import { useState } from 'react';
 import { Text } from 'react-native';
 
 import { BrandHeader, Button, ErrorText, Field, Screen, useColors } from '../../src/components/ui';
+import { passwordRecoveryUrl } from '../../src/lib/auth-links';
 import { supabase } from '../../src/lib/supabase';
 
 export default function ForgotPasswordScreen() {
@@ -14,7 +14,7 @@ export default function ForgotPasswordScreen() {
   const submit = async () => {
     setLoading(true);
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: Linking.createURL('/(auth)/update-password'),
+      redirectTo: passwordRecoveryUrl,
     });
     setMessage(error?.message ?? 'If that account exists, a secure reset link is on its way.');
     setLoading(false);

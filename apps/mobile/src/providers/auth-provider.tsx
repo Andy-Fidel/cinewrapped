@@ -14,6 +14,7 @@ import {
 } from 'react';
 
 import { api } from '../lib/api';
+import { authCallbackUrl, completeAuthRedirect } from '../lib/auth-links';
 import { devicePlatform, getInstallationId } from '../lib/installation';
 import { supabase } from '../lib/supabase';
 
@@ -83,6 +84,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    let active = true;
+    const handleAuthUrl = async (url: string | null) => {
+      if (url === null) return;
+      try {
+        const handled = await completeAuthRedirect(supabase, url);
+        if (handled) {
+          const parsed = new URL(url);
+          const fragment = new URLSearchParams(parsed.hash.replace(/^#/, ''));
+          if (
+            parsed.searchParams.get('type') === 'recovery' ||
+            fragment.get('type') === 'recovery'
+          ) {
+            router.replace('/(auth)/update-password');
+          }
+        }
+      } catch (reason) {
+        if (active) {
+          setError(
+            reason instanceof Error ? reason.message : 'The authentication link is invalid.',
+          );
+          setLoading(false);
+        }
+      }
+    };
     const restoreSession = async () => {
       try {
         const { data, error: sessionError } = await supabase.auth.getSession();
@@ -100,12 +125,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     void restoreSession();
+    void Linking.getInitialURL().then(handleAuthUrl);
+    const linkingSubscription = Linking.addEventListener('url', ({ url }) => {
+      void handleAuthUrl(url);
+    });
     const { data } = supabase.auth.onAuthStateChange((event: AuthChangeEvent, nextSession) => {
       if (event === 'PASSWORD_RECOVERY') router.replace('/(auth)/update-password');
       if (event === 'TOKEN_REFRESHED' && nextSession !== null) setSession(nextSession);
       else void bootstrap(nextSession);
     });
-    return () => data.subscription.unsubscribe();
+    return () => {
+      active = false;
+      linkingSubscription.remove();
+      data.subscription.unsubscribe();
+    };
   }, [bootstrap]);
 
   const refreshUser = useCallback(async () => {
@@ -131,7 +164,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const oauth = useCallback(async (provider: 'google' | 'apple') => {
-    const redirectTo = Linking.createURL('/auth/callback');
+    const redirectTo = authCallbackUrl;
     const { data, error: authError } = await supabase.auth.signInWithOAuth({
       provider,
       options: { redirectTo, skipBrowserRedirect: true },
