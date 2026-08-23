@@ -48,4 +48,4 @@ COPY --from=builder --chown=cinewrapped:cinewrapped /workspace/packages/validati
 COPY --from=builder --chown=cinewrapped:cinewrapped /workspace/packages/validation/dist ./packages/validation/dist
 USER cinewrapped
 EXPOSE 4000
-CMD ["sh", "-c", "./packages/database/node_modules/.bin/prisma migrate deploy --schema packages/database/prisma/schema.prisma && exec node apps/api/dist/main.js"]
+CMD ["sh", "-c", "./packages/database/node_modules/.bin/prisma migrate deploy --schema packages/database/prisma/schema.prisma && ./node_modules/.bin/tsx packages/database/prisma/seed.ts && exec node apps/api/dist/main.js"]

@@ -418,6 +418,17 @@ export default function OnboardingScreen() {
                 onPress={() => void genres.refetch()}
               />
             </View>
+          ) : genres.data.length === 0 ? (
+            <View style={styles.queryError}>
+              <ErrorText>
+                The genre catalogue is temporarily empty. Retry while CineWrapped refreshes it.
+              </ErrorText>
+              <Button
+                label="Refresh genres"
+                variant="secondary"
+                onPress={() => void genres.refetch()}
+              />
+            </View>
           ) : (
             <View style={styles.chips}>
               {genres.data.map((genre) => (
