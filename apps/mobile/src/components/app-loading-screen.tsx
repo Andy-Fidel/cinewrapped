@@ -1,9 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, Animated, Easing, StyleSheet, Text, View } from 'react-native';
+import { AccessibilityInfo, Animated, Easing, Image, StyleSheet, Text, View } from 'react-native';
+
+import logoFull from '../../assets/logo.png';
+import logoFullWhite from '../../assets/logo-white.png';
+import logoMark from '../../assets/logo-mark.png';
+import logoMarkWhite from '../../assets/logo-mark-white.png';
 
 import { useTheme } from '../providers/theme-provider';
 
-const minimumDisplayMs = 1_000;
+const minimumDisplayMs = 1_400;
 
 export function AppLoadingScreen({
   ready,
@@ -15,180 +20,265 @@ export function AppLoadingScreen({
   const { colors, resolvedTheme } = useTheme();
   const [minimumElapsed, setMinimumElapsed] = useState(false);
   const rootOpacity = useRef(new Animated.Value(1)).current;
-  const entranceOpacity = useRef(new Animated.Value(0)).current;
-  const markScale = useRef(new Animated.Value(0.82)).current;
-  const markOffset = useRef(new Animated.Value(12)).current;
+  const rootScale = useRef(new Animated.Value(1)).current;
+  const stageOpacity = useRef(new Animated.Value(0)).current;
+  const stageScale = useRef(new Animated.Value(0.72)).current;
+  const stageOffset = useRef(new Animated.Value(18)).current;
+  const ringRotation = useRef(new Animated.Value(0)).current;
+  const logoScale = useRef(new Animated.Value(1)).current;
+  const haloScale = useRef(new Animated.Value(0.84)).current;
+  const haloOpacity = useRef(new Animated.Value(0)).current;
+  const shimmerPosition = useRef(new Animated.Value(-88)).current;
   const copyOpacity = useRef(new Animated.Value(0)).current;
-  const copyOffset = useRef(new Animated.Value(8)).current;
-  const orbitRotation = useRef(new Animated.Value(0)).current;
-  const pulseScale = useRef(new Animated.Value(1)).current;
-  const pulseOpacity = useRef(new Animated.Value(0.38)).current;
-  const progressPosition = useRef(new Animated.Value(-96)).current;
+  const copyOffset = useRef(new Animated.Value(10)).current;
+  const loaderOpacity = useRef(new Animated.Value(0)).current;
+  const progressPosition = useRef(new Animated.Value(-116)).current;
   const reduceMotion = useRef(false);
 
   useEffect(() => {
     const timer = setTimeout(() => setMinimumElapsed(true), minimumDisplayMs);
     let active = true;
-    let orbit: Animated.CompositeAnimation | null = null;
-    let pulse: Animated.CompositeAnimation | null = null;
+    let rings: Animated.CompositeAnimation | null = null;
+    let breathing: Animated.CompositeAnimation | null = null;
+    let halo: Animated.CompositeAnimation | null = null;
+    let shimmer: Animated.CompositeAnimation | null = null;
     let progress: Animated.CompositeAnimation | null = null;
 
     void AccessibilityInfo.isReduceMotionEnabled().then((reduced) => {
       if (!active) return;
       reduceMotion.current = reduced;
       if (reduced) {
-        entranceOpacity.setValue(1);
-        markScale.setValue(1);
-        markOffset.setValue(0);
+        stageOpacity.setValue(1);
+        stageScale.setValue(1);
+        stageOffset.setValue(0);
+        haloScale.setValue(1);
+        haloOpacity.setValue(0.18);
         copyOpacity.setValue(1);
         copyOffset.setValue(0);
+        loaderOpacity.setValue(1);
         progressPosition.setValue(0);
         return;
       }
 
-      Animated.parallel([
-        Animated.timing(entranceOpacity, {
-          toValue: 1,
-          duration: 420,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-        Animated.spring(markScale, {
-          toValue: 1,
-          damping: 14,
-          mass: 0.72,
-          stiffness: 150,
-          useNativeDriver: true,
-        }),
-        Animated.timing(markOffset, {
-          toValue: 0,
-          duration: 520,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-        Animated.sequence([
-          Animated.delay(180),
+      Animated.sequence([
+        Animated.parallel([
+          Animated.timing(stageOpacity, {
+            toValue: 1,
+            duration: 340,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true,
+          }),
+          Animated.spring(stageScale, {
+            toValue: 1,
+            damping: 15,
+            mass: 0.8,
+            stiffness: 145,
+            useNativeDriver: true,
+          }),
+          Animated.timing(stageOffset, {
+            toValue: 0,
+            duration: 560,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true,
+          }),
           Animated.parallel([
-            Animated.timing(copyOpacity, {
-              toValue: 1,
-              duration: 360,
+            Animated.timing(haloScale, {
+              toValue: 1.08,
+              duration: 680,
               easing: Easing.out(Easing.cubic),
               useNativeDriver: true,
             }),
-            Animated.timing(copyOffset, {
-              toValue: 0,
-              duration: 420,
+            Animated.timing(haloOpacity, {
+              toValue: 0.24,
+              duration: 520,
               easing: Easing.out(Easing.cubic),
               useNativeDriver: true,
             }),
           ]),
         ]),
+        Animated.parallel([
+          Animated.timing(copyOpacity, {
+            toValue: 1,
+            duration: 380,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true,
+          }),
+          Animated.timing(copyOffset, {
+            toValue: 0,
+            duration: 440,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.timing(loaderOpacity, {
+          toValue: 1,
+          duration: 260,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
       ]).start();
 
-      orbit = Animated.loop(
-        Animated.timing(orbitRotation, {
+      rings = Animated.loop(
+        Animated.timing(ringRotation, {
           toValue: 1,
-          duration: 2_800,
+          duration: 4_800,
           easing: Easing.linear,
           useNativeDriver: true,
         }),
       );
-      pulse = Animated.loop(
+      breathing = Animated.loop(
+        Animated.sequence([
+          Animated.timing(logoScale, {
+            toValue: 1.035,
+            duration: 1_500,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: true,
+          }),
+          Animated.timing(logoScale, {
+            toValue: 1,
+            duration: 1_500,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: true,
+          }),
+        ]),
+      );
+      halo = Animated.loop(
         Animated.sequence([
           Animated.parallel([
-            Animated.timing(pulseScale, {
-              toValue: 1.14,
-              duration: 1_300,
+            Animated.timing(haloScale, {
+              toValue: 1.22,
+              duration: 1_650,
               easing: Easing.out(Easing.quad),
               useNativeDriver: true,
             }),
-            Animated.timing(pulseOpacity, {
+            Animated.timing(haloOpacity, {
               toValue: 0,
-              duration: 1_300,
+              duration: 1_650,
               easing: Easing.out(Easing.quad),
               useNativeDriver: true,
             }),
           ]),
-          Animated.timing(pulseScale, { toValue: 1, duration: 0, useNativeDriver: true }),
-          Animated.timing(pulseOpacity, {
-            toValue: 0.38,
+          Animated.timing(haloScale, { toValue: 0.92, duration: 0, useNativeDriver: true }),
+          Animated.timing(haloOpacity, { toValue: 0.2, duration: 0, useNativeDriver: true }),
+        ]),
+      );
+      shimmer = Animated.loop(
+        Animated.sequence([
+          Animated.delay(600),
+          Animated.timing(shimmerPosition, {
+            toValue: 88,
+            duration: 900,
+            easing: Easing.inOut(Easing.cubic),
+            useNativeDriver: true,
+          }),
+          Animated.timing(shimmerPosition, {
+            toValue: -88,
             duration: 0,
             useNativeDriver: true,
           }),
+          Animated.delay(1_500),
         ]),
       );
       progress = Animated.loop(
         Animated.sequence([
           Animated.timing(progressPosition, {
-            toValue: 96,
-            duration: 1_250,
+            toValue: 116,
+            duration: 1_350,
             easing: Easing.inOut(Easing.cubic),
             useNativeDriver: true,
           }),
           Animated.timing(progressPosition, {
-            toValue: -96,
+            toValue: -116,
             duration: 0,
             useNativeDriver: true,
           }),
-          Animated.delay(180),
+          Animated.delay(160),
         ]),
       );
-      orbit.start();
-      pulse.start();
+      rings.start();
+      breathing.start();
+      halo.start();
+      shimmer.start();
       progress.start();
     });
 
     return () => {
       active = false;
       clearTimeout(timer);
-      orbit?.stop();
-      pulse?.stop();
+      rings?.stop();
+      breathing?.stop();
+      halo?.stop();
+      shimmer?.stop();
       progress?.stop();
     };
   }, [
     copyOffset,
     copyOpacity,
-    entranceOpacity,
-    markOffset,
-    markScale,
-    orbitRotation,
+    haloOpacity,
+    haloScale,
+    loaderOpacity,
+    logoScale,
     progressPosition,
-    pulseOpacity,
-    pulseScale,
+    ringRotation,
+    shimmerPosition,
+    stageOffset,
+    stageOpacity,
+    stageScale,
   ]);
 
   useEffect(() => {
     if (!ready || !minimumElapsed) return;
-    const exit = Animated.timing(rootOpacity, {
-      toValue: 0,
-      duration: reduceMotion.current ? 80 : 260,
-      easing: Easing.in(Easing.cubic),
-      useNativeDriver: true,
-    });
+    const exit = Animated.parallel([
+      Animated.timing(rootOpacity, {
+        toValue: 0,
+        duration: reduceMotion.current ? 80 : 320,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(rootScale, {
+        toValue: reduceMotion.current ? 1 : 1.035,
+        duration: reduceMotion.current ? 80 : 360,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]);
     exit.start(({ finished }) => {
       if (finished) onFinished();
     });
     return () => exit.stop();
-  }, [minimumElapsed, onFinished, ready, rootOpacity]);
+  }, [minimumElapsed, onFinished, ready, rootOpacity, rootScale]);
 
-  const orbitSpin = orbitRotation.interpolate({
+  const ringSpin = ringRotation.interpolate({
     inputRange: [0, 1],
     outputRange: ['0deg', '360deg'],
   });
+  const reverseRingSpin = ringRotation.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['360deg', '0deg'],
+  });
   const dark = resolvedTheme === 'dark';
+  const markSource = dark ? logoMarkWhite : logoMark;
+  const wordmarkSource = dark ? logoFullWhite : logoFull;
 
   return (
     <Animated.View
       accessibilityLabel="CineWrapped is loading"
       accessibilityRole="progressbar"
-      style={[styles.screen, { backgroundColor: colors.background, opacity: rootOpacity }]}
+      style={[
+        styles.screen,
+        {
+          backgroundColor: colors.background,
+          opacity: rootOpacity,
+          transform: [{ scale: rootScale }],
+        },
+      ]}
     >
       <View
         pointerEvents="none"
         style={[
           styles.ambientGlow,
           styles.glowTop,
-          { backgroundColor: colors.brand, opacity: dark ? 0.11 : 0.08 },
+          { backgroundColor: colors.brand, opacity: dark ? 0.14 : 0.09 },
         ]}
       />
       <View
@@ -196,75 +286,102 @@ export function AppLoadingScreen({
         style={[
           styles.ambientGlow,
           styles.glowBottom,
-          { backgroundColor: colors.accent, opacity: dark ? 0.09 : 0.06 },
+          { backgroundColor: colors.accent, opacity: dark ? 0.1 : 0.065 },
         ]}
       />
+      <View pointerEvents="none" style={[styles.frameLine, { backgroundColor: colors.border }]} />
 
       <Animated.View
         style={[
           styles.hero,
           {
-            opacity: entranceOpacity,
-            transform: [{ translateY: markOffset }, { scale: markScale }],
+            opacity: stageOpacity,
+            transform: [{ translateY: stageOffset }, { scale: stageScale }],
           },
         ]}
       >
-        <View style={styles.markStage}>
+        <View style={styles.logoStage}>
           <Animated.View
             style={[
-              styles.pulseRing,
+              styles.halo,
               {
-                borderColor: colors.brand,
-                opacity: pulseOpacity,
-                transform: [{ scale: pulseScale }],
+                backgroundColor: colors.brand,
+                opacity: haloOpacity,
+                transform: [{ scale: haloScale }],
               },
             ]}
           />
           <Animated.View
             style={[
-              styles.orbit,
+              styles.outerRing,
               {
-                borderColor: colors.border,
-                borderTopColor: colors.brand,
-                transform: [{ rotate: orbitSpin }],
+                borderColor: dark ? colors.borderStrong : colors.border,
+                transform: [{ rotate: ringSpin }],
               },
             ]}
           >
-            <View style={[styles.orbitLight, { backgroundColor: colors.brand }]} />
+            <View style={[styles.ringSpark, styles.sparkTop, { backgroundColor: colors.brand }]} />
+            <View
+              style={[styles.ringSpark, styles.sparkBottom, { backgroundColor: colors.accent }]}
+            />
           </Animated.View>
-          <View
+          <Animated.View
             style={[
-              styles.mark,
+              styles.innerRing,
+              {
+                borderColor: colors.border,
+                borderRightColor: colors.brand,
+                transform: [{ rotate: reverseRingSpin }],
+              },
+            ]}
+          />
+          <Animated.View
+            style={[
+              styles.logoPlate,
               {
                 backgroundColor: colors.surface,
                 borderColor: dark ? colors.borderStrong : colors.border,
                 shadowColor: colors.brand,
+                transform: [{ scale: logoScale }],
               },
             ]}
           >
-            <Text style={[styles.monogram, { color: colors.brand }]}>C</Text>
-            <View style={styles.perforationsLeft}>
-              {[0, 1, 2].map((slot) => (
-                <View key={slot} style={[styles.perforation, { backgroundColor: colors.brand }]} />
-              ))}
-            </View>
-            <View style={styles.perforationsRight}>
-              {[0, 1, 2].map((slot) => (
-                <View key={slot} style={[styles.perforation, { backgroundColor: colors.brand }]} />
-              ))}
-            </View>
-          </View>
+            <Image accessibilityIgnoresInvertColors source={markSource} style={styles.markImage} />
+            <Animated.View
+              pointerEvents="none"
+              style={[
+                styles.shimmer,
+                {
+                  backgroundColor: dark ? '#FFFFFF' : colors.surface,
+                  transform: [{ translateX: shimmerPosition }, { rotate: '18deg' }],
+                },
+              ]}
+            />
+          </Animated.View>
         </View>
       </Animated.View>
 
       <Animated.View
         style={[styles.copy, { opacity: copyOpacity, transform: [{ translateY: copyOffset }] }]}
       >
-        <Text style={[styles.wordmark, { color: colors.textPrimary }]}>CINEWRAPPED</Text>
-        <Text style={[styles.tagline, { color: colors.textSecondary }]}>Your story in cinema</Text>
+        <Image
+          accessibilityIgnoresInvertColors
+          source={wordmarkSource}
+          style={styles.wordmarkImage}
+        />
+        <View style={styles.taglineRow}>
+          <View style={[styles.taglineRule, { backgroundColor: colors.brand }]} />
+          <Text
+            maxFontSizeMultiplier={1.2}
+            style={[styles.tagline, { color: colors.textSecondary }]}
+          >
+            YOUR STORY IN CINEMA
+          </Text>
+          <View style={[styles.taglineRule, { backgroundColor: colors.brand }]} />
+        </View>
       </Animated.View>
 
-      <Animated.View style={[styles.loaderArea, { opacity: copyOpacity }]}>
+      <Animated.View style={[styles.loaderArea, { opacity: loaderOpacity }]}>
         <View style={[styles.track, { backgroundColor: colors.surfaceRaised }]}>
           <Animated.View
             style={[
@@ -276,7 +393,12 @@ export function AppLoadingScreen({
             ]}
           />
         </View>
-        <Text style={[styles.loadingLabel, { color: colors.textDisabled }]}>CURATING YOUR CUT</Text>
+        <Text
+          maxFontSizeMultiplier={1.2}
+          style={[styles.loadingLabel, { color: colors.textDisabled }]}
+        >
+          CURATING YOUR CUT
+        </Text>
       </Animated.View>
     </Animated.View>
   );
@@ -291,68 +413,80 @@ const styles = StyleSheet.create({
   },
   ambientGlow: {
     borderRadius: 999,
-    height: 320,
+    height: 360,
     position: 'absolute',
-    width: 320,
+    width: 360,
   },
-  glowTop: { right: -180, top: -110 },
-  glowBottom: { bottom: -150, left: -190 },
+  glowTop: { right: -210, top: -130 },
+  glowBottom: { bottom: -180, left: -210 },
+  frameLine: { height: 1, left: 28, opacity: 0.45, position: 'absolute', right: 28, top: 54 },
   hero: { alignItems: 'center' },
-  markStage: {
+  logoStage: {
     alignItems: 'center',
-    height: 154,
+    height: 196,
     justifyContent: 'center',
-    width: 154,
+    width: 196,
   },
-  pulseRing: {
-    borderRadius: 74,
-    borderWidth: 1,
-    height: 148,
+  halo: {
+    borderRadius: 86,
+    height: 172,
     position: 'absolute',
-    width: 148,
+    width: 172,
   },
-  orbit: {
-    borderRadius: 62,
+  outerRing: {
+    borderRadius: 82,
+    borderStyle: 'dashed',
     borderWidth: 1,
-    height: 124,
+    height: 164,
     position: 'absolute',
-    width: 124,
+    width: 164,
   },
-  orbitLight: {
+  innerRing: {
+    borderRadius: 68,
+    borderWidth: 1,
+    height: 136,
+    opacity: 0.8,
+    position: 'absolute',
+    width: 136,
+  },
+  ringSpark: {
     borderRadius: 4,
-    height: 7,
+    height: 8,
     position: 'absolute',
-    right: 14,
-    top: 8,
-    width: 7,
+    shadowColor: '#FFFFFF',
+    shadowOpacity: 0.5,
+    shadowRadius: 6,
+    width: 8,
   },
-  mark: {
+  sparkTop: { right: 20, top: 14 },
+  sparkBottom: { bottom: 15, left: 19 },
+  logoPlate: {
     alignItems: 'center',
-    borderRadius: 28,
+    borderRadius: 32,
     borderWidth: 1,
-    elevation: 10,
-    height: 92,
+    elevation: 12,
+    height: 108,
     justifyContent: 'center',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.18,
-    shadowRadius: 24,
-    width: 92,
+    overflow: 'hidden',
+    shadowOffset: { width: 0, height: 14 },
+    shadowOpacity: 0.22,
+    shadowRadius: 26,
+    width: 108,
   },
-  monogram: {
-    fontSize: 50,
-    fontWeight: '800',
-    letterSpacing: -4,
-    lineHeight: 58,
-    marginLeft: -2,
+  markImage: { height: 84, resizeMode: 'contain', width: 80 },
+  shimmer: {
+    height: 150,
+    opacity: 0.16,
+    position: 'absolute',
+    width: 24,
   },
-  perforationsLeft: { gap: 8, left: 8, position: 'absolute' },
-  perforationsRight: { gap: 8, position: 'absolute', right: 8 },
-  perforation: { borderRadius: 1, height: 4, opacity: 0.55, width: 3 },
-  copy: { alignItems: 'center', marginTop: 22 },
-  wordmark: { fontSize: 20, fontWeight: '800', letterSpacing: 4.4 },
-  tagline: { fontSize: 13, letterSpacing: 0.5, marginTop: 8 },
-  loaderArea: { alignItems: 'center', bottom: 68, position: 'absolute' },
-  track: { borderRadius: 2, height: 2, overflow: 'hidden', width: 184 },
-  progress: { borderRadius: 2, height: 2, width: 72 },
+  copy: { alignItems: 'center', marginTop: 18 },
+  wordmarkImage: { height: 50, resizeMode: 'contain', width: 216 },
+  taglineRow: { alignItems: 'center', flexDirection: 'row', gap: 10, marginTop: 7 },
+  taglineRule: { borderRadius: 1, height: 1, opacity: 0.7, width: 22 },
+  tagline: { fontSize: 9, fontWeight: '700', letterSpacing: 1.8 },
+  loaderArea: { alignItems: 'center', bottom: 64, position: 'absolute' },
+  track: { borderRadius: 2, height: 2, overflow: 'hidden', width: 216 },
+  progress: { borderRadius: 2, height: 2, width: 86 },
   loadingLabel: { fontSize: 9, fontWeight: '700', letterSpacing: 1.8, marginTop: 14 },
 });
