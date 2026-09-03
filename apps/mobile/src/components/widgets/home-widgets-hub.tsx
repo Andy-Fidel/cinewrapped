@@ -210,7 +210,9 @@ const styles = StyleSheet.create({
   headerTitleGroup: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
     gap: 8,
+    minWidth: 0,
   },
   hubBadge: {
     flexDirection: 'row',
@@ -219,6 +221,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
+    flexShrink: 0,
   },
   hubBadgeText: {
     fontSize: 10,
@@ -226,6 +229,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
   },
   sectionTitle: {
+    flexShrink: 1,
     fontSize: 18,
     fontWeight: '900',
     letterSpacing: -0.3,
@@ -242,8 +246,10 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
+    flexShrink: 0,
   },
   chipText: {
+    flexShrink: 0,
     fontSize: 12,
     fontWeight: '700',
   },

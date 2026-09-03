@@ -68,7 +68,7 @@ function StepProgressBar({ currentStep, totalSteps }: { currentStep: number; tot
           STEP {currentStep + 1} OF {totalSteps}
         </Text>
         <Text
-          maxFontSizeMultiplier={1.25}
+          maxFontSizeMultiplier={1.15}
           style={[styles.stepTitleLabel, { color: colors.textSecondary }]}
         >
           {steps[currentStep]}
@@ -111,7 +111,7 @@ function Chip({
         />
       ) : null}
       <Text
-        maxFontSizeMultiplier={1.25}
+        maxFontSizeMultiplier={1.15}
         style={{
           color: selected ? colors.onBrand : colors.textPrimary,
           flexShrink: 1,

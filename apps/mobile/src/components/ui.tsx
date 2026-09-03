@@ -89,7 +89,7 @@ export function BrandHeader({
           ) : null}
           <Text
             accessibilityRole="header"
-            maxFontSizeMultiplier={1.35}
+            maxFontSizeMultiplier={1.2}
             style={[styles.title, { color: colors.textPrimary }]}
           >
             {title}
@@ -98,7 +98,7 @@ export function BrandHeader({
         {action}
       </View>
       {body === undefined ? null : (
-        <Text maxFontSizeMultiplier={1.4} style={[styles.body, { color: colors.textSecondary }]}>
+        <Text maxFontSizeMultiplier={1.2} style={[styles.body, { color: colors.textSecondary }]}>
           {body}
         </Text>
       )}
@@ -359,7 +359,7 @@ function LabeledInput({
   const { style, ...props } = inputProps;
   return (
     <View style={styles.fieldWrap}>
-      <Text maxFontSizeMultiplier={1.4} style={[styles.label, { color: colors.textPrimary }]}>
+      <Text maxFontSizeMultiplier={1.2} style={[styles.label, { color: colors.textPrimary }]}>
         {label}
       </Text>
       <View
@@ -381,7 +381,7 @@ function LabeledInput({
             style,
           ]}
           {...props}
-          maxFontSizeMultiplier={props.maxFontSizeMultiplier ?? 1.4}
+          maxFontSizeMultiplier={props.maxFontSizeMultiplier ?? 1.2}
         />
         {trailing}
       </View>
@@ -426,7 +426,7 @@ export function Button({
       {loading ? (
         <ActivityIndicator color={foreground} />
       ) : (
-        <Text maxFontSizeMultiplier={1.3} style={[styles.buttonText, { color: foreground }]}>
+        <Text maxFontSizeMultiplier={1.2} style={[styles.buttonText, { color: foreground }]}>
           {label}
         </Text>
       )}

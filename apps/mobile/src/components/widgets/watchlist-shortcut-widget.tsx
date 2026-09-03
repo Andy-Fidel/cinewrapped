@@ -49,7 +49,7 @@ export function WatchlistShortcutWidget({
           <View style={[styles.iconCircle, { backgroundColor: colors.surfaceRaised }]}>
             <Ionicons name="bookmark" size={15} color={colors.brand} />
           </View>
-          <View style={{ gap: 2 }}>
+          <View style={styles.headerCopy}>
             <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
               Watchlist Shortcut
             </Text>
@@ -150,13 +150,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 10,
     paddingHorizontal: 16,
   },
   headerTitleGroup: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    flex: 1,
+    minWidth: 0,
   },
+  headerCopy: { flex: 1, gap: 2, minWidth: 0 },
   iconCircle: {
     width: 32,
     height: 32,
@@ -165,10 +169,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: {
+    flexShrink: 1,
     fontSize: 15,
     fontWeight: '800',
   },
   headerSubtitle: {
+    flexShrink: 1,
     fontSize: 11,
     fontWeight: '500',
   },
@@ -176,6 +182,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 2,
+    flexShrink: 0,
   },
   viewAllText: {
     fontSize: 12,

@@ -181,6 +181,7 @@ const styles = StyleSheet.create({
   topBadgeRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
     justifyContent: 'space-between',
   },
   crownBadge: {
@@ -193,12 +194,15 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 198, 92, 0.2)',
     borderWidth: 1,
     borderColor: '#FFC65C',
+    flex: 1,
+    minWidth: 0,
   },
   crownText: {
     color: '#FFD700',
     fontSize: 10,
     fontWeight: '900',
     letterSpacing: 0.9,
+    flexShrink: 1,
   },
   matchBadge: {
     flexDirection: 'row',
@@ -210,6 +214,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(16, 185, 129, 0.25)',
     borderWidth: 1,
     borderColor: '#10B981',
+    flexShrink: 0,
   },
   matchScoreText: {
     color: '#10B981',
@@ -274,8 +279,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     flex: 1,
+    minWidth: 0,
   },
   streamingText: {
+    flexShrink: 1,
     fontSize: 12,
     fontWeight: '500',
   },
@@ -283,6 +290,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    flexShrink: 0,
   },
   watchlistButton: {
     flexDirection: 'row',
