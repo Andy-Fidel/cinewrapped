@@ -17,7 +17,10 @@ import {
 } from 'react-native';
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 
+import { platformFontScaleLimit } from '../lib/text-scale';
 import { useTheme } from '../providers/theme-provider';
+
+const controlFontScaleLimit = platformFontScaleLimit(1.2);
 
 export { ThemeOverride, useTheme } from '../providers/theme-provider';
 
@@ -89,7 +92,7 @@ export function BrandHeader({
           ) : null}
           <Text
             accessibilityRole="header"
-            maxFontSizeMultiplier={1.2}
+            maxFontSizeMultiplier={controlFontScaleLimit}
             style={[styles.title, { color: colors.textPrimary }]}
           >
             {title}
@@ -98,7 +101,10 @@ export function BrandHeader({
         {action}
       </View>
       {body === undefined ? null : (
-        <Text maxFontSizeMultiplier={1.2} style={[styles.body, { color: colors.textSecondary }]}>
+        <Text
+          maxFontSizeMultiplier={controlFontScaleLimit}
+          style={[styles.body, { color: colors.textSecondary }]}
+        >
           {body}
         </Text>
       )}
@@ -359,7 +365,10 @@ function LabeledInput({
   const { style, ...props } = inputProps;
   return (
     <View style={styles.fieldWrap}>
-      <Text maxFontSizeMultiplier={1.2} style={[styles.label, { color: colors.textPrimary }]}>
+      <Text
+        maxFontSizeMultiplier={controlFontScaleLimit}
+        style={[styles.label, { color: colors.textPrimary }]}
+      >
         {label}
       </Text>
       <View
@@ -381,7 +390,7 @@ function LabeledInput({
             style,
           ]}
           {...props}
-          maxFontSizeMultiplier={props.maxFontSizeMultiplier ?? 1.2}
+          maxFontSizeMultiplier={props.maxFontSizeMultiplier ?? controlFontScaleLimit}
         />
         {trailing}
       </View>
@@ -426,7 +435,10 @@ export function Button({
       {loading ? (
         <ActivityIndicator color={foreground} />
       ) : (
-        <Text maxFontSizeMultiplier={1.2} style={[styles.buttonText, { color: foreground }]}>
+        <Text
+          maxFontSizeMultiplier={controlFontScaleLimit}
+          style={[styles.buttonText, { color: foreground }]}
+        >
           {label}
         </Text>
       )}

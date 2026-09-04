@@ -30,6 +30,7 @@ import {
   uploadAvatarAsset,
 } from '../../src/lib/avatar-upload';
 import { errorMessage } from '../../src/lib/error-message';
+import { platformFontScaleLimit } from '../../src/lib/text-scale';
 import { useAuth } from '../../src/providers/auth-provider';
 import { useDialog } from '../../src/providers/dialog-provider';
 import { useOnboardingStore } from '../../src/stores/onboarding-store';
@@ -42,6 +43,8 @@ const steps = [
   'Tune Recommendations',
   'Stay in the Loop',
 ];
+
+const onboardingFontScaleLimit = platformFontScaleLimit(1.15);
 
 function StepProgressBar({ currentStep, totalSteps }: { currentStep: number; totalSteps: number }) {
   const colors = useColors();
@@ -68,7 +71,7 @@ function StepProgressBar({ currentStep, totalSteps }: { currentStep: number; tot
           STEP {currentStep + 1} OF {totalSteps}
         </Text>
         <Text
-          maxFontSizeMultiplier={1.15}
+          maxFontSizeMultiplier={onboardingFontScaleLimit}
           style={[styles.stepTitleLabel, { color: colors.textSecondary }]}
         >
           {steps[currentStep]}
@@ -111,7 +114,7 @@ function Chip({
         />
       ) : null}
       <Text
-        maxFontSizeMultiplier={1.15}
+        maxFontSizeMultiplier={onboardingFontScaleLimit}
         style={{
           color: selected ? colors.onBrand : colors.textPrimary,
           flexShrink: 1,

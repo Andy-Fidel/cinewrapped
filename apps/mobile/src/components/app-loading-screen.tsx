@@ -6,9 +6,11 @@ import logoFullWhite from '../../assets/logo-white.png';
 import logoMark from '../../assets/logo-mark.png';
 import logoMarkWhite from '../../assets/logo-mark-white.png';
 
+import { platformFontScaleLimit } from '../lib/text-scale';
 import { useTheme } from '../providers/theme-provider';
 
 const minimumDisplayMs = 1_400;
+const loadingFontScaleLimit = platformFontScaleLimit(1.2);
 
 export function AppLoadingScreen({
   ready,
@@ -21,17 +23,20 @@ export function AppLoadingScreen({
   const [minimumElapsed, setMinimumElapsed] = useState(false);
   const rootOpacity = useRef(new Animated.Value(1)).current;
   const rootScale = useRef(new Animated.Value(1)).current;
-  const stageOpacity = useRef(new Animated.Value(0)).current;
+  // Keep the branded content visible before the asynchronous accessibility
+  // preference resolves. Some Android and web runtimes answer after the minimum
+  // display window, which previously left users looking at an empty backdrop.
+  const stageOpacity = useRef(new Animated.Value(1)).current;
   const stageScale = useRef(new Animated.Value(0.72)).current;
   const stageOffset = useRef(new Animated.Value(18)).current;
   const ringRotation = useRef(new Animated.Value(0)).current;
   const logoScale = useRef(new Animated.Value(1)).current;
   const haloScale = useRef(new Animated.Value(0.84)).current;
-  const haloOpacity = useRef(new Animated.Value(0)).current;
+  const haloOpacity = useRef(new Animated.Value(0.12)).current;
   const shimmerPosition = useRef(new Animated.Value(-88)).current;
-  const copyOpacity = useRef(new Animated.Value(0)).current;
+  const copyOpacity = useRef(new Animated.Value(1)).current;
   const copyOffset = useRef(new Animated.Value(10)).current;
-  const loaderOpacity = useRef(new Animated.Value(0)).current;
+  const loaderOpacity = useRef(new Animated.Value(1)).current;
   const progressPosition = useRef(new Animated.Value(-116)).current;
   const reduceMotion = useRef(false);
 
@@ -372,7 +377,7 @@ export function AppLoadingScreen({
         <View style={styles.taglineRow}>
           <View style={[styles.taglineRule, { backgroundColor: colors.brand }]} />
           <Text
-            maxFontSizeMultiplier={1.2}
+            maxFontSizeMultiplier={loadingFontScaleLimit}
             style={[styles.tagline, { color: colors.textSecondary }]}
           >
             YOUR STORY IN CINEMA
@@ -394,7 +399,7 @@ export function AppLoadingScreen({
           />
         </View>
         <Text
-          maxFontSizeMultiplier={1.2}
+          maxFontSizeMultiplier={loadingFontScaleLimit}
           style={[styles.loadingLabel, { color: colors.textDisabled }]}
         >
           CURATING YOUR CUT
