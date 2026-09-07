@@ -9,13 +9,17 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/api/package.json apps/api/package.json
 COPY packages/config/package.json packages/config/package.json
 COPY packages/database/package.json packages/database/package.json
+COPY packages/eslint-config/package.json packages/eslint-config/package.json
 COPY packages/shared-types/package.json packages/shared-types/package.json
 COPY packages/validation/package.json packages/validation/package.json
 COPY packages/typescript-config/package.json packages/typescript-config/package.json
 RUN --mount=type=cache,id=cinewrapped-pnpm,target=/pnpm/store \
-    pnpm config set store-dir /pnpm/store && pnpm install --frozen-lockfile
+    pnpm config set store-dir /pnpm/store && \
+    pnpm install --filter @cinewrapped/api... --frozen-lockfile --trust-lockfile \
+      --network-concurrency=4 --fetch-retries=5 --fetch-timeout=120000
 
 FROM dependencies AS builder
+ENV PRISMA_GENERATE_SKIP_AUTOINSTALL=true
 COPY turbo.json eslint.config.mjs ./
 COPY apps/api apps/api
 COPY packages/config packages/config
@@ -24,6 +28,9 @@ COPY packages/eslint-config packages/eslint-config
 COPY packages/shared-types packages/shared-types
 COPY packages/typescript-config packages/typescript-config
 COPY packages/validation packages/validation
+RUN --mount=type=cache,id=cinewrapped-pnpm,target=/pnpm/store \
+    pnpm config set store-dir /pnpm/store && \
+    pnpm install --filter @cinewrapped/api... --frozen-lockfile --trust-lockfile --offline
 RUN pnpm --filter @cinewrapped/api... build
 
 FROM node:22.14-alpine AS runner
@@ -46,6 +53,7 @@ COPY --from=builder --chown=cinewrapped:cinewrapped /workspace/packages/shared-t
 COPY --from=builder --chown=cinewrapped:cinewrapped /workspace/packages/validation/node_modules ./packages/validation/node_modules
 COPY --from=builder --chown=cinewrapped:cinewrapped /workspace/packages/validation/package.json ./packages/validation/package.json
 COPY --from=builder --chown=cinewrapped:cinewrapped /workspace/packages/validation/dist ./packages/validation/dist
+COPY --chown=cinewrapped:cinewrapped infrastructure/scripts/render-predeploy.sh ./infrastructure/scripts/render-predeploy.sh
 USER cinewrapped
 EXPOSE 4000
-CMD ["sh", "-c", "./packages/database/node_modules/.bin/prisma migrate deploy --schema packages/database/prisma/schema.prisma && ./node_modules/.bin/tsx packages/database/prisma/seed.ts && exec node apps/api/dist/main.js"]
+CMD ["node", "apps/api/dist/main.js"]

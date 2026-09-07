@@ -1,6 +1,14 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-export const authCallbackUrl = 'cinewrapped://auth/callback';
+export function getAuthCallbackUrl(webOrigin?: string): string {
+  return webOrigin === undefined
+    ? 'cinewrapped://auth/callback'
+    : new URL('/auth/callback', webOrigin).toString();
+}
+
+export const authCallbackUrl = getAuthCallbackUrl(
+  typeof window === 'undefined' ? undefined : window.location.origin,
+);
 export const passwordRecoveryUrl = authCallbackUrl;
 
 export async function completeAuthRedirect(

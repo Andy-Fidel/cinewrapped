@@ -1,4 +1,4 @@
-import * as Notifications from 'expo-notifications';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { Platform } from 'react-native';
 
 import { api } from './api';
@@ -6,6 +6,14 @@ import { devicePlatform, getInstallationId } from './installation';
 
 export async function registerForPushNotifications(): Promise<void> {
   if (Platform.OS === 'web') throw new Error('Push notifications require the iOS or Android app.');
+
+  if (Constants.executionEnvironment === ExecutionEnvironment.StoreClient) {
+    throw new Error(
+      'Push notifications require an installed CineWrapped build, rather than Expo Go.',
+    );
+  }
+  // Import only after platform checks: the module itself throws in Android Expo Go.
+  const Notifications = await import('expo-notifications');
 
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('default', {

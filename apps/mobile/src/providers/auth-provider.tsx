@@ -3,6 +3,7 @@ import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import { router } from 'expo-router';
+import { Platform } from 'react-native';
 import {
   createContext,
   useCallback,
@@ -167,9 +168,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const redirectTo = authCallbackUrl;
     const { data, error: authError } = await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo, skipBrowserRedirect: true },
+      options: { redirectTo, skipBrowserRedirect: Platform.OS !== 'web' },
     });
     if (authError !== null) throw authError;
+    if (Platform.OS === 'web') return;
     const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
     if (result.type === 'success') {
       const parameters = new URL(result.url).searchParams;

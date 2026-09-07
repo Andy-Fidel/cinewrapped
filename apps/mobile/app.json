@@ -45,7 +45,7 @@
     "web": {
       "favicon": "./assets/logo-mark.png",
       "bundler": "metro",
-      "output": "static"
+      "output": "single"
     },
     "extra": {
       "router": {},

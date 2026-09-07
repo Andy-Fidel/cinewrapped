@@ -8,3 +8,6 @@ CineWrapped Master Build Prompt.docx
 packages/ui-tokens/src/generated
 apps/admin/next-env.d.ts
 apps/mobile/expo-env.d.ts
+
+# Generated from the supplied dotLottie archive; embedded raster data.
+apps/mobile/assets/gaming.json
