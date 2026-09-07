@@ -79,10 +79,7 @@ function ThemedNavigation() {
   const finishLaunch = useCallback(() => setLaunchComplete(true), []);
   return (
     <View style={styles.navigationRoot}>
-      <StatusBar
-        backgroundColor={colors.background}
-        style={resolvedTheme === 'light' ? 'dark' : 'light'}
-      />
+      <StatusBar style={resolvedTheme === 'light' ? 'dark' : 'light'} />
       <Stack
         screenOptions={{
           headerShown: false,
@@ -101,5 +98,5 @@ function ThemedNavigation() {
 
 const styles = StyleSheet.create({
   navigationRoot: { flex: 1 },
-  launchOverlay: { ...StyleSheet.absoluteFillObject, elevation: 100, zIndex: 100 },
+  launchOverlay: { ...StyleSheet.absoluteFill, elevation: 100, zIndex: 100 },
 });

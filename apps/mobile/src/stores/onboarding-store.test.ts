@@ -41,3 +41,27 @@ describe('onboarding store', () => {
     expect(useOnboardingStore.getState()).toBe(hydrated);
   });
 });
+
+describe('welcome tour state', () => {
+  beforeEach(() => useOnboardingStore.getState().reset());
+
+  it('preserves dismissal for the same user and clears it when switching accounts', () => {
+    const user = {
+      id: 'first',
+      username: 'andy',
+      displayName: 'Andy',
+      avatarUrl: null,
+      version: 1,
+    };
+    useOnboardingStore.getState().hydrateProfile(user);
+    useOnboardingStore.getState().patch({ welcomeTourSeen: true, step: 2, genreIds: ['drama'] });
+    useOnboardingStore.getState().hydrateProfile(user);
+    expect(useOnboardingStore.getState().welcomeTourSeen).toBe(true);
+    useOnboardingStore.getState().hydrateProfile({ ...user, id: 'second' });
+    expect(useOnboardingStore.getState()).toMatchObject({
+      welcomeTourSeen: false,
+      step: 0,
+      genreIds: [],
+    });
+  });
+});

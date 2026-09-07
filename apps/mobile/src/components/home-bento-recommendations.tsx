@@ -191,7 +191,7 @@ export function HomeBentoRecommendations({
         ]}
       >
         {bgUri ? (
-          <Image source={{ uri: bgUri }} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
+          <Image source={{ uri: bgUri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
         ) : null}
 
         <View style={styles.curatedTallScrim} />
@@ -341,7 +341,7 @@ export function HomeBentoRecommendations({
         ]}
       >
         {bgUri ? (
-          <Image source={{ uri: bgUri }} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
+          <Image source={{ uri: bgUri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
         ) : null}
 
         <View style={styles.curatedWideScrim} />
@@ -430,7 +430,7 @@ export function HomeBentoRecommendations({
             {item0 && (item0.media.backdropUrl || item0.media.posterUrl) ? (
               <Image
                 source={{ uri: item0.media.backdropUrl ?? item0.media.posterUrl ?? undefined }}
-                style={StyleSheet.absoluteFillObject}
+                style={StyleSheet.absoluteFill}
                 resizeMode="cover"
               />
             ) : null}
@@ -968,7 +968,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   heroMatchScrim: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(15, 6, 8, 0.68)',
   },
   cardHeaderRow: {
@@ -1350,7 +1350,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   curatedTallScrim: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(10, 8, 14, 0.62)',
   },
   curatedTallTop: {
@@ -1503,7 +1503,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   curatedWideScrim: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(12, 10, 16, 0.72)',
   },
   curatedWideTopRow: {

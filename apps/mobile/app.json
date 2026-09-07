@@ -7,9 +7,9 @@
     "icon": "./assets/icon.png",
     "scheme": "cinewrapped",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "plugins": [
       "expo-router",
+      "expo-font",
       "expo-secure-store",
       "expo-image-picker",
       "expo-web-browser",

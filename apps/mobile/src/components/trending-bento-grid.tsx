@@ -149,7 +149,7 @@ export function TrendingBentoGrid({ mediaList }: TrendingBentoGridProps) {
             {item0 && (item0.backdropUrl || item0.posterUrl) ? (
               <Image
                 source={{ uri: item0.backdropUrl ?? item0.posterUrl ?? undefined }}
-                style={StyleSheet.absoluteFillObject}
+                style={StyleSheet.absoluteFill}
                 resizeMode="cover"
               />
             ) : null}
@@ -552,7 +552,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   heroSpotlightScrim: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(15, 6, 8, 0.68)',
   },
   cardHeaderRow: {

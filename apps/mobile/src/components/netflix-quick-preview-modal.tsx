@@ -339,7 +339,7 @@ const styles = StyleSheet.create({
   },
   imageDarkGradient: {
     backgroundColor: 'rgba(0, 0, 0, 0.35)',
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   closeCircleBtn: {
     alignItems: 'center',

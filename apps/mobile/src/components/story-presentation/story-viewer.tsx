@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   gestureOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     flexDirection: 'row',
     zIndex: 10,
   },

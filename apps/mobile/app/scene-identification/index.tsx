@@ -883,7 +883,7 @@ const styles = StyleSheet.create({
 
   // Laser Overlay
   scanningOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.65)',
     justifyContent: 'center',

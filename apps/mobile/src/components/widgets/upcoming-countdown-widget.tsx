@@ -255,10 +255,10 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   backdropImage: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(9, 10, 15, 0.65)',
   },
   topRow: {

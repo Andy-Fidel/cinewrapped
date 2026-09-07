@@ -36,12 +36,10 @@ export function StorySlideRenderer({
         <>
           <Image
             source={{ uri: slide.media.backdropUrl }}
-            style={StyleSheet.absoluteFillObject}
+            style={StyleSheet.absoluteFill}
             resizeMode="cover"
           />
-          <View
-            style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(7, 6, 14, 0.78)' }]}
-          />
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(7, 6, 14, 0.78)' }]} />
         </>
       ) : null}
 

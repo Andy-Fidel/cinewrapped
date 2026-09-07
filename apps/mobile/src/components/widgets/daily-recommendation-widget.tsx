@@ -172,10 +172,10 @@ const styles = StyleSheet.create({
     padding: 14,
   },
   backdropImage: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   gradientOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(9, 10, 15, 0.72)',
   },
   topBadgeRow: {

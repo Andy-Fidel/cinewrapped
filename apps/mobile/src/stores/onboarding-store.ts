@@ -3,6 +3,7 @@ import { create } from 'zustand';
 
 interface OnboardingDraft {
   step: number;
+  welcomeTourSeen: boolean;
   username: string;
   displayName: string;
   avatarUrl: string | null;
@@ -22,6 +23,7 @@ interface OnboardingDraft {
 
 const initial = {
   step: 0,
+  welcomeTourSeen: false,
   username: '',
   displayName: '',
   avatarUrl: null,
@@ -41,6 +43,7 @@ export const useOnboardingStore = create<OnboardingDraft>((set) => ({
       state.hydratedUserId === user.id
         ? state
         : {
+            ...initial,
             hydratedUserId: user.id,
             username: user.username.startsWith('user_') ? '' : user.username,
             displayName: user.displayName,

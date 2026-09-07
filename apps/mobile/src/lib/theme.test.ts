@@ -12,5 +12,7 @@ describe('resolveTheme', () => {
     expect(resolveTheme('SYSTEM', 'light')).toBe('light');
     expect(resolveTheme('SYSTEM', 'dark')).toBe('dark');
     expect(resolveTheme('SYSTEM', null)).toBe('dark');
+    expect(resolveTheme('SYSTEM', undefined)).toBe('dark');
+    expect(resolveTheme('SYSTEM', 'unspecified')).toBe('dark');
   });
 });

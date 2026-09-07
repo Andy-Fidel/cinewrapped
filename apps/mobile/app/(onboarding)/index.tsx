@@ -23,6 +23,7 @@ import {
 } from 'react-native';
 
 import { BrandHeader, Button, ErrorText, Field, Screen, useColors } from '../../src/components/ui';
+import { WelcomeTour } from '../../src/components/welcome-tour';
 import { api } from '../../src/lib/api';
 import {
   previousAvatarPath,
@@ -329,6 +330,10 @@ export default function OnboardingScreen() {
       setBusy(false);
     }
   };
+
+  if (!draft.welcomeTourSeen) {
+    return <WelcomeTour onFinish={() => draft.patch({ welcomeTourSeen: true })} />;
+  }
 
   return (
     <Screen>

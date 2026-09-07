@@ -162,10 +162,10 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   backdropImage: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   backdropOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0, 0, 0, 0.45)',
   },
   topBadgeRow: {

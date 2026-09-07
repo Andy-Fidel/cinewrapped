@@ -5,7 +5,7 @@ export type ResolvedTheme = 'light' | 'dark';
 
 export function resolveTheme(
   preference: ThemePreference,
-  systemColorScheme: ColorSchemeName,
+  systemColorScheme: ColorSchemeName | null | undefined,
 ): ResolvedTheme {
   if (preference === 'LIGHT') return 'light';
   if (preference === 'DARK') return 'dark';

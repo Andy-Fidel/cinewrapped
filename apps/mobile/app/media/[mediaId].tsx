@@ -886,15 +886,15 @@ const styles = StyleSheet.create({
   center: { alignItems: 'center', flex: 1, gap: 16, justifyContent: 'center', padding: 24 },
   heroContainer: { aspectRatio: 16 / 9, position: 'relative', width: '100%' },
   ambientBackdropLayer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     opacity: 0.55,
   },
   backdropOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0, 0, 0, 0.4)',
   },
   heroPlayOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 5,

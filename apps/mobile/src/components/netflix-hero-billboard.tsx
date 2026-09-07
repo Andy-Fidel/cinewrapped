@@ -244,7 +244,7 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
   },
   imageWrapper: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   backdropImage: {
     height: '100%',
