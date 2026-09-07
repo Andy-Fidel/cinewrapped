@@ -34,6 +34,16 @@ Remote push delivery is also incomplete: the current API stores tokens/preferenc
 
 `render.yaml` retains the existing repository/branch and service names. Both API and website have automatic deployment off for a controlled release. Confirm live service ownership and actual hostnames before applying. A suffixed Render hostname or custom domain requires updating both `CORS_ORIGINS` and the web API URL.
 
+Live preflight against **My Workspace** (`tea-d5khp07pm1nc7384eu30`) on 2026-09-07 found:
+
+- `cinewrapped-api` already exists at `https://cinewrapped-api.onrender.com`, uses the expected repository, branch, Dockerfile, Frankfurt region, and readiness path. Its runtime plan is still `free` and automatic deploys are enabled on commits.
+- `cinewrapped-cache` is available on the free, non-persistent plan in Frankfurt.
+- No Render PostgreSQL instance exists; production data is expected to remain in Supabase.
+- The latest Render deploy (`361ed39`) is live. The public liveness probe took about 55 seconds to wake the free instance across two attempts; readiness then returned HTTP 200 in 0.66 seconds.
+- The prior 24 hours contained no error/fatal logs. Performance warnings ranged from roughly 0.5 to 3.8 seconds, especially for trending media, recommendations, statistics, and media details.
+
+Disable the existing API's automatic deploy setting before pushing this release. Otherwise the push will immediately build the new image before the Blueprint's controlled-deploy and pre-deploy migration settings are reconciled.
+
 The API uses `PORT` supplied by Render and listens on `0.0.0.0`. Readiness queries PostgreSQL; liveness only checks the running process. Migrations and reference-data seeding run in `preDeployCommand`; container startup only launches the API.
 
 The web export uses Expo's `single` output with a `/*` → `/index.html` rewrite, so refreshing dynamic media/profile/club URLs and auth callbacks opens the app. This is an authenticated SPA, without per-route static SEO.
@@ -75,7 +85,7 @@ Browser OAuth now redirects back to its current origin; native auth retains the 
 
 ## Outstanding release gates
 
-- Workspace and budget confirmation; inspect actual Render services and environment value presence without exposing secrets.
+- Disable the existing API's automatic deploy setting and confirm required environment-variable presence without exposing secret values. The MCP connection cannot change service deployment settings, and the browser session requires a Render login.
 - Live Supabase/storage/provider/SMTP checks and database backup plan.
 - Real browser authentication round trips and installed-device testing.
 - Background-job and push delivery implementation if those are included in the requested launch scope.
