@@ -1,6 +1,6 @@
 # Render launch preparation
 
-Prepared 2026-09-07. This configuration is not a completed production deployment.
+Prepared 2026-09-07 and deployed to Render on 2026-09-08.
 
 ## Proposed budget and services
 
@@ -18,7 +18,14 @@ Sources: https://render.com/pricing, https://render.com/docs/compute-plans, http
 
 The existing API and web app include authentication/onboarding, discovery, tracking, reviews, recommendations, social features, statistics/wraps, gamification, clubs, and the grounded AI assistant.
 
-After validation of storage and the scene-identification provider, run this once in the API Render shell:
+The completed feature set was released at 100% in production for:
+
+- `MOVIE_JOURNAL`
+- `CALENDAR_INTEGRATION`
+- `SOUNDTRACKS`
+- `SCENE_IDENTIFICATION`
+
+For a new environment, run this once in the API Render shell after validating storage and the scene-identification provider:
 
 ```sh
 ./node_modules/.bin/tsx packages/database/prisma/release-features.ts
@@ -41,6 +48,8 @@ Live preflight against **My Workspace** (`tea-d5khp07pm1nc7384eu30`) on 2026-09-
 - No Render PostgreSQL instance exists; production data is expected to remain in Supabase.
 - The application deploy (`361ed39`) remains live. Before the upgrade, the public liveness probe took about 55 seconds to wake the free instance across two attempts. After the compute-plan deployment (`dep-dafq3t2d0e5s73dgnulg`), liveness and database readiness returned HTTP 200 in 0.72 and 0.92 seconds respectively.
 - The prior 24 hours contained no error/fatal logs. Performance warnings ranged from roughly 0.5 to 3.8 seconds, especially for trending media, recommendations, statistics, and media details.
+
+The production release uses commit `2322176b8c87e4336fb84b5c79c1db3ff6fd58c4`. The API and static website deployments completed successfully. The public website is `https://cinewrapped-web.onrender.com`; its login and callback routes return HTTP 200 and render in a browser. API liveness and database readiness both return HTTP 200.
 
 Automatic deploy is disabled, so pushing the release branch will not start an uncontrolled API deployment.
 
@@ -70,6 +79,10 @@ Set the Auth Site URL to the actual web origin. Add exact redirect allowlist ent
 - `cinewrapped://auth/callback`
 - Local callback URLs only if local development uses this Auth project.
 
+Production now uses `https://cinewrapped-web.onrender.com` as the Auth Site URL and retains both the exact web callback and `cinewrapped://auth/callback` in the allowlist.
+
+The Prisma tables are API-only. Migration `20260908061000_lock_down_supabase_data_api` enables RLS and revokes all table, sequence, and function privileges from the Supabase `anon` and `authenticated` roles. Storage access remains governed by the ownership policies in `infrastructure/supabase/private-storage.sql`. Verification found all 66 public application tables protected, zero browser-role table grants, and HTTP 401 for a direct publishable-key request to the application tables.
+
 Browser OAuth now redirects back to its current origin; native auth retains the application scheme. Configure Google/Apple providers separately in Supabase. See https://supabase.com/docs/guides/auth/redirect-urls.
 
 ## Release sequence
@@ -85,8 +98,8 @@ Browser OAuth now redirects back to its current origin; native auth retains the 
 
 ## Outstanding release gates
 
-- Apply the updated Blueprint after pushing so the paid API receives its pre-deploy command and the static web service is created. All 17 expected API environment-variable names are present; `DIRECT_DATABASE_URL` remains optional.
-- Live Supabase/storage/provider/SMTP checks and database backup plan.
+- Supabase is currently on the Free plan. Leaked-password protection requires Pro, so the security advisor retains that warning. Confirm the database backup/recovery plan and production SMTP delivery before inviting users.
+- Live provider checks still require an authenticated test account: Google/Apple OAuth, OpenAI scene identification, TMDB access, email confirmation, and password recovery.
 - Real browser authentication round trips and installed-device testing.
 - Background-job and push delivery implementation if those are included in the requested launch scope.
 - The bundled Disney promotional poster is third-party artwork; no distribution license was supplied in this workspace. Resolve asset rights for a public release or replace it with owned/licensed artwork.
