@@ -4,7 +4,7 @@ Prepared 2026-09-07. This configuration is not a completed production deployment
 
 ## Proposed budget and services
 
-- `cinewrapped-api`: Render Starter (`0.5c-512mb`, legacy `starter`), $7/month compute.
+- `cinewrapped-api`: Render `0.5c-512mb`, $7/month compute. Activated in My Workspace on 2026-09-08.
 - `cinewrapped-web`: static Expo web export, no compute charge; workspace bandwidth/build limits still apply.
 - `cinewrapped-cache`: existing free Key Value instance, ephemeral cache only. Cache restarts clear cached responses and rate counters; paid AI calls fail closed while cache is unreachable. Do not use this instance for durable jobs.
 - Reuse the existing Supabase database, Auth and Storage. Their quotas, backups, SMTP, API usage, and OpenAI charges are separate from the $7 Render service.
@@ -36,13 +36,13 @@ Remote push delivery is also incomplete: the current API stores tokens/preferenc
 
 Live preflight against **My Workspace** (`tea-d5khp07pm1nc7384eu30`) on 2026-09-07 found:
 
-- `cinewrapped-api` already exists at `https://cinewrapped-api.onrender.com`, uses the expected repository, branch, Dockerfile, Frankfurt region, and readiness path. Its runtime plan is still `free` and automatic deploys are enabled on commits.
+- `cinewrapped-api` already exists at `https://cinewrapped-api.onrender.com`, uses the expected repository, branch, Dockerfile, Frankfurt region, and readiness path. It now runs on `0.5c-512mb`; automatic deploys are off.
 - `cinewrapped-cache` is available on the free, non-persistent plan in Frankfurt.
 - No Render PostgreSQL instance exists; production data is expected to remain in Supabase.
-- The latest Render deploy (`361ed39`) is live. The public liveness probe took about 55 seconds to wake the free instance across two attempts; readiness then returned HTTP 200 in 0.66 seconds.
+- The application deploy (`361ed39`) remains live. Before the upgrade, the public liveness probe took about 55 seconds to wake the free instance across two attempts. After the compute-plan deployment (`dep-dafq3t2d0e5s73dgnulg`), liveness and database readiness returned HTTP 200 in 0.72 and 0.92 seconds respectively.
 - The prior 24 hours contained no error/fatal logs. Performance warnings ranged from roughly 0.5 to 3.8 seconds, especially for trending media, recommendations, statistics, and media details.
 
-Disable the existing API's automatic deploy setting before pushing this release. Otherwise the push will immediately build the new image before the Blueprint's controlled-deploy and pre-deploy migration settings are reconciled.
+Automatic deploy is disabled, so pushing the release branch will not start an uncontrolled API deployment.
 
 The API uses `PORT` supplied by Render and listens on `0.0.0.0`. Readiness queries PostgreSQL; liveness only checks the running process. Migrations and reference-data seeding run in `preDeployCommand`; container startup only launches the API.
 
@@ -85,7 +85,7 @@ Browser OAuth now redirects back to its current origin; native auth retains the 
 
 ## Outstanding release gates
 
-- Disable the existing API's automatic deploy setting and confirm required environment-variable presence without exposing secret values. The MCP connection cannot change service deployment settings, and the browser session requires a Render login.
+- Apply the updated Blueprint after pushing so the paid API receives its pre-deploy command and the static web service is created. All 17 expected API environment-variable names are present; `DIRECT_DATABASE_URL` remains optional.
 - Live Supabase/storage/provider/SMTP checks and database backup plan.
 - Real browser authentication round trips and installed-device testing.
 - Background-job and push delivery implementation if those are included in the requested launch scope.

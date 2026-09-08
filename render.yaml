@@ -11,7 +11,7 @@ services:
     repo: https://github.com/Andy-Fidel/cinewrapped.git
     branch: codex/sdk54-expo-go
     runtime: docker
-    plan: starter
+    plan: 0.5c-512mb
     region: frankfurt
     preDeployCommand: sh infrastructure/scripts/render-predeploy.sh
     dockerfilePath: ./infrastructure/docker/Dockerfile.api
