@@ -41,6 +41,7 @@ export class SupabaseJwtVerifier {
         sessionId: payload.session_id,
         expiresAt: typeof payload.exp === 'number' ? new Date(payload.exp * 1000) : null,
         displayName,
+        assuranceLevel: payload.aal === 'aal1' || payload.aal === 'aal2' ? payload.aal : null,
       };
     } catch {
       throw new AppException(401, 'AUTH_TOKEN_INVALID', 'The access token is invalid or expired.');

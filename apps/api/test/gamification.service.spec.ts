@@ -10,6 +10,7 @@ const principal: AuthPrincipal = {
   sessionId: 'session-1',
   expiresAt: null,
   displayName: 'Viewer',
+  assuranceLevel: 'aal1',
 };
 
 const user = {

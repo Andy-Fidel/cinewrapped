@@ -31,6 +31,20 @@ export class AuthGuard implements CanActivate {
       throw new AppException(401, 'AUTH_TOKEN_MISSING', 'A bearer access token is required.');
     }
     const principal = await this.verifier.verify(authorization.slice('Bearer '.length));
+    const member = await this.prisma.user.findUnique({
+      where: { authSubject: principal.subject },
+      select: { status: true, deletedAt: true },
+    });
+    if (member?.deletedAt !== null && member?.deletedAt !== undefined) {
+      throw new AppException(403, 'ACCOUNT_UNAVAILABLE', 'This account is unavailable.');
+    }
+    if (member?.status === 'SUSPENDED' || member?.status === 'BANNED') {
+      throw new AppException(
+        403,
+        'ACCOUNT_RESTRICTED',
+        'This account cannot access CineWrapped at this time.',
+      );
+    }
     const session = await this.prisma.authSession.findUnique({
       where: { id: principal.sessionId },
       select: { revokedAt: true },

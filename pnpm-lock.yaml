@@ -55,6 +55,9 @@ importers:
       '@cinewrapped/ui-tokens':
         specifier: workspace:*
         version: link:../../packages/ui-tokens
+      '@supabase/supabase-js':
+        specifier: 2.110.8
+        version: 2.110.8
       '@tanstack/react-query':
         specifier: 5.101.4
         version: 5.101.4(react@19.2.8)

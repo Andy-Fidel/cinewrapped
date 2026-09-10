@@ -124,7 +124,7 @@ Cursor pagination is used for member-facing collections:
 
 Cursors are not database IDs and must not be constructed by clients. Changing filters invalidates a cursor. Invalid, expired, or mismatched cursors return `400 INVALID_CURSOR`.
 
-Admin table pagination will use `page` and `pageSize` in the later admin contract. It is not part of this MVP member API.
+The first admin release uses a bounded `take` parameter with a maximum of 100. User search also accepts `q`; these operations are outside the member-facing cursor contract.
 
 ### 2.8 Sparse expansion
 
@@ -549,7 +549,24 @@ Generation policy:
 - Public response schemas are separate from internal database entities.
 - Errors never return stack traces, SQL details, provider secrets, or raw provider bodies.
 - Mutation limits are stricter for comments, requests, shares, uploads, export, and deletion.
-- Admin endpoints will live under `/admin` with MFA and separate scope definitions; they are not silently included in member endpoints.
+- Admin endpoints live under `/admin`, require a Supabase `aal2` JWT, and evaluate database-backed role permissions separately from member endpoints.
+
+### 9.1 Admin operations
+
+| Method  | Path                           | Permission     | Purpose                                       |
+| ------- | ------------------------------ | -------------- | --------------------------------------------- |
+| `GET`   | `/admin/session`               | Dashboard read | Return the authenticated administrator roles  |
+| `GET`   | `/admin/dashboard`             | Dashboard read | Return bounded operational counts and reports |
+| `GET`   | `/admin/users`                 | Users read     | Search active, non-deleted user records       |
+| `PATCH` | `/admin/users/{userId}/status` | Users write    | Change account status and revoke sessions     |
+| `PATCH` | `/admin/users/{userId}/roles`  | Roles write    | Grant or revoke one administrator role        |
+| `GET`   | `/admin/feature-flags`         | Flags read     | List feature rollout controls                 |
+| `PATCH` | `/admin/feature-flags/{key}`   | Flags write    | Apply an audited flag change                  |
+| `GET`   | `/admin/reports`               | Reports read   | List content-report audit records             |
+| `PATCH` | `/admin/reports/{reportId}`    | Reports write  | Resolve or dismiss a report                   |
+| `GET`   | `/admin/audit-logs`            | Audit read     | Return the newest audit records               |
+
+Administrative mutations require an audit reason of 8–500 characters. UUID parameters, list bounds, statuses, roles, environments, and report resolutions are validated before service execution.
 
 ## 10. Task 3 acceptance checklist
 

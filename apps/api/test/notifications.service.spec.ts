@@ -11,6 +11,7 @@ const principal: AuthPrincipal = {
   sessionId: 'session-1',
   expiresAt: null,
   displayName: 'Cinephile User',
+  assuranceLevel: 'aal1',
 };
 
 const mockUser = {

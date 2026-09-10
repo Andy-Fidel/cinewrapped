@@ -11,6 +11,7 @@ const principal: AuthPrincipal = {
   sessionId: 'session-1',
   expiresAt: null,
   displayName: 'Viewer',
+  assuranceLevel: 'aal1',
 };
 const user = { id: '20000000-0000-4000-8000-000000000000', authSubject: principal.subject };
 const flags = { assertEnabled: vi.fn(() => Promise.resolve()) } as unknown as FeatureFlagsService;

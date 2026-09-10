@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: cinewrapped-admin
+    repo: https://github.com/Andy-Fidel/cinewrapped.git
+    branch: codex/sdk54-expo-go
+    runtime: docker
+    plan: 0.5c-512mb
+    region: frankfurt
+    dockerfilePath: ./infrastructure/docker/Dockerfile.admin
+    dockerContext: .
+    healthCheckPath: /api/health
+    autoDeployTrigger: off
+    envVars:
+      - key: NEXT_PUBLIC_API_BASE_URL
+        value: https://cinewrapped-api.onrender.com/api/v1
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false

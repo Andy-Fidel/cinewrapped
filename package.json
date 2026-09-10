@@ -22,6 +22,7 @@
     "db:migrate": "pnpm --filter @cinewrapped/database db:migrate",
     "db:migrate:dev": "pnpm --filter @cinewrapped/database db:migrate:dev",
     "db:seed": "pnpm --filter @cinewrapped/database db:seed",
+    "admin:grant-initial": "pnpm --filter @cinewrapped/database admin:grant-initial",
     "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm db:validate && pnpm build"
   },
   "devDependencies": {

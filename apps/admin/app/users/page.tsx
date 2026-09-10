@@ -1,316 +1,214 @@
 'use client';
 
-import { Ban, Search, Shield, UserCheck, Users } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
-import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 import { Modal } from '../../components/ui/modal';
 import { useAdmin } from '../../lib/admin-context';
-import { adminStore, type AdminRole, type ManagedUser } from '../../lib/admin-store';
+import { adminApi } from '../../lib/admin-api';
+import type { AdminRole, ManagedUser } from '../../lib/admin-types';
 
-export default function UsersManagementPage() {
-  const { session } = useAdmin();
-  const [, setRerender] = useState(0);
-  const [search, setSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState('ALL');
-  const [statusFilter, setStatusFilter] = useState('ALL');
+const roles: AdminRole[] = [
+  'SUPER_ADMINISTRATOR',
+  'CONTENT_MODERATOR',
+  'COMMUNITY_MODERATOR',
+  'SUPPORT_AGENT',
+  'ANALYST',
+];
+type UserStatus = ManagedUser['status'];
 
-  const [selectedUser, setSelectedUser] = useState<ManagedUser | null>(null);
-  const [actionType, setActionType] = useState<'ROLE' | 'STATUS' | null>(null);
-  const [targetRole, setTargetRole] = useState<AdminRole | 'USER'>('USER');
-  const [targetStatus, setTargetStatus] = useState<ManagedUser['status']>('ACTIVE');
-  const [adminReason, setAdminReason] = useState('');
+export default function UsersPage() {
+  const queryClient = useQueryClient();
+  const { hasRole } = useAdmin();
+  const canWrite = hasRole('SUPER_ADMINISTRATOR');
+  const [query, setQuery] = useState('');
+  const [target, setTarget] = useState<ManagedUser | null>(null);
+  const [mode, setMode] = useState<'status' | 'role'>('status');
+  const [status, setStatus] = useState<UserStatus>('ACTIVE');
+  const [role, setRole] = useState<AdminRole>('SUPPORT_AGENT');
+  const [roleEnabled, setRoleEnabled] = useState(true);
+  const [reason, setReason] = useState('');
 
-  const users = adminStore.users.filter((u) => {
-    const matchesSearch =
-      u.username.toLowerCase().includes(search.toLowerCase()) ||
-      u.displayName.toLowerCase().includes(search.toLowerCase()) ||
-      u.email.toLowerCase().includes(search.toLowerCase());
-    const matchesRole = roleFilter === 'ALL' || u.role === roleFilter;
-    const matchesStatus = statusFilter === 'ALL' || u.status === statusFilter;
-    return matchesSearch && matchesRole && matchesStatus;
+  const users = useQuery({
+    queryKey: ['admin', 'users', query],
+    queryFn: () => adminApi<ManagedUser[]>(`/admin/users?take=100&q=${encodeURIComponent(query)}`),
+  });
+  const update = useMutation({
+    mutationFn: async () => {
+      if (!target) throw new Error('Select a user.');
+      if (mode === 'status') {
+        return adminApi(`/admin/users/${target.id}/status`, {
+          method: 'PATCH',
+          body: JSON.stringify({ status, reason: reason.trim() }),
+        });
+      }
+      return adminApi(`/admin/users/${target.id}/roles`, {
+        method: 'PATCH',
+        body: JSON.stringify({ role, enabled: roleEnabled, reason: reason.trim() }),
+      });
+    },
+    onSuccess: async () => {
+      setTarget(null);
+      setReason('');
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+    },
   });
 
-  const handleUpdateStatus = () => {
-    if (!selectedUser) return;
-    adminStore.updateUserStatus(
-      session,
-      selectedUser.id,
-      targetStatus,
-      adminReason || `Status updated to ${targetStatus}`,
-    );
-    setActionType(null);
-    setSelectedUser(null);
-    setAdminReason('');
-    setRerender((v) => v + 1);
-  };
-
-  const handleUpdateRole = () => {
-    if (!selectedUser) return;
-    adminStore.updateUserRole(
-      session,
-      selectedUser.id,
-      targetRole,
-      adminReason || `Role updated to ${targetRole}`,
-    );
-    setActionType(null);
-    setSelectedUser(null);
-    setAdminReason('');
-    setRerender((v) => v + 1);
-  };
+  function open(user: ManagedUser, nextMode: 'status' | 'role') {
+    setTarget(user);
+    setMode(nextMode);
+    setStatus(user.status);
+    setReason('');
+    setRoleEnabled(true);
+  }
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-6">
+      <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
         <div>
-          <h1 className="text-2xl font-extrabold text-white tracking-tight flex items-center gap-2">
-            <Users className="h-6 w-6 text-red-500" />
-            User Management & Authorization
-          </h1>
-          <p className="text-sm text-zinc-400 mt-1">
-            Manage cinephile profiles, administrative role grants, suspensions, and safety warnings.
+          <h2 className="text-3xl font-extrabold text-white">Users & roles</h2>
+          <p className="mt-2 text-sm text-zinc-400">
+            Live accounts, restrictions, and administrative access.
           </p>
         </div>
+        <input
+          aria-label="Search users"
+          placeholder="Search email, username, or name"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-2.5 text-sm outline-none focus:border-red-500 lg:w-80"
+        />
       </div>
-
-      {/* Filter Bar */}
-      <Card className="p-4">
-        <div className="flex flex-col md:flex-row items-center gap-4">
-          <div className="relative flex-1 w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
-            <input
-              type="text"
-              placeholder="Search by username, display name, or email..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full h-10 pl-9 pr-4 text-xs rounded-xl bg-zinc-950 border border-zinc-800 text-zinc-200 placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-red-500/50"
-            />
-          </div>
-
-          <div className="flex items-center gap-3 w-full md:w-auto">
-            <select
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value)}
-              className="h-10 px-3 text-xs rounded-xl bg-zinc-950 border border-zinc-800 text-zinc-300 focus:outline-none cursor-pointer"
-            >
-              <option value="ALL">All Roles</option>
-              <option value="SUPER_ADMINISTRATOR">Super Admin</option>
-              <option value="CONTENT_MODERATOR">Content Mod</option>
-              <option value="COMMUNITY_MODERATOR">Community Mod</option>
-              <option value="USER">Standard User</option>
-            </select>
-
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="h-10 px-3 text-xs rounded-xl bg-zinc-950 border border-zinc-800 text-zinc-300 focus:outline-none cursor-pointer"
-            >
-              <option value="ALL">All Statuses</option>
-              <option value="ACTIVE">Active</option>
-              <option value="WARNED">Warned</option>
-              <option value="SUSPENDED">Suspended</option>
-              <option value="BANNED">Banned</option>
-            </select>
-          </div>
-        </div>
-      </Card>
-
-      {/* Users Table */}
-      <Card className="p-0 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-zinc-950 border-b border-zinc-800/80 text-zinc-400 uppercase tracking-wider font-semibold">
+      {users.isPending && <p className="text-sm text-zinc-400">Loading users…</p>}
+      {users.isError && (
+        <p role="alert" className="text-sm text-red-400">
+          {users.error.message}
+        </p>
+      )}
+      {update.isError && (
+        <p role="alert" className="text-sm text-red-400">
+          {update.error.message}
+        </p>
+      )}
+      {users.data && (
+        <Card className="overflow-x-auto p-0">
+          <table className="w-full min-w-[1050px] text-left text-xs">
+            <thead className="border-b border-zinc-800 bg-zinc-900 text-zinc-400">
               <tr>
-                <th className="p-4">User</th>
-                <th className="p-4">Role</th>
-                <th className="p-4">Status</th>
-                <th className="p-4">Activity</th>
-                <th className="p-4">Region</th>
-                <th className="p-4 text-right">Actions</th>
+                <th className="p-4">Member</th>
+                <th>Status</th>
+                <th>Roles</th>
+                <th>Activity</th>
+                <th>Joined</th>
+                <th>Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-800/60">
-              {users.map((user) => (
-                <tr key={user.id} className="hover:bg-zinc-850/40 transition-colors">
+            <tbody className="divide-y divide-zinc-800">
+              {users.data.map((user) => (
+                <tr key={user.id} className="text-zinc-300">
                   <td className="p-4">
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={user.avatarUrl}
-                        alt={user.username}
-                        className="h-9 w-9 rounded-full object-cover border border-zinc-700"
-                      />
-                      <div>
-                        <p className="font-bold text-zinc-100">{user.displayName}</p>
-                        <p className="text-zinc-500 font-mono">@{user.username}</p>
-                      </div>
-                    </div>
+                    <p className="font-semibold text-zinc-100">{user.displayName}</p>
+                    <p className="text-zinc-500">
+                      @{user.username} · {user.email}
+                    </p>
                   </td>
-                  <td className="p-4">
-                    <Badge
-                      variant={
-                        user.role === 'SUPER_ADMINISTRATOR'
-                          ? 'danger'
-                          : user.role.includes('MODERATOR')
-                            ? 'purple'
-                            : 'outline'
-                      }
-                    >
-                      {user.role}
-                    </Badge>
-                  </td>
-                  <td className="p-4">
-                    <Badge
-                      variant={
-                        user.status === 'ACTIVE'
-                          ? 'success'
-                          : user.status === 'WARNED'
-                            ? 'warning'
-                            : 'danger'
-                      }
-                    >
+                  <td>
+                    <span className="rounded-full border border-zinc-700 px-2 py-1">
                       {user.status}
-                    </Badge>
+                    </span>
                   </td>
-                  <td className="p-4 text-zinc-300">
-                    <p className="font-medium">{user.totalViewings} films logged</p>
-                    <p className="text-[11px] text-zinc-500">{user.totalReviews} reviews</p>
+                  <td className="max-w-56">
+                    {user.roles.length
+                      ? user.roles.map((item) => item.replaceAll('_', ' ')).join(', ')
+                      : 'Member'}
                   </td>
-                  <td className="p-4 text-zinc-400 font-mono">{user.countryCode}</td>
-                  <td className="p-4 text-right space-x-2">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedUser(user);
-                        setTargetRole(user.role);
-                        setActionType('ROLE');
-                      }}
-                    >
-                      <Shield className="h-3.5 w-3.5" />
-                      Role
-                    </Button>
-                    <Button
-                      variant={user.status === 'ACTIVE' ? 'danger' : 'secondary'}
-                      size="sm"
-                      onClick={() => {
-                        setSelectedUser(user);
-                        setTargetStatus(user.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE');
-                        setActionType('STATUS');
-                      }}
-                    >
-                      {user.status === 'ACTIVE' ? (
-                        <Ban className="h-3.5 w-3.5" />
-                      ) : (
-                        <UserCheck className="h-3.5 w-3.5" />
+                  <td>
+                    {user.viewingCount} watches · {user.reviewCount} reviews
+                  </td>
+                  <td>{new Date(user.createdAt).toLocaleDateString()}</td>
+                  <td>
+                    <div className="flex gap-2">
+                      {canWrite && (
+                        <>
+                          <Button size="sm" variant="outline" onClick={() => open(user, 'status')}>
+                            Status
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => open(user, 'role')}>
+                            Role
+                          </Button>
+                        </>
                       )}
-                      Status
-                    </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
-      </Card>
-
-      {/* Role Assignment Modal */}
+        </Card>
+      )}
       <Modal
-        isOpen={actionType === 'ROLE' && selectedUser !== null}
-        onClose={() => setActionType(null)}
-        title="Assign Administrative Role"
-        description={`Modify system capabilities for ${selectedUser?.displayName} (@${selectedUser?.username})`}
+        isOpen={target !== null}
+        onClose={() => setTarget(null)}
+        title={mode === 'status' ? 'Update account status' : 'Update administrator role'}
+        description={target ? `${target.displayName} · ${target.email}` : undefined}
       >
         <div className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-2">
-              Select Scoped Role
+          {mode === 'status' ? (
+            <label className="block text-xs font-semibold text-zinc-300">
+              Status
+              <select
+                value={status}
+                onChange={(event) => setStatus(event.target.value as UserStatus)}
+                className="mt-2 w-full rounded-xl border border-zinc-700 bg-zinc-950 p-3"
+              >
+                <option>ACTIVE</option>
+                <option>WARNED</option>
+                <option>SUSPENDED</option>
+                <option>BANNED</option>
+              </select>
             </label>
-            <select
-              value={targetRole}
-              onChange={(e) => setTargetRole(e.target.value as AdminRole | 'USER')}
-              className="w-full text-xs rounded-xl bg-zinc-950 border border-zinc-800 p-3 text-zinc-200 focus:outline-none focus:ring-1 focus:ring-red-500"
-            >
-              <option value="USER">Standard User (No Admin Access)</option>
-              <option value="SUPPORT_AGENT">Support Agent</option>
-              <option value="COMMUNITY_MODERATOR">Community Moderator</option>
-              <option value="CONTENT_MODERATOR">Content Moderator</option>
-              <option value="ANALYST">Analyst</option>
-              <option value="SUPER_ADMINISTRATOR">Super Administrator</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1.5">
-              Reason for Role Grant / Revocation (Audit Log Required)
-            </label>
+          ) : (
+            <>
+              <label className="block text-xs font-semibold text-zinc-300">
+                Role
+                <select
+                  value={role}
+                  onChange={(event) => setRole(event.target.value as AdminRole)}
+                  className="mt-2 w-full rounded-xl border border-zinc-700 bg-zinc-950 p-3"
+                >
+                  {roles.map((item) => (
+                    <option key={item}>{item}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex items-center gap-2 text-xs text-zinc-300">
+                <input
+                  type="checkbox"
+                  checked={roleEnabled}
+                  onChange={(event) => setRoleEnabled(event.target.checked)}
+                />
+                Role is active
+              </label>
+            </>
+          )}
+          <label className="block text-xs font-semibold text-zinc-300">
+            Audit reason
             <textarea
-              value={adminReason}
-              onChange={(e) => setAdminReason(e.target.value)}
-              placeholder="e.g. Promoted to Content Moderator following safety team verification."
-              rows={3}
-              className="w-full text-xs rounded-xl bg-zinc-950 border border-zinc-800 p-3 text-zinc-200 focus:outline-none focus:ring-1 focus:ring-red-500"
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+              className="mt-2 min-h-24 w-full rounded-xl border border-zinc-700 bg-zinc-950 p-3"
+              placeholder="Required; minimum 8 characters"
             />
-          </div>
-
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="ghost" size="sm" onClick={() => setActionType(null)}>
-              Cancel
-            </Button>
-            <Button variant="primary" size="sm" onClick={handleUpdateRole}>
-              Confirm Role Assignment
-            </Button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Status Adjustment Modal */}
-      <Modal
-        isOpen={actionType === 'STATUS' && selectedUser !== null}
-        onClose={() => setActionType(null)}
-        title="Adjust User Account Standing"
-        description={`Set account state for ${selectedUser?.displayName} (@${selectedUser?.username})`}
-      >
-        <div className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-2">
-              Select Standing
-            </label>
-            <select
-              value={targetStatus}
-              onChange={(e) => setTargetStatus(e.target.value as ManagedUser['status'])}
-              className="w-full text-xs rounded-xl bg-zinc-950 border border-zinc-800 p-3 text-zinc-200 focus:outline-none"
-            >
-              <option value="ACTIVE">ACTIVE (Full access)</option>
-              <option value="WARNED">WARNED (Warning issued on profile)</option>
-              <option value="SUSPENDED">SUSPENDED (Temporary restriction)</option>
-              <option value="BANNED">BANNED (Permanent exclusion)</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1.5">
-              Mandatory Audit Reason
-            </label>
-            <textarea
-              value={adminReason}
-              onChange={(e) => setAdminReason(e.target.value)}
-              placeholder="Explain why this standing adjustment is necessary..."
-              rows={3}
-              className="w-full text-xs rounded-xl bg-zinc-950 border border-zinc-800 p-3 text-zinc-200 focus:outline-none"
-            />
-          </div>
-
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="ghost" size="sm" onClick={() => setActionType(null)}>
-              Cancel
-            </Button>
-            <Button variant="danger" size="sm" onClick={handleUpdateStatus}>
-              Apply Status Update
-            </Button>
-          </div>
+          </label>
+          <Button
+            className="w-full"
+            disabled={reason.trim().length < 8 || update.isPending}
+            onClick={() => update.mutate()}
+          >
+            {update.isPending ? 'Saving…' : 'Save audited change'}
+          </Button>
         </div>
       </Modal>
     </div>

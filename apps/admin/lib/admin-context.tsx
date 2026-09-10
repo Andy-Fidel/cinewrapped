@@ -1,48 +1,85 @@
 'use client';
 
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
 
-import { type AdminRole, type AdminUserSession, hasPermission } from './admin-store';
+import { adminApi } from './admin-api';
+import type { AdminRole, AdminSession } from './admin-types';
+import { supabase } from './supabase';
+
+type SessionStatus = 'loading' | 'authenticated' | 'unauthenticated' | 'forbidden';
 
 interface AdminContextValue {
-  session: AdminUserSession;
-  setActiveRole: (role: AdminRole) => void;
-  canAccess: (moduleName: string) => boolean;
+  session: AdminSession | null;
+  status: SessionStatus;
+  error: string | null;
+  refreshSession: () => Promise<void>;
+  signOut: () => Promise<void>;
+  hasRole: (...roles: AdminRole[]) => boolean;
 }
-
-const DEFAULT_SESSION: AdminUserSession = {
-  id: 'usr-1',
-  name: 'Alex Rivers',
-  email: 'alex.rivers@cinewrapped.app',
-  avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-  activeRole: 'SUPER_ADMINISTRATOR',
-};
 
 const AdminContext = createContext<AdminContextValue | null>(null);
 
 export function AdminProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<AdminUserSession>(DEFAULT_SESSION);
+  const [session, setSession] = useState<AdminSession | null>(null);
+  const [status, setStatus] = useState<SessionStatus>('loading');
+  const [error, setError] = useState<string | null>(null);
 
-  const setActiveRole = (role: AdminRole) => {
-    setSession((prev) => ({
-      ...prev,
-      activeRole: role,
-    }));
-  };
+  const refreshSession = useCallback(async () => {
+    const auth = await supabase.auth.getSession();
+    if (!auth.data.session) {
+      setSession(null);
+      setStatus('unauthenticated');
+      return;
+    }
+    try {
+      const nextSession = await adminApi<AdminSession>('/admin/session');
+      setSession(nextSession);
+      setError(null);
+      setStatus('authenticated');
+    } catch (caught) {
+      setSession(null);
+      setError(caught instanceof Error ? caught.message : 'Administrator access was denied.');
+      setStatus('forbidden');
+    }
+  }, []);
 
-  const canAccess = (moduleName: string) => {
-    return hasPermission(session.activeRole, moduleName);
-  };
+  useEffect(() => {
+    void refreshSession();
+    const { data } = supabase.auth.onAuthStateChange(() => {
+      window.setTimeout(() => void refreshSession(), 0);
+    });
+    return () => data.subscription.unsubscribe();
+  }, [refreshSession]);
 
-  return (
-    <AdminContext.Provider value={{ session, setActiveRole, canAccess }}>
-      {children}
-    </AdminContext.Provider>
+  const value = useMemo<AdminContextValue>(
+    () => ({
+      session,
+      status,
+      error,
+      refreshSession,
+      signOut: async () => {
+        await supabase.auth.signOut();
+        setSession(null);
+        setStatus('unauthenticated');
+      },
+      hasRole: (...roles) => session?.roles.some((role) => roles.includes(role)) ?? false,
+    }),
+    [error, refreshSession, session, status],
   );
+
+  return <AdminContext.Provider value={value}>{children}</AdminContext.Provider>;
 }
 
 export function useAdmin() {
-  const ctx = useContext(AdminContext);
-  if (!ctx) throw new Error('useAdmin must be used within an AdminProvider');
-  return ctx;
+  const context = useContext(AdminContext);
+  if (!context) throw new Error('useAdmin must be used within AdminProvider.');
+  return context;
 }

@@ -1,154 +1,97 @@
 'use client';
 
-import { Sliders, ToggleLeft } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
-import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
-import { Modal } from '../../components/ui/modal';
-import { Switch } from '../../components/ui/switch';
 import { useAdmin } from '../../lib/admin-context';
-import { adminStore, type FeatureFlagConfig } from '../../lib/admin-store';
+import { adminApi } from '../../lib/admin-api';
+import type { FeatureFlagConfig } from '../../lib/admin-types';
 
 export default function FeatureFlagsPage() {
-  const { session } = useAdmin();
-  const [, setRerender] = useState(0);
-  const [selectedFlag, setSelectedFlag] = useState<FeatureFlagConfig | null>(null);
-  const [targetEnabled, setTargetEnabled] = useState(false);
-  const [targetRollout, setTargetRollout] = useState(100);
-  const [adminReason, setAdminReason] = useState('');
-
-  const handleOpenEdit = (flag: FeatureFlagConfig) => {
-    setSelectedFlag(flag);
-    setTargetEnabled(flag.isEnabled);
-    setTargetRollout(flag.rolloutPercentage);
-    setAdminReason('');
-  };
-
-  const handleSaveFlag = () => {
-    if (!selectedFlag) return;
-    adminStore.toggleFeatureFlag(
-      session,
-      selectedFlag.key,
-      targetEnabled,
-      targetRollout,
-      adminReason ||
-        `Updated flag ${selectedFlag.key} rollout to ${targetRollout}% (enabled: ${targetEnabled})`,
-    );
-    setSelectedFlag(null);
-    setRerender((v) => v + 1);
-  };
-
+  const queryClient = useQueryClient();
+  const { hasRole } = useAdmin();
+  const canWrite = hasRole('SUPER_ADMINISTRATOR');
+  const [reason, setReason] = useState<Record<string, string>>({});
+  const flags = useQuery({
+    queryKey: ['admin', 'feature-flags'],
+    queryFn: () => adminApi<FeatureFlagConfig[]>('/admin/feature-flags'),
+  });
+  const update = useMutation({
+    mutationFn: ({ flag, enabled }: { flag: FeatureFlagConfig; enabled: boolean }) =>
+      adminApi<FeatureFlagConfig>(`/admin/feature-flags/${encodeURIComponent(flag.key)}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          enabled,
+          rolloutPercentage: enabled ? Math.max(flag.rolloutPercentage, 100) : 0,
+          environments: flag.environments,
+          reason: reason[flag.key]?.trim(),
+        }),
+      }),
+    onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['admin', 'feature-flags'] }),
+  });
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-extrabold text-white tracking-tight flex items-center gap-2">
-          <ToggleLeft className="h-6 w-6 text-red-500" />
-          Runtime Feature Flags & Rollouts
-        </h1>
-        <p className="text-sm text-zinc-400 mt-1">
-          Dynamic capability toggles, canary rollout percentages, and scoped role permissions.
+        <h2 className="text-3xl font-extrabold text-white">Feature flags</h2>
+        <p className="mt-2 text-sm text-zinc-400">
+          Live rollout controls. Every change requires a reason and is audited.
         </p>
       </div>
-
-      <div className="space-y-4">
-        {adminStore.flags.map((flag) => (
-          <Card key={flag.key} className="p-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="space-y-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-extrabold text-base text-zinc-100">{flag.name}</span>
-                  <Badge variant="outline" className="font-mono text-xs">
-                    {flag.key}
-                  </Badge>
-                  <Badge variant={flag.isEnabled ? 'success' : 'outline'}>
-                    {flag.isEnabled ? `Active (${flag.rolloutPercentage}%)` : 'Disabled'}
-                  </Badge>
-                </div>
-
-                <p className="text-xs text-zinc-400 max-w-2xl">{flag.description}</p>
-
-                <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-500 pt-1">
-                  <span>
-                    Updated by <strong className="text-zinc-300">{flag.updatedBy}</strong>
-                  </span>
-                  <span>•</span>
-                  <span>{new Date(flag.updatedAt).toLocaleString()}</span>
-                  <span>•</span>
-                  <span className="text-zinc-400">
-                    Roles: {flag.allowedRoles.map((r) => r.split('_')[0]).join(', ')}
-                  </span>
-                </div>
+      {flags.isPending && <p className="text-sm text-zinc-400">Loading feature flags…</p>}
+      {flags.isError && (
+        <p role="alert" className="text-sm text-red-400">
+          {flags.error.message}
+        </p>
+      )}
+      {update.isError && (
+        <p role="alert" className="text-sm text-red-400">
+          {update.error.message}
+        </p>
+      )}
+      <div className="grid gap-4 xl:grid-cols-2">
+        {flags.data?.map((flag) => (
+          <Card key={flag.key}>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="font-mono text-sm font-bold text-zinc-100">{flag.key}</h3>
+                <p className="mt-1 text-xs text-zinc-400">{flag.description}</p>
               </div>
-
-              <div className="flex items-center gap-4 shrink-0">
-                <Button variant="secondary" size="sm" onClick={() => handleOpenEdit(flag)}>
-                  <Sliders className="h-3.5 w-3.5" />
-                  Configure
+              <span
+                className={`rounded-full px-2.5 py-1 text-xs font-bold ${flag.enabled ? 'bg-emerald-500/15 text-emerald-400' : 'bg-zinc-800 text-zinc-400'}`}
+              >
+                {flag.enabled ? 'Enabled' : 'Disabled'}
+              </span>
+            </div>
+            <p className="mt-4 text-xs text-zinc-500">
+              Rollout: {flag.rolloutPercentage}% · Environments:{' '}
+              {flag.environments.join(', ') || 'all'}
+            </p>
+            {canWrite && (
+              <div className="mt-4 flex gap-2">
+                <input
+                  aria-label={`Change reason for ${flag.key}`}
+                  placeholder="Change reason (minimum 8 characters)"
+                  value={reason[flag.key] ?? ''}
+                  onChange={(event) =>
+                    setReason((current) => ({ ...current, [flag.key]: event.target.value }))
+                  }
+                  className="min-w-0 flex-1 rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-xs outline-none focus:border-red-500"
+                />
+                <Button
+                  size="sm"
+                  variant={flag.enabled ? 'danger' : 'primary'}
+                  disabled={(reason[flag.key]?.trim().length ?? 0) < 8 || update.isPending}
+                  onClick={() => update.mutate({ flag, enabled: !flag.enabled })}
+                >
+                  {flag.enabled ? 'Disable' : 'Enable'}
                 </Button>
               </div>
-            </div>
+            )}
           </Card>
         ))}
       </div>
-
-      <Modal
-        isOpen={selectedFlag !== null}
-        onClose={() => setSelectedFlag(null)}
-        title="Configure Feature Flag"
-        description={selectedFlag ? `Tuning rollout for "${selectedFlag.name}"` : undefined}
-      >
-        {selectedFlag && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-950 border border-zinc-800">
-              <div>
-                <p className="text-xs font-bold text-zinc-200">Global Activation State</p>
-                <p className="text-[11px] text-zinc-400">Master switch for this feature</p>
-              </div>
-              <Switch checked={targetEnabled} onCheckedChange={setTargetEnabled} />
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between text-xs font-semibold text-zinc-300 uppercase mb-1">
-                <span>Canary Rollout Percentage</span>
-                <span className="text-red-400 font-bold">{targetRollout}%</span>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                step="5"
-                value={targetRollout}
-                onChange={(e) => setTargetRollout(Number(e.target.value))}
-                className="w-full h-2 bg-zinc-950 rounded-lg appearance-none cursor-pointer accent-red-600 border border-zinc-800"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1.5">
-                Audit Rationale (Required)
-              </label>
-              <textarea
-                value={adminReason}
-                onChange={(e) => setAdminReason(e.target.value)}
-                placeholder="e.g. Scaling rollout to 100% following successful staging smoke tests."
-                rows={3}
-                className="w-full text-xs rounded-xl bg-zinc-950 border border-zinc-800 p-3 text-zinc-200 focus:outline-none"
-              />
-            </div>
-
-            <div className="flex justify-end gap-2 pt-2">
-              <Button variant="ghost" size="sm" onClick={() => setSelectedFlag(null)}>
-                Cancel
-              </Button>
-              <Button variant="primary" size="sm" onClick={handleSaveFlag}>
-                Save & Record Audit
-              </Button>
-            </div>
-          </div>
-        )}
-      </Modal>
     </div>
   );
 }

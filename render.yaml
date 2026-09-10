@@ -28,7 +28,7 @@ services:
       - key: TRUST_PROXY
         value: 'true'
       - key: CORS_ORIGINS
-        value: https://cinewrapped-web.onrender.com
+        value: https://cinewrapped-web.onrender.com,https://cinewrapped-admin.onrender.com
       - key: API_DOCS_ENABLED
         value: 'false'
       - key: DATABASE_URL

@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 
 import { AppController } from './app.controller.js';
+import { AdminModule } from './admin/admin.module.js';
 import { CalendarModule } from './calendar/calendar.module.js';
 import { AiModule } from './ai/ai.module.js';
 import { AuthModule } from './auth/auth.module.js';
@@ -30,6 +31,7 @@ import { UsersModule } from './users/users.module.js';
   imports: [
     EnvironmentModule,
     DatabaseModule,
+    AdminModule,
     CalendarModule,
     AiModule,
     GamificationModule,

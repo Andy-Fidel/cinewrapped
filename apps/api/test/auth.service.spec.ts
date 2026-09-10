@@ -10,6 +10,7 @@ const principal: AuthPrincipal = {
   displayName: 'Movie Lover',
   sessionId: 'session-1',
   expiresAt: new Date('2026-09-01T00:00:00.000Z'),
+  assuranceLevel: 'aal1',
 };
 
 describe('AuthService', () => {

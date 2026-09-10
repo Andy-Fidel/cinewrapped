@@ -12,6 +12,7 @@ const principal: AuthPrincipal = {
   sessionId: 'session-1',
   expiresAt: null,
   displayName: 'Viewer',
+  assuranceLevel: 'aal1',
 };
 const user = { id: 'user-1', deletedAt: null };
 const media = { id: 'media-1', mediaType: 'MOVIE' };

@@ -8,7 +8,7 @@ Prepared 2026-09-07 and deployed to Render on 2026-09-08.
 - `cinewrapped-web`: static Expo web export, no compute charge; workspace bandwidth/build limits still apply.
 - `cinewrapped-cache`: existing free Key Value instance, ephemeral cache only. Cache restarts clear cached responses and rate counters; paid AI calls fail closed while cache is unreachable. Do not use this instance for durable jobs.
 - Reuse the existing Supabase database, Auth and Storage. Their quotas, backups, SMTP, API usage, and OpenAI charges are separate from the $7 Render service.
-- No worker or admin web service is provisioned by this budget Blueprint. The existing worker has no business-job handlers, so deploying it would not enable missing features.
+- No worker or admin web service is provisioned by the active budget Blueprint. A separately reviewed `render.admin.yaml` is ready for the admin portal; applying it adds another `0.5c-512mb` service at $7/month. The existing worker has no business-job handlers, so deploying it would not enable missing features.
 
 A $7 API instance alone does not make the entire system production-ready. Confirm the overall budget and database backup/recovery arrangements before inviting real users. Paid persistent Redis and a worker would increase the budget.
 
@@ -50,6 +50,8 @@ Live preflight against **My Workspace** (`tea-d5khp07pm1nc7384eu30`) on 2026-09-
 - The prior 24 hours contained no error/fatal logs. Performance warnings ranged from roughly 0.5 to 3.8 seconds, especially for trending media, recommendations, statistics, and media details.
 
 The production release uses commit `2322176b8c87e4336fb84b5c79c1db3ff6fd58c4`. The API and static website deployments completed successfully. The public website is `https://cinewrapped-web.onrender.com`; its login and callback routes return HTTP 200 and render in a browser. API liveness and database readiness both return HTTP 200.
+
+The admin portal, MFA-gated API routes, user-status migration, and guarded initial-role bootstrap are prepared but not deployed. Follow `ADMIN_PRODUCTION.md`; do not connect `render.admin.yaml` until the additional $7/month charge and initial administrator account are approved.
 
 Automatic deploy is disabled, so pushing the release branch will not start an uncontrolled API deployment.
 
@@ -95,6 +97,8 @@ Browser OAuth now redirects back to its current origin; native auth retains the 
 6. Check signup, email confirmation, password recovery, OAuth, onboarding, search, watchlist save, and page refresh on a dynamic route in desktop/mobile browsers.
 7. Verify private storage access and scene identification, run the one-time feature release command, and check its flag response and each newly enabled screen.
 8. Inspect errors, memory/CPU, database connections and provider quotas. Test cold restarts. Keep a previous release available for application rollback; database migration rollback requires a separately reviewed plan.
+
+The separate admin release runs after the API and database steps. See `ADMIN_PRODUCTION.md` for the exact order, environment values, initial role grant, validation, and rollback procedure.
 
 ## Outstanding release gates
 
