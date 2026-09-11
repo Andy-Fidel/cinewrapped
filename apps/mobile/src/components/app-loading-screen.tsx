@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, Animated, Image, StyleSheet, Text, View } from 'react-native';
 import LottieView from 'lottie-react-native';
 
+import cinemaLoadingArtwork from '../../assets/cinewrapped-cinema-loading.jpg';
 import gamingAnimation from '../../assets/gaming.json';
-import jackSparrowPoster from '../../assets/jack-sparrow-poster.jpg';
 
 import logoFullWhite from '../../assets/logo-white.png';
 import { platformFontScaleLimit } from '../lib/text-scale';
@@ -57,7 +57,7 @@ export function AppLoadingScreen({
       style={[styles.screen, { opacity }]}
     >
       <Image
-        source={jackSparrowPoster}
+        source={cinemaLoadingArtwork}
         resizeMode="cover"
         style={styles.poster}
         accessible={false}
