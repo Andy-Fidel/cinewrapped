@@ -31,6 +31,9 @@ export default function AdminSignInPage() {
   async function bootstrapAdminSession(): Promise<void> {
     await adminApi('/auth/bootstrap', {
       method: 'POST',
+      headers: {
+        'Idempotency-Key': crypto.randomUUID(),
+      },
       body: JSON.stringify({
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
         locale: navigator.language || 'en-US',
