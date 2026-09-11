@@ -31,7 +31,7 @@ On first admin sign-in, scan the displayed QR code with an authenticator applica
 
 ## Render service
 
-`render.admin.yaml` defines `cinewrapped-admin` as a Frankfurt `0.5c-512mb` Docker web service with automatic deploys disabled and `/api/health` as its health check. This is a second paid Render service and adds **$7/month** at the prepared plan, separate from the existing $7/month API.
+`render.admin.yaml` defines `cinewrapped-admin` as a Frankfurt `0.5c-512mb` Node web service with automatic deploys disabled and `/api/health` as its health check. This is a second paid Render service and adds **$7/month** at the prepared plan, separate from the existing $7/month API.
 
 Set these build-time public values:
 

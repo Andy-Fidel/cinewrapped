@@ -3,14 +3,18 @@ services:
     name: cinewrapped-admin
     repo: https://github.com/Andy-Fidel/cinewrapped.git
     branch: codex/sdk54-expo-go
-    runtime: docker
+    runtime: node
     plan: 0.5c-512mb
     region: frankfurt
-    dockerfilePath: ./infrastructure/docker/Dockerfile.admin
-    dockerContext: .
+    buildCommand: corepack enable && corepack prepare pnpm@11.9.0 --activate && pnpm install --filter @cinewrapped/admin... --frozen-lockfile --trust-lockfile --network-concurrency=4 --fetch-retries=5 --fetch-timeout=120000 && pnpm --filter @cinewrapped/admin... build
+    startCommand: node apps/admin/.next/standalone/apps/admin/server.js
     healthCheckPath: /api/health
     autoDeployTrigger: off
     envVars:
+      - key: NODE_VERSION
+        value: 22.14.0
+      - key: NODE_ENV
+        value: production
       - key: NEXT_PUBLIC_API_BASE_URL
         value: https://cinewrapped-api.onrender.com/api/v1
       - key: NEXT_PUBLIC_SUPABASE_URL
