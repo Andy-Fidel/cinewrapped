@@ -2,6 +2,9 @@ import { PrismaClient } from '@prisma/client';
 import { afterAll, describe, expect, it } from 'vitest';
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
+if (process.env.CI === 'true' && databaseUrl === undefined) {
+  throw new Error('CI must provide TEST_DATABASE_URL for database integration tests.');
+}
 const integration = describe.runIf(databaseUrl !== undefined);
 
 integration('Phase 8 club migration', () => {

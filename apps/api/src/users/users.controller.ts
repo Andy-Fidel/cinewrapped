@@ -6,7 +6,18 @@ import {
   updatePrivacySchema,
   updateProfileSchema,
 } from '@cinewrapped/validation';
-import { Body, Controller, Delete, Get, Headers, Patch, Post, Req } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Headers,
+  HttpCode,
+  HttpStatus,
+  Patch,
+  Post,
+  Req,
+} from '@nestjs/common';
 import type { FastifyRequest } from 'fastify';
 
 import { CurrentPrincipal } from '../auth/current-principal.decorator.js';
@@ -34,6 +45,7 @@ export class UsersController {
   }
 
   @Delete()
+  @HttpCode(HttpStatus.ACCEPTED)
   public async deleteAccount(
     @CurrentPrincipal() principal: AuthPrincipal,
     @Req() request: FastifyRequest,

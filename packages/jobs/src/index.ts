@@ -9,6 +9,7 @@ export const jobNames = [
   'scene.identify',
   'watch-party.notification',
   'calendar.sync',
+  'account.erase',
 ] as const;
 
 export type JobName = (typeof jobNames)[number];

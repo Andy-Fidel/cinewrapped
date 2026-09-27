@@ -19,7 +19,7 @@ vi.mock('expo-constants', () => ({
 vi.mock('./api', () => ({ api: { request: vi.fn() } }));
 vi.mock('./installation', () => ({
   devicePlatform: () => 'ANDROID',
-  getInstallationId: async () => 'test',
+  getInstallationId: () => Promise.resolve('test'),
 }));
 vi.mock('expo-notifications', () => {
   throw new Error('Unsupported notification module was imported');

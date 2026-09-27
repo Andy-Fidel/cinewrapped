@@ -188,3 +188,17 @@ This checklist follows the mandatory execution order in the master build prompt.
 - [x] Mobile discovery, assistant, review, and Movie DNA experiences
 - [x] Unit, validation, typecheck, lint, test, schema, and build verification
 - [x] Documentation and phase handoff
+
+## Phase 10 — Hardening and Launch
+
+- [ ] Green release baseline and reproducible artifacts
+- [ ] Critical HTTP, admin-browser, and mobile-device journeys
+- [ ] Idempotent background handlers, retries, and dead-letter recovery
+- [ ] Security, privacy, authorization, and account-erasure review
+- [ ] Structured observability, actionable alerts, and operational runbooks
+- [ ] Backup restoration and deployment rollback exercise
+- [ ] Measured performance and physical-device accessibility review
+- [ ] Store assets, disclosures, signing, and release configuration
+- [ ] Closed beta, soak period, and recorded go/no-go decision
+
+Detailed acceptance criteria are in [the Phase 10 checklist](PHASE_10_CHECKLIST.md).

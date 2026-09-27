@@ -3,6 +3,7 @@ import { Reflector } from '@nestjs/core';
 import type { FastifyRequest } from 'fastify';
 
 import { AppException } from '../common/app.exception.js';
+import { hashIdentitySubject } from '../common/identity-subject.js';
 import { PrismaService } from '../database/prisma.service.js';
 import type { AuthPrincipal } from './auth.types.js';
 import { IS_PUBLIC_ROUTE } from './public.decorator.js';
@@ -35,6 +36,15 @@ export class AuthGuard implements CanActivate {
       where: { authSubject: principal.subject },
       select: { status: true, deletedAt: true },
     });
+    if (member === null) {
+      const erasure = await this.prisma.accountErasureRequest.findUnique({
+        where: { authSubjectHash: hashIdentitySubject(principal.subject) },
+        select: { id: true },
+      });
+      if (erasure !== null) {
+        throw new AppException(403, 'ACCOUNT_UNAVAILABLE', 'This account is unavailable.');
+      }
+    }
     if (member?.deletedAt !== null && member?.deletedAt !== undefined) {
       throw new AppException(403, 'ACCOUNT_UNAVAILABLE', 'This account is unavailable.');
     }

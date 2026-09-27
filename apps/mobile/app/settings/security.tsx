@@ -28,8 +28,8 @@ export default function SecuritySettingsScreen() {
     mutationFn: () => api.request('users/me', { method: 'DELETE' }),
     onSuccess: async () => {
       showInfo(
-        'Account Deleted',
-        'Your CineWrapped account and personal data have been permanently erased.',
+        'Deletion Started',
+        'Your account is disabled. CineWrapped will continue erasing your personal data safely in the background.',
       );
       await signOut();
     },

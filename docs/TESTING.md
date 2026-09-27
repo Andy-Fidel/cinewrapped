@@ -10,6 +10,8 @@ Current checks:
 - API and worker readiness contracts
 - Design-token generation and version integrity
 - Prisma schema validation
+- Fresh PostgreSQL migration application, seed verification, Supabase-role privilege hardening, and
+  account-erasure outbox persistence
 - Authentication bootstrap and TMDB response normalization
 - TMDB details, credits, trailer, season-summary, and monetization-group normalization
 - TMDB episode normalization for on-demand season progress
@@ -35,10 +37,21 @@ Run all checks with `pnpm check`. Tests must not call real identity, metadata, e
 
 Run `pnpm audit --prod --audit-level high` separately because it requires registry access. The accepted residual moderate advisory and mitigation are recorded in the repository security policy.
 
-The default suite has no external-service dependency. To verify the real PostgreSQL migration and seed, provision an isolated test database, apply the migration and seed, then run:
+The default local suite has no external-service dependency. CI provisions PostgreSQL 16, creates the
+Supabase-compatible no-login roles, applies every migration, seeds reference data, and runs the database
+integration tests as part of `pnpm test`. CI fails rather than silently skipping them when
+`TEST_DATABASE_URL` is missing.
+
+To run the same gate locally, provision a disposable PostgreSQL database whose name clearly identifies it
+as a test database, then run:
 
 ```bash
-TEST_DATABASE_URL=postgresql://... pnpm --filter @cinewrapped/database test
+export DATABASE_URL=postgresql://.../cinewrapped_test
+export TEST_DATABASE_URL="$DATABASE_URL"
+pnpm --filter @cinewrapped/database db:test:bootstrap
+pnpm db:migrate
+pnpm db:seed
+pnpm --filter @cinewrapped/database test
 ```
 
 Never point `TEST_DATABASE_URL` at a shared, staging, or production database.

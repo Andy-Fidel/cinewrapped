@@ -6,11 +6,11 @@ Prepared 2026-09-07 and deployed to Render on 2026-09-08.
 
 - `cinewrapped-api`: Render `0.5c-512mb`, $7/month compute. Activated in My Workspace on 2026-09-08.
 - `cinewrapped-web`: static Expo web export, no compute charge; workspace bandwidth/build limits still apply.
-- `cinewrapped-cache`: existing free Key Value instance, ephemeral cache only. Cache restarts clear cached responses and rate counters; paid AI calls fail closed while cache is unreachable. Do not use this instance for durable jobs.
+- `cinewrapped-cache`: paid 256 MB Key Value instance with journal-and-snapshot persistence and `noeviction`. It serves both cache traffic and the BullMQ job queue; PostgreSQL remains the authoritative source through the transactional outbox.
 - Reuse the existing Supabase database, Auth and Storage. Their quotas, backups, SMTP, API usage, and OpenAI charges are separate from the $7 Render service.
-- No worker or admin web service is provisioned by the active budget Blueprint. A separately reviewed `render.admin.yaml` is ready for the admin portal; applying it adds another `0.5c-512mb` service at $7/month. The existing worker has no business-job handlers, so deploying it would not enable missing features.
+- The Blueprint provisions a `0.5c-512mb` background worker for account erasure. A separately reviewed `render.admin.yaml` remains available for the admin portal and adds another paid service when applied.
 
-A $7 API instance alone does not make the entire system production-ready. Confirm the overall budget and database backup/recovery arrangements before inviting real users. Paid persistent Redis and a worker would increase the budget.
+The API alone does not make the entire system production-ready. Confirm the combined API, worker, persistent Key Value, database, and backup/recovery budget before inviting real users. The shared Key Value service must retain both `noeviction` and journal-and-snapshot persistence so queued work is not deliberately evicted and survives ordinary restarts.
 
 Sources: https://render.com/pricing, https://render.com/docs/compute-plans, https://render.com/docs/free
 

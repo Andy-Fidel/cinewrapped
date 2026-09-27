@@ -14,6 +14,7 @@ import {
   type OnApplicationBootstrap,
   type OnApplicationShutdown,
 } from '@nestjs/common';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { type Job, Queue, Worker } from 'bullmq';
 import { Redis } from 'ioredis';
 
@@ -37,6 +38,7 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
   #queue: Queue<OutboxJobPayload> | null = null;
   #deadLetterQueue: Queue<OutboxJobPayload> | null = null;
   #consumer: Worker<OutboxJobPayload> | null = null;
+  #supabase: SupabaseClient | null = null;
   #pollTimer: ReturnType<typeof setInterval> | null = null;
   #polling = false;
 
@@ -45,6 +47,11 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
   public async onApplicationBootstrap(): Promise<void> {
     await this.#prisma.$connect();
     this.#redis = new Redis(this.environment.REDIS_URL, { maxRetriesPerRequest: null });
+    this.#supabase = createClient(
+      this.environment.SUPABASE_URL,
+      this.environment.SUPABASE_SECRET_KEY,
+      { auth: { autoRefreshToken: false, persistSession: false } },
+    );
     const connection = this.#redis;
     this.#queue = new Queue<OutboxJobPayload>(CINEWRAPPED_QUEUE, { connection });
     this.#deadLetterQueue = new Queue<OutboxJobPayload>(CINEWRAPPED_DEAD_LETTER_QUEUE, {
@@ -179,9 +186,151 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     });
   }
 
-  private process(job: Job<OutboxJobPayload>): Promise<void> {
+  private async process(job: Job<OutboxJobPayload>): Promise<void> {
     if (job.name === 'system.healthcheck') return Promise.resolve();
-    return Promise.reject(new Error(`No worker handler is registered for ${job.name}.`));
+    if (job.name === 'account.erase') return this.eraseAccount(job.data.aggregateId);
+    throw new Error(`No worker handler is registered for ${job.name}.`);
+  }
+
+  private async eraseAccount(requestId: string): Promise<void> {
+    const request = await this.#prisma.accountErasureRequest.findUnique({
+      where: { id: requestId },
+    });
+    if (request === null || request.status === 'COMPLETED') return;
+
+    await this.#prisma.accountErasureRequest.update({
+      where: { id: request.id },
+      data: {
+        status: 'PROCESSING',
+        startedAt: request.startedAt ?? new Date(),
+        attemptCount: { increment: 1 },
+        lastErrorCode: null,
+      },
+    });
+
+    try {
+      if (request.authSubject === null) {
+        throw new Error('Account erasure request has no identity subject.');
+      }
+      await this.eraseUserStorage(request.authSubject);
+      await this.deleteIdentity(request.authSubject);
+      await this.purgeApplicationData(request.id, request.userId);
+    } catch (error) {
+      await this.#prisma.accountErasureRequest.update({
+        where: { id: request.id },
+        data: {
+          status: 'FAILED',
+          lastErrorCode: (error instanceof Error ? error.name : 'ACCOUNT_ERASURE_FAILED').slice(
+            0,
+            100,
+          ),
+        },
+      });
+      throw error;
+    }
+  }
+
+  private async eraseUserStorage(ownerId: string): Promise<void> {
+    if (this.#supabase === null) throw new Error('Supabase client is unavailable.');
+    const buckets = [
+      'avatars',
+      'club-covers',
+      'data-exports',
+      'data-imports',
+      'journal-attachments',
+      'scene-identification',
+    ] as const;
+    for (const bucket of buckets) {
+      const paths = await this.listStoragePaths(bucket, ownerId);
+      for (let offset = 0; offset < paths.length; offset += 1000) {
+        const { error } = await this.#supabase.storage
+          .from(bucket)
+          .remove(paths.slice(offset, offset + 1000));
+        if (error !== null)
+          throw new Error(`Storage erasure failed for ${bucket}: ${error.message}`);
+      }
+    }
+  }
+
+  private async listStoragePaths(bucket: string, directory: string): Promise<string[]> {
+    if (this.#supabase === null) throw new Error('Supabase client is unavailable.');
+    const paths: string[] = [];
+    for (let offset = 0; ; offset += 1000) {
+      const { data, error } = await this.#supabase.storage
+        .from(bucket)
+        .list(directory, { limit: 1000, offset });
+      if (error !== null) throw new Error(`Storage listing failed for ${bucket}: ${error.message}`);
+      for (const item of data) {
+        const path = `${directory}/${item.name}`;
+        if (item.metadata === null) paths.push(...(await this.listStoragePaths(bucket, path)));
+        else paths.push(path);
+      }
+      if (data.length < 1000) break;
+    }
+    return paths;
+  }
+
+  private async deleteIdentity(authSubject: string): Promise<void> {
+    if (this.#supabase === null) throw new Error('Supabase client is unavailable.');
+    const { error } = await this.#supabase.auth.admin.deleteUser(authSubject);
+    if (error !== null && error.code !== 'user_not_found') {
+      throw new Error(`Identity erasure failed: ${error.message}`);
+    }
+  }
+
+  private async purgeApplicationData(requestId: string, userId: string): Promise<void> {
+    await this.#prisma.$transaction(async (tx) => {
+      const user = await tx.user.findUnique({ where: { id: userId }, select: { id: true } });
+      if (user !== null) {
+        const ownedClubs = await tx.club.findMany({
+          where: { ownerId: userId },
+          select: { id: true },
+        });
+        const ownedClubIds = ownedClubs.map((club) => club.id);
+        const authoredPosts = await tx.clubPost.findMany({
+          where: { authorId: userId, clubId: { notIn: ownedClubIds } },
+          select: { id: true },
+        });
+        const authoredPostIds = authoredPosts.map((post) => post.id);
+        if (authoredPostIds.length > 0) {
+          await tx.comment.deleteMany({
+            where: { parentType: 'CLUB_POST', parentId: { in: authoredPostIds } },
+          });
+          await tx.reaction.deleteMany({
+            where: { targetType: 'CLUB_POST', targetId: { in: authoredPostIds } },
+          });
+        }
+        await tx.clubPost.deleteMany({ where: { authorId: userId } });
+        await tx.clubPoll.deleteMany({ where: { createdById: userId } });
+        await tx.clubWatchlistItem.deleteMany({ where: { suggestedById: userId } });
+        await tx.clubWatchEvent.deleteMany({ where: { createdById: userId } });
+        await tx.watchlistItem.deleteMany({ where: { addedByUserId: userId } });
+        await tx.club.deleteMany({ where: { ownerId: userId } });
+        await tx.auditLog.updateMany({
+          where: { actorUserId: userId },
+          data: { actorSubject: null, reason: null, metadataJson: {} },
+        });
+        await tx.user.delete({ where: { id: userId } });
+      }
+      await tx.accountErasureRequest.update({
+        where: { id: requestId },
+        data: {
+          status: 'COMPLETED',
+          authSubject: null,
+          completedAt: new Date(),
+          lastErrorCode: null,
+        },
+      });
+      await tx.auditLog.create({
+        data: {
+          actorType: 'SYSTEM',
+          action: 'ACCOUNT_PURGED',
+          targetType: 'ACCOUNT_ERASURE',
+          targetId: requestId,
+          reason: 'USER_REQUESTED_ERASURE',
+        },
+      });
+    });
   }
 
   private async deadLetter(job: Job<OutboxJobPayload>, error: Error): Promise<void> {

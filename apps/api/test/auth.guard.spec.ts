@@ -26,8 +26,9 @@ function contextFor(request: Partial<FastifyRequest>): ExecutionContext {
 }
 
 function createGuard(input: {
-  status: 'ACTIVE' | 'SUSPENDED' | 'BANNED';
+  status: 'ACTIVE' | 'SUSPENDED' | 'BANNED' | null;
   revokedAt?: Date | null;
+  erased?: boolean;
 }) {
   const reflector = { getAllAndOverride: vi.fn().mockReturnValue(false) } as unknown as Reflector;
   const verifier = {
@@ -35,7 +36,14 @@ function createGuard(input: {
   } as unknown as SupabaseJwtVerifier;
   const prisma = {
     user: {
-      findUnique: vi.fn().mockResolvedValue({ status: input.status, deletedAt: null }),
+      findUnique: vi
+        .fn()
+        .mockResolvedValue(
+          input.status === null ? null : { status: input.status, deletedAt: null },
+        ),
+    },
+    accountErasureRequest: {
+      findUnique: vi.fn().mockResolvedValue(input.erased === true ? { id: 'request-1' } : null),
     },
     authSession: {
       findUnique: vi.fn().mockResolvedValue({ revokedAt: input.revokedAt ?? null }),
@@ -60,6 +68,15 @@ describe('AuthGuard account restrictions', () => {
 
     await expect(guard.canActivate(contextFor(request))).rejects.toMatchObject({
       code: 'AUTH_SESSION_REVOKED',
+    });
+  });
+
+  it('rejects bootstrap with a valid token after account erasure', async () => {
+    const guard = createGuard({ status: null, erased: true });
+    const request = { headers: { authorization: 'Bearer token' }, url: '/auth/bootstrap' };
+
+    await expect(guard.canActivate(contextFor(request))).rejects.toMatchObject({
+      code: 'ACCOUNT_UNAVAILABLE',
     });
   });
 });

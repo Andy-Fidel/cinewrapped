@@ -12,7 +12,7 @@ import type { z } from 'zod';
 
 import type { AuthPrincipal } from '../auth/auth.types.js';
 import { AppException } from '../common/app.exception.js';
-import { SupabaseAdminService } from '../common/supabase-admin.service.js';
+import { hashIdentitySubject } from '../common/identity-subject.js';
 import { PrismaService } from '../database/prisma.service.js';
 import { toCurrentUser } from './user.mapper.js';
 
@@ -21,6 +21,9 @@ export type UpdatePreferencesInput = z.output<typeof updatePreferencesSchema>;
 export type UpdatePrivacyInput = z.output<typeof updatePrivacySchema>;
 export type UpdateOnboardingInput = z.output<typeof updateOnboardingSchema>;
 export type CompleteOnboardingInput = z.output<typeof completeOnboardingSchema>;
+
+const DESTRUCTIVE_ACTION_SESSION_MAX_AGE_MS = 10 * 60_000;
+const SESSION_CLOCK_SKEW_MS = 60_000;
 
 type PreferencesWithRelations = Prisma.UserPreferencesGetPayload<{
   include: {
@@ -76,10 +79,7 @@ function toPreferences(preferences: PreferencesWithRelations): UserPreferences {
 
 @Injectable()
 export class UsersService {
-  public constructor(
-    private readonly prisma: PrismaService,
-    private readonly supabaseAdmin: SupabaseAdminService,
-  ) {}
+  public constructor(private readonly prisma: PrismaService) {}
 
   public async getCurrentUser(principal: AuthPrincipal): Promise<CurrentUser> {
     return toCurrentUser(await this.requireUser(principal.subject));
@@ -358,57 +358,64 @@ export class UsersService {
 
   public async deleteCurrentUser(
     principal: AuthPrincipal,
-  ): Promise<{ success: true; deletedAt: string }> {
+  ): Promise<{ id: string; status: 'PENDING'; requestedAt: string }> {
+    await this.assertRecentAuthentication(principal);
     const user = await this.requireUser(principal.subject);
     const now = new Date();
-
-    this.supabaseAdmin.assertConfigured();
-    await this.supabaseAdmin.eraseUserStorage(principal.subject);
-    await this.supabaseAdmin.deleteIdentity(principal.subject);
-
-    await this.prisma.$transaction(async (tx) => {
-      const ownedClubs = await tx.club.findMany({
-        where: { ownerId: user.id },
-        select: { id: true },
-      });
-      const ownedClubIds = ownedClubs.map((club) => club.id);
-      const authoredPosts = await tx.clubPost.findMany({
-        where: { authorId: user.id, clubId: { notIn: ownedClubIds } },
-        select: { id: true },
-      });
-      const authoredPostIds = authoredPosts.map((post) => post.id);
-
-      if (authoredPostIds.length > 0) {
-        await tx.comment.deleteMany({
-          where: { parentType: 'CLUB_POST', parentId: { in: authoredPostIds } },
-        });
-        await tx.reaction.deleteMany({
-          where: { targetType: 'CLUB_POST', targetId: { in: authoredPostIds } },
-        });
-      }
-      await tx.clubPost.deleteMany({ where: { authorId: user.id } });
-      await tx.clubPoll.deleteMany({ where: { createdById: user.id } });
-      await tx.clubWatchlistItem.deleteMany({ where: { suggestedById: user.id } });
-      await tx.clubWatchEvent.deleteMany({ where: { createdById: user.id } });
-      await tx.watchlistItem.deleteMany({ where: { addedByUserId: user.id } });
-      await tx.club.deleteMany({ where: { ownerId: user.id } });
-      await tx.auditLog.updateMany({
-        where: { actorUserId: user.id },
-        data: { actorSubject: null, reason: null, metadataJson: {} },
-      });
-      await tx.user.delete({ where: { id: user.id } });
-      await tx.auditLog.create({
-        data: {
-          actorType: 'SYSTEM',
-          action: 'ACCOUNT_PURGED',
-          targetType: 'USER',
-          targetId: user.id,
-          reason: 'USER_REQUESTED_ERASURE',
+    const request = await this.prisma.$transaction(async (tx) => {
+      const erasure = await tx.accountErasureRequest.upsert({
+        where: { userId: user.id },
+        update: {},
+        create: {
+          userId: user.id,
+          authSubject: principal.subject,
+          authSubjectHash: hashIdentitySubject(principal.subject),
         },
       });
+      await tx.user.update({ where: { id: user.id }, data: { deletedAt: now } });
+      await tx.authSession.updateMany({
+        where: { userId: user.id, revokedAt: null },
+        data: { revokedAt: now },
+      });
+      await tx.outboxEvent.upsert({
+        where: { id: erasure.id },
+        update: {},
+        create: {
+          id: erasure.id,
+          aggregateType: 'ACCOUNT_ERASURE',
+          aggregateId: erasure.id,
+          eventType: 'account.erase',
+          payloadJson: { requestId: erasure.id },
+        },
+      });
+      return erasure;
     });
 
-    return { success: true, deletedAt: now.toISOString() };
+    return { id: request.id, status: 'PENDING', requestedAt: request.requestedAt.toISOString() };
+  }
+
+  private async assertRecentAuthentication(principal: AuthPrincipal): Promise<void> {
+    const session = await this.prisma.authSession.findFirst({
+      where: {
+        id: principal.sessionId,
+        revokedAt: null,
+        user: { authSubject: principal.subject, deletedAt: null },
+      },
+      select: { createdAt: true },
+    });
+    const now = Date.now();
+    const createdAt = session?.createdAt.getTime();
+    if (
+      createdAt === undefined ||
+      createdAt < now - DESTRUCTIVE_ACTION_SESSION_MAX_AGE_MS ||
+      createdAt > now + SESSION_CLOCK_SKEW_MS
+    ) {
+      throw new AppException(
+        403,
+        'AUTH_RECENT_LOGIN_REQUIRED',
+        'Sign in again, then retry account deletion within ten minutes.',
+      );
+    }
   }
 
   private async requireUser(subject: string) {

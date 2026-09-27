@@ -42,6 +42,8 @@ const workerEnvironmentSchema = sharedServerSchema.extend({
   OUTBOX_BATCH_SIZE: z.coerce.number().int().min(1).max(500).default(50),
   OUTBOX_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(100).default(10),
   TMDB_API_TOKEN: secretSchema,
+  SUPABASE_URL: z.url({ protocol: /^https$/ }),
+  SUPABASE_SECRET_KEY: secretSchema,
 });
 
 const adminPublicEnvironmentSchema = z.object({

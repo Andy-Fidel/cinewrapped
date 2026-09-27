@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseApiEnvironment, parseMobilePublicEnvironment } from './index.js';
+import {
+  parseApiEnvironment,
+  parseMobilePublicEnvironment,
+  parseWorkerEnvironment,
+} from './index.js';
 
 describe('environment validation', () => {
   it('normalizes API ports and CORS origins', () => {
@@ -64,5 +68,18 @@ describe('environment validation', () => {
         EXPO_PUBLIC_SUPABASE_ANON_KEY: 'short',
       }),
     ).toThrow();
+  });
+
+  it('requires server-only Supabase credentials for the erasure worker', () => {
+    const environment = parseWorkerEnvironment({
+      NODE_ENV: 'test',
+      DATABASE_URL: 'postgresql://user:password@localhost:5432/cinewrapped',
+      REDIS_URL: 'redis://localhost:6379',
+      TMDB_API_TOKEN: 'test-token-at-least-sixteen-characters',
+      SUPABASE_URL: 'https://example.supabase.co',
+      SUPABASE_SECRET_KEY: 'test-secret-at-least-sixteen-characters',
+    });
+
+    expect(environment.SUPABASE_URL).toBe('https://example.supabase.co');
   });
 });

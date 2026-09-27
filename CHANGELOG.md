@@ -25,9 +25,18 @@ All notable changes are documented here. The project follows semantic versioning
 ### Security
 
 - Updated `@fastify/static` to `10.1.2`; the high-severity production dependency audit passes.
+- Require a newly registered Supabase session before permanent account deletion; silent access-token refresh does not reset the ten-minute window.
+- Stage account erasure through a durable database request and transactional outbox, then retry storage, identity, and relational cleanup in the worker.
+- Gate CI on a fresh PostgreSQL 16 migration, seed, and database integration suite, including account-erasure ledger and row-level-security assertions.
 
 ### Fixed
 
 - Apply the saved system, light, or dark appearance preference across mobile screens, navigation, and the status bar.
 - Retry one transient native network failure across Supabase authentication requests.
 - Load Expo public configuration from the monorepo-root environment instead of silently bundling invalid authentication and API fallbacks.
+- Load admin public configuration from the monorepo-root environment and provide deterministic CI build values.
+- Keep the push-notification platform-guard test compliant with the workspace async lint rules.
+
+### Documentation
+
+- Add a measurable Phase 10 hardening, recovery, observability, store-readiness, and closed-beta release gate.

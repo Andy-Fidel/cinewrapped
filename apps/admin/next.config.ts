@@ -1,4 +1,12 @@
 import type { NextConfig } from 'next';
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+const rootEnvironmentFile = resolve(__dirname, '../../.env');
+
+// Keep local development consistent with the rest of the monorepo, which owns one root .env file.
+// Render and CI inject these values directly, so no file is loaded in those environments.
+if (existsSync(rootEnvironmentFile)) process.loadEnvFile(rootEnvironmentFile);
 
 const config: NextConfig = {
   images: { unoptimized: true },

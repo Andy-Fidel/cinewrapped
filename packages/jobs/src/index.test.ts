@@ -5,6 +5,7 @@ import { isJobName } from './index.js';
 describe('job contracts', () => {
   it('rejects unknown outbox event types', () => {
     expect(isJobName('data.export')).toBe(true);
+    expect(isJobName('account.erase')).toBe(true);
     expect(isJobName('unregistered.event')).toBe(false);
   });
 });

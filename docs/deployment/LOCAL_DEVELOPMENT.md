@@ -57,8 +57,10 @@ pnpm --filter @cinewrapped/mobile dev
 ```
 
 The Expo app loads `EXPO_PUBLIC_*` values from the workspace-root `.env` through
-`apps/mobile/app.config.ts`. Keep the configured phone and development machine on the same network;
-the mobile API base URL must use the machine's LAN address rather than `localhost`.
+`apps/mobile/app.config.ts`. The admin app loads its `NEXT_PUBLIC_*` values from the same file through
+`apps/admin/next.config.ts`. These values are public build-time configuration and must never contain
+service-role keys or other secrets. Keep the configured phone and development machine on the same
+network; the mobile API base URL must use the machine's LAN address rather than `localhost`.
 
 Default URLs:
 

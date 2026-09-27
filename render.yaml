@@ -1,9 +1,10 @@
 services:
   - type: keyvalue
     name: cinewrapped-cache
-    plan: free
+    plan: 256mb
     region: frankfurt
     maxmemoryPolicy: noeviction
+    persistenceMode: journal-snapshot
     ipAllowList: []
 
   - type: web
@@ -91,3 +92,43 @@ services:
         sync: false
       - key: EXPO_PUBLIC_EAS_PROJECT_ID
         value: de90dff5-a2f1-445c-9aa0-4493c6287f13
+
+  - type: worker
+    name: cinewrapped-worker
+    repo: https://github.com/Andy-Fidel/cinewrapped.git
+    branch: codex/sdk54-expo-go
+    runtime: docker
+    plan: 0.5c-512mb
+    region: frankfurt
+    dockerfilePath: ./infrastructure/docker/Dockerfile.worker
+    dockerContext: .
+    autoDeployTrigger: off
+    maxShutdownDelaySeconds: 120
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: info
+      - key: DATABASE_URL
+        sync: false
+      - key: PRISMA_CONNECTION_LIMIT
+        value: '3'
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: cinewrapped-cache
+          property: connectionString
+      - key: TMDB_API_TOKEN
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SECRET_KEY
+        sync: false
+      - key: WORKER_CONCURRENCY
+        value: '2'
+      - key: OUTBOX_POLL_INTERVAL_MS
+        value: '2000'
+      - key: OUTBOX_BATCH_SIZE
+        value: '25'
+      - key: OUTBOX_MAX_ATTEMPTS
+        value: '10'

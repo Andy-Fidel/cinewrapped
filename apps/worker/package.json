@@ -17,6 +17,7 @@
     "@cinewrapped/jobs": "workspace:*",
     "@nestjs/common": "11.1.28",
     "@nestjs/core": "11.1.28",
+    "@supabase/supabase-js": "2.110.8",
     "bullmq": "6.0.5",
     "ioredis": "6.0.0",
     "reflect-metadata": "0.2.2",

@@ -76,6 +76,7 @@ pnpm build
 - [Clubs and collaboration](docs/clubs/CLUBS_AND_COLLABORATION.md)
 - [Design system](docs/design/DESIGN_SYSTEM.md)
 - [Implementation checklist](docs/IMPLEMENTATION_CHECKLIST.md)
+- [Phase 10 hardening and launch checklist](docs/PHASE_10_CHECKLIST.md)
 - [Security policy](SECURITY.md)
 
 Secrets must never be committed. Public Expo variables are visible in the mobile bundle and may contain only public configuration.
