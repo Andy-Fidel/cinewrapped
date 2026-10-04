@@ -127,7 +127,9 @@ export const updatePreferencesSchema = z
     spoilerPreference: z.enum(['ALWAYS_HIDE', 'HIDE_UNTIL_REVEALED', 'SHOW']).optional(),
     adultContentEnabled: z.boolean().optional(),
     notificationPreferences: z.record(z.string(), z.boolean()).optional(),
-    theme: z.enum(['SYSTEM', 'LIGHT', 'DARK']).optional(),
+    theme: z
+      .enum(['SYSTEM', 'LIGHT', 'DARK', 'OCEAN', 'FOREST', 'AMETHYST', 'ROSE', 'SUNSET'])
+      .optional(),
     defaultCountryForStreaming: countryCodeSchema.optional(),
     autoplayTrailers: z.boolean().optional(),
     reduceMotion: z.boolean().optional(),

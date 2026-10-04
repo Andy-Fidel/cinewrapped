@@ -1,14 +1,17 @@
 import type { ThemePreference, UserPreferences } from '@cinewrapped/shared-types';
 import { tokens } from '@cinewrapped/ui-tokens';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { createContext, useContext, useMemo } from 'react';
-import { useColorScheme } from 'react-native';
+import { createContext, useContext, useEffect, useMemo } from 'react';
+import { Platform, useColorScheme } from 'react-native';
 
 import { api } from '../lib/api';
-import { resolveTheme, type ResolvedTheme } from '../lib/theme';
+import {
+  resolveTheme,
+  resolveThemePalette,
+  type ResolvedTheme,
+  type ThemeColors,
+} from '../lib/theme';
 import { useAuth } from './auth-provider';
-
-type ThemeColors = (typeof tokens.color.semantic)['light'] | (typeof tokens.color.semantic)['dark'];
 
 interface ThemeContextValue {
   colors: ThemeColors;
@@ -34,7 +37,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   });
   const preference = preferences.data?.theme ?? 'SYSTEM';
   const resolvedTheme = resolveTheme(preference, systemColorScheme);
-  const colors = tokens.color.semantic[resolvedTheme];
+  const colors = tokens.color.semantic[resolveThemePalette(preference, systemColorScheme)];
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', colors.background);
+  }, [colors.background]);
 
   const value = useMemo<ThemeContextValue>(
     () => ({

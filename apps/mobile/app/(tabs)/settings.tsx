@@ -1,5 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
+import type { ThemePreference } from '@cinewrapped/shared-types';
 import { router } from 'expo-router';
+import { useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { SettingsCard, SettingsLink } from '../../src/components/settings-controls';
@@ -9,12 +11,41 @@ import { useTheme } from '../../src/providers/theme-provider';
 import { useFeatureFlags } from '../../src/providers/feature-flags-provider';
 import { useDialog } from '../../src/providers/dialog-provider';
 
+const appearanceOptions = [
+  { label: 'System', value: 'SYSTEM', icon: 'desktop-outline' },
+  { label: 'Light', value: 'LIGHT', icon: 'sunny-outline' },
+  { label: 'Dark', value: 'DARK', icon: 'moon-outline' },
+  { label: 'Ocean', value: 'OCEAN', icon: 'water-outline' },
+  { label: 'Forest', value: 'FOREST', icon: 'leaf-outline' },
+  { label: 'Amethyst', value: 'AMETHYST', icon: 'diamond-outline' },
+  { label: 'Rose', value: 'ROSE', icon: 'flower-outline' },
+  { label: 'Sunset', value: 'SUNSET', icon: 'partly-sunny-outline' },
+] as const satisfies ReadonlyArray<{
+  label: string;
+  value: ThemePreference;
+  icon: keyof typeof Ionicons.glyphMap;
+}>;
+
 export default function SettingsScreen() {
   const colors = useColors();
   const { user, signOut } = useAuth();
   const { preference: themePreference, setPreference: setThemePreference } = useTheme();
   const { isEnabled } = useFeatureFlags();
   const { confirm, showError } = useDialog();
+  const [changingTheme, setChangingTheme] = useState(false);
+  const changeTheme = async (preference: ThemePreference) => {
+    setChangingTheme(true);
+    try {
+      await setThemePreference(preference);
+    } catch (error) {
+      showError(
+        'Could not save appearance',
+        error instanceof Error ? error.message : 'Please try again.',
+      );
+    } finally {
+      setChangingTheme(false);
+    }
+  };
 
   const handleSignOut = async () => {
     const accepted = await confirm({
@@ -76,35 +107,30 @@ export default function SettingsScreen() {
       <SettingsCard
         icon="color-palette-outline"
         title="Appearance"
-        body="Choose your preferred theme across the app."
+        body="Choose your preferred theme across the app. Your choice is saved to your account."
       >
         <View accessibilityRole="radiogroup" style={styles.themeRow}>
-          {[
-            { label: 'System', value: 'SYSTEM', icon: 'desktop-outline' },
-            { label: 'Light', value: 'LIGHT', icon: 'sunny-outline' },
-            { label: 'Dark', value: 'DARK', icon: 'moon-outline' },
-          ].map((themeOption) => {
+          {appearanceOptions.map((themeOption) => {
             const selected = themePreference === themeOption.value;
             return (
               <Pressable
                 accessibilityRole="radio"
-                accessibilityState={{ checked: selected }}
-                disabled={selected}
+                accessibilityLabel={`${themeOption.label} theme`}
+                accessibilityState={{ checked: selected, disabled: selected || changingTheme }}
+                disabled={selected || changingTheme}
                 key={themeOption.value}
-                onPress={() =>
-                  void setThemePreference(themeOption.value as 'SYSTEM' | 'LIGHT' | 'DARK')
-                }
+                onPress={() => void changeTheme(themeOption.value)}
                 style={({ pressed }) => [
                   styles.themePill,
                   {
                     backgroundColor: selected ? colors.brand : colors.surfaceRaised,
                     borderColor: selected ? colors.brand : colors.border,
-                    opacity: pressed ? 0.75 : 1,
+                    opacity: changingTheme ? 0.6 : pressed ? 0.75 : 1,
                   },
                 ]}
               >
                 <Ionicons
-                  name={themeOption.icon as keyof typeof Ionicons.glyphMap}
+                  name={themeOption.icon}
                   size={16}
                   color={selected ? colors.onBrand : colors.textPrimary}
                 />
@@ -121,6 +147,11 @@ export default function SettingsScreen() {
             );
           })}
         </View>
+        {changingTheme ? (
+          <Text accessibilityLiveRegion="polite" style={{ color: colors.textSecondary }}>
+            Saving appearance…
+          </Text>
+        ) : null}
       </SettingsCard>
 
       <View style={styles.links}>

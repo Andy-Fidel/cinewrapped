@@ -24,6 +24,11 @@ enum ThemePreference {
   SYSTEM
   LIGHT
   DARK
+  OCEAN
+  FOREST
+  AMETHYST
+  ROSE
+  SUNSET
 }
 
 enum SpoilerPreference {

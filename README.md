@@ -52,6 +52,7 @@ See [Vercel migration](docs/deployment/VERCEL_PRODUCTION.md) for the free-plan h
 
 - [Feature release: imports, exports, social push and offline viewings](docs/deployment/FEATURE_RELEASE.md)
 - [PWA installation, offline fallback and update behavior](docs/deployment/PWA.md)
+- [Additional appearance themes and account preference rollout](docs/deployment/APPEARANCE_THEMES.md)
   Configure the identity providers and avatar bucket using [Supabase setup](docs/deployment/SUPABASE_SETUP.md) before testing authentication.
 
 ## Verification

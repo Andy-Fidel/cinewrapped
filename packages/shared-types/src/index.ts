@@ -41,7 +41,8 @@ export type WatchStatus =
   'PLANNED' | 'WATCHING' | 'COMPLETED' | 'PAUSED' | 'DROPPED' | 'REWATCHING';
 
 export type ProfileVisibility = 'PUBLIC' | 'FRIENDS' | 'PRIVATE';
-export type ThemePreference = 'SYSTEM' | 'LIGHT' | 'DARK';
+export type ThemePreference =
+  'SYSTEM' | 'LIGHT' | 'DARK' | 'OCEAN' | 'FOREST' | 'AMETHYST' | 'ROSE' | 'SUNSET';
 export type SpoilerPreference = 'ALWAYS_HIDE' | 'HIDE_UNTIL_REVEALED' | 'SHOW';
 export type RatingSystem = 'FIVE_STAR' | 'TEN_POINT' | 'LIKE_DISLIKE';
 export type ContentType = 'MOVIE' | 'TV' | 'ANIME' | 'DOCUMENTARY' | 'SHORT_FILM';

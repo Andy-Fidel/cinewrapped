@@ -27,6 +27,15 @@ import {
 } from './index.js';
 
 describe('shared validation', () => {
+  it.each(['SYSTEM', 'LIGHT', 'DARK', 'OCEAN', 'FOREST', 'AMETHYST', 'ROSE', 'SUNSET'])(
+    'accepts %s as a saved appearance preference',
+    (theme) => {
+      expect(updatePreferencesSchema.parse({ theme }).theme).toBe(theme);
+    },
+  );
+  it('rejects unknown appearance preferences', () => {
+    expect(updatePreferencesSchema.safeParse({ theme: 'NEON' }).success).toBe(false);
+  });
   it('bounds intelligent discovery and review-assistant inputs', () => {
     expect(
       intelligentDiscoverySchema.parse({ query: 'cozy family movie', countryCode: 'GH' }),
