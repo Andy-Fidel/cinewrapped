@@ -12,7 +12,11 @@ export function isShareCancellation(error: unknown): boolean {
   );
 }
 
-export async function prepareWebCard(svg: string, title: string): Promise<PreparedWebCard> {
+export async function prepareWebCard(
+  svg: string,
+  title: string,
+  dimensions = { width: 1080, height: 1920 },
+): Promise<PreparedWebCard> {
   const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
   try {
     const image = new Image();
@@ -32,11 +36,11 @@ export async function prepareWebCard(svg: string, title: string): Promise<Prepar
       image.src = url;
     });
     const canvas = document.createElement('canvas');
-    canvas.width = 1080;
-    canvas.height = 1920;
+    canvas.width = dimensions.width;
+    canvas.height = dimensions.height;
     const context = canvas.getContext('2d');
     if (!context) throw new Error('Image export is unavailable in this browser.');
-    context.drawImage(image, 0, 0, 1080, 1920);
+    context.drawImage(image, 0, 0, dimensions.width, dimensions.height);
     const blob = await new Promise<Blob>((resolve, reject) =>
       canvas.toBlob(
         (value) => (value ? resolve(value) : reject(new Error('Could not create the PNG image.'))),

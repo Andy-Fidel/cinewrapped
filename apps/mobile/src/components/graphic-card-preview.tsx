@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Platform, Text, View } from 'react-native';
 import type Svg from 'react-native-svg';
 import { SvgXml } from 'react-native-svg';
-import { renderGraphicCard, type GraphicCard } from '../lib/share-card-model';
+import { cardDimensions, renderGraphicCard, type GraphicCard } from '../lib/share-card-model';
 import {
   downloadWebCard,
   loadCardPoster,
@@ -17,8 +17,10 @@ export function GraphicCardPreview({
   card,
   posterUrl,
   svgOverride,
+  collagePosters,
 }: {
   card: GraphicCard;
+  collagePosters?: Array<{ title: string; posterUrl: string | null | undefined }>;
   svgOverride?: string;
   posterUrl?: string | null | undefined;
 }) {
@@ -34,11 +36,41 @@ export function GraphicCardPreview({
   const [message, setMessage] = useState('');
   const [failure, setFailure] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
-  const ready = !posterUrl || poster.url === posterUrl;
+  const collageKey = JSON.stringify(collagePosters ?? []);
+  const [collage, setCollage] = useState<{
+    key: string;
+    items: Array<{ title: string; dataUrl: string | null }>;
+  }>({ key: '', items: [] });
+  const dimensions = svgOverride ? { width: 1080, height: 1920 } : cardDimensions(card);
+  const ready =
+    (!posterUrl || poster.url === posterUrl) &&
+    (!collagePosters?.length || collage.key === collageKey);
+  useEffect(() => {
+    const items = JSON.parse(collageKey) as Array<{ title: string; posterUrl: string | null }>;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10_000);
+    let active = true;
+    void Promise.all(
+      items.slice(0, 4).map(async (item) => ({
+        title: item.title,
+        dataUrl: await loadCardPoster(item.posterUrl, controller.signal).catch(() => null),
+      })),
+    ).then((items) => {
+      if (active) setCollage({ key: collageKey, items });
+    });
+    return () => {
+      active = false;
+      clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [collageKey, attempt]);
   const svg =
     svgOverride ??
     renderGraphicCard({
       ...card,
+      ...(collagePosters?.length
+        ? { collage: collage.key === collageKey ? collage.items : [] }
+        : {}),
       posterDataUrl: poster.url === posterUrl ? poster.data : null,
     });
   useEffect(() => {
@@ -61,7 +93,7 @@ export function GraphicCardPreview({
     setMessage('');
     if (!ready || Platform.OS !== 'web') return;
     let active = true;
-    void prepareWebCard(svg, card.title)
+    void prepareWebCard(svg, card.title, dimensions)
       .then((result) => {
         if (active) setPrepared({ svg, card: result });
       })
@@ -72,7 +104,7 @@ export function GraphicCardPreview({
     return () => {
       active = false;
     };
-  }, [svg, card.title, ready, attempt]);
+  }, [svg, card.title, ready, attempt, dimensions.width, dimensions.height]);
   const available = ready && !failure && (Platform.OS !== 'web' || prepared?.svg === svg);
   const share = async (download = false) => {
     if (sharing.current || !available) return;
@@ -110,7 +142,7 @@ export function GraphicCardPreview({
                 clearTimeout(timer);
                 resolve(value);
               },
-              { width: 1080, height: 1920 },
+              { width: dimensions.width, height: dimensions.height },
             );
           } catch (error) {
             clearTimeout(timer);
@@ -133,17 +165,23 @@ export function GraphicCardPreview({
     <View style={{ width: '100%', gap: 12, alignItems: 'center' }}>
       <View
         accessibilityLabel={`Share card preview for ${card.title}`}
-        style={{ width: '100%', maxWidth: 320, aspectRatio: 9 / 16 }}
+        style={{ width: '100%', maxWidth: 320, aspectRatio: dimensions.width / dimensions.height }}
       >
         <SvgXml xml={svg} override={{ width: '100%', height: '100%', ref: svgRef }} />
       </View>
       <Text style={{ color: colors.textSecondary, textAlign: 'center' }}>
-        1080 × 1920 PNG · Long text is shortened as shown in the preview.
+        {dimensions.width} × {dimensions.height} PNG · Long text is shortened as shown in the
+        preview.
       </Text>
       {!ready ? <Text style={{ color: colors.textSecondary }}>Preparing poster…</Text> : null}
       {ready && posterUrl && !poster.data ? (
         <Text style={{ color: colors.textSecondary }}>
           Poster unavailable. The card uses a CineWrapped placeholder.
+        </Text>
+      ) : null}
+      {ready && collagePosters?.length && collage.items.some((item) => !item.dataUrl) ? (
+        <Text style={{ color: colors.textSecondary }}>
+          Some collage posters are unavailable and use placeholders.
         </Text>
       ) : null}
       {failure ? (

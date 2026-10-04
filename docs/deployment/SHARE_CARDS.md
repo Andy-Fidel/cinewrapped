@@ -33,3 +33,13 @@ Year in Pixels exports a 1080 × 1920 PNG containing all 12 month grids, leap da
 Calendar ICS exports use a real browser download or a unique native temporary file with cleanup. Paragraphs are escaped once and an empty reminder list means no alarms. Inline export failures are visible. Opening Google Calendar creates a template the user still needs to save. Both calendar export implementations use canonical branding links.
 
 The unused expiring-wrap-link API returns PUBLIC_WRAP_LINKS_UNAVAILABLE (501) for an owner’s ready wrap, rather than returning a placeholder URL or unenforced expiry. An invalid slide is rejected and non-owners remain denied. PNG and JSON exports continue to work; no public wrap access or paid resource was introduced.
+
+## Designer cards (October 4, 2026)
+
+The review card composer now offers Classic, Cinema ticket, Festival poster, and Minimal cover templates. Story (1080×1920), square (1080×1080), feed portrait (1080×1350), and landscape (1920×1080) formats use the same dimensions for SVG preview, browser PNG conversion, and native capture. Heatmap SVG overrides retain their existing portrait dimensions.
+
+Users can select up to four film posters in display order through the existing authenticated search API. Selections affect only the exported card, not profile favorites or account privacy. Only public TMDB raster images are embedded, without credentials; failed images use visible placeholders. Loading is bounded by the existing timeout and image size limits. Spoiler consent continues to gate rendering and the spoiler warning remains in every format.
+
+Personal branding supports author initials, an optional signature, hex background/accent colors, and a watermark toggle. The author remains credited. Color values are validated and text is XML-escaped; only raster data URLs can enter the renderer. Long titles, signatures, and reviews are shortened as shown in the preview. These are still PNG cards, with no new dependencies, schema changes, paid services, subscriptions, or storage costs.
+
+Verification: 104 mobile tests passed, including every template/format combination, spoiler and rating integrity, ordered collage limits, branding escaping, and unsafe image/color rejection. Browser canvas conversion produced 16 valid PNGs at their advertised dimensions, with visual inspection of text bounds and placeholder layouts. Mobile typechecking and changed-file lint passed; Expo web/iOS/Android exports passed. Full authenticated composer interactions and physical-device native share sheets still need manual verification.
