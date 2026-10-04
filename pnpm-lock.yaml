@@ -116,6 +116,9 @@ importers:
       '@cinewrapped/validation':
         specifier: workspace:*
         version: link:../../packages/validation
+      '@cinewrapped/worker':
+        specifier: workspace:*
+        version: link:../worker
       '@fastify/cors':
         specifier: 11.3.0
         version: 11.3.0

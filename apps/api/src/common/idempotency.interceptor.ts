@@ -41,6 +41,9 @@ export class IdempotencyInterceptor implements NestInterceptor {
       ['GET', 'HEAD', 'OPTIONS'].includes(method) ||
       request.principal === undefined ||
       request.url.includes('/auth/bootstrap') ||
+      // Viewing writes deduplicate transactionally with a durable clientOperationId.
+      // A crashed HTTP response must not leave offline replay stuck in IN_PROGRESS.
+      (method === 'POST' && /\/library\/media\/[a-f0-9-]+\/viewings(?:\?|$)/iu.test(request.url)) ||
       (method === 'DELETE' && /\/users\/me(?:\?|$)/u.test(request.url))
     ) {
       return next.handle();

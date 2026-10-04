@@ -10,7 +10,7 @@ if (existsSync(rootEnvironmentFile)) process.loadEnvFile(rootEnvironmentFile);
 
 const config: NextConfig = {
   images: { unoptimized: true },
-  output: 'standalone',
+  ...(process.env.VERCEL ? {} : { output: 'standalone' as const }),
   poweredByHeader: false,
   reactStrictMode: true,
   transpilePackages: ['@cinewrapped/ui-tokens'],
@@ -28,8 +28,7 @@ const config: NextConfig = {
           { key: 'Cross-Origin-Resource-Policy', value: 'same-site' },
           {
             key: 'Content-Security-Policy',
-            value:
-              "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; object-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://cinewrapped-api.onrender.com https://qptbvrfrelkqoesaulyp.supabase.co; upgrade-insecure-requests",
+            value: `default-src 'self'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; object-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' ${new URL(process.env.NEXT_PUBLIC_API_BASE_URL ?? 'https://cinewrapped-api.onrender.com').origin} ${new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://qptbvrfrelkqoesaulyp.supabase.co').origin}; upgrade-insecure-requests`,
           },
         ],
       },

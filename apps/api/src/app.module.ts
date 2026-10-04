@@ -1,7 +1,10 @@
 import { Module } from '@nestjs/common';
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 
+import { DataTransferModule } from './data-transfer/data-transfer.module.js';
+
 import { AppController } from './app.controller.js';
+import { ScheduledJobsController } from './scheduled-jobs.controller.js';
 import { AdminModule } from './admin/admin.module.js';
 import { CalendarModule } from './calendar/calendar.module.js';
 import { AiModule } from './ai/ai.module.js';
@@ -30,6 +33,7 @@ import { UsersModule } from './users/users.module.js';
 @Module({
   imports: [
     EnvironmentModule,
+    DataTransferModule,
     DatabaseModule,
     AdminModule,
     CalendarModule,
@@ -51,7 +55,7 @@ import { UsersModule } from './users/users.module.js';
     SoundtracksModule,
     NotificationsModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController, ScheduledJobsController],
   providers: [
     { provide: APP_FILTER, useClass: ApiExceptionFilter },
     { provide: APP_INTERCEPTOR, useClass: IdempotencyInterceptor },

@@ -18,9 +18,11 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { type Job, Queue, Worker } from 'bullmq';
 import { Redis } from 'ioredis';
 
+import { deliverPush } from './push-delivery.js';
+
 import { WORKER_ENVIRONMENT } from './worker-environment.js';
 
-interface ClaimedOutboxEvent {
+export interface ClaimedOutboxEvent {
   id: string;
   aggregateType: string;
   aggregateId: string;
@@ -33,7 +35,7 @@ interface ClaimedOutboxEvent {
 @Injectable()
 export class WorkerService implements OnApplicationBootstrap, OnApplicationShutdown {
   readonly #logger = new Logger(WorkerService.name);
-  readonly #prisma = new PrismaClient();
+  readonly #prisma: PrismaClient;
   #redis: Redis | null = null;
   #queue: Queue<OutboxJobPayload> | null = null;
   #deadLetterQueue: Queue<OutboxJobPayload> | null = null;
@@ -42,9 +44,16 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
   #pollTimer: ReturnType<typeof setInterval> | null = null;
   #polling = false;
 
-  public constructor(@Inject(WORKER_ENVIRONMENT) private readonly environment: WorkerEnvironment) {}
+  public constructor(@Inject(WORKER_ENVIRONMENT) private readonly environment: WorkerEnvironment) {
+    this.#prisma = new PrismaClient({ datasourceUrl: environment.DATABASE_URL });
+  }
 
   public async onApplicationBootstrap(): Promise<void> {
+    if (this.environment.REDIS_URL === undefined) {
+      throw new Error(
+        'The persistent worker requires REDIS_URL. Use runScheduledBatch for serverless execution.',
+      );
+    }
     await this.#prisma.$connect();
     this.#redis = new Redis(this.environment.REDIS_URL, { maxRetriesPerRequest: null });
     this.#supabase = createClient(
@@ -88,6 +97,69 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     return 'ready';
   }
 
+  // Serverless invocations process the durable outbox directly, without starting timers or BullMQ.
+  public async runScheduledBatch(
+    handlers: Record<string, (event: ClaimedOutboxEvent) => Promise<boolean>> = {},
+  ): Promise<{ processed: number; failed: number }> {
+    let processed = 0;
+    let failed = 0;
+    try {
+      await this.#prisma.$connect();
+      this.#supabase = createClient(
+        this.environment.SUPABASE_URL,
+        this.environment.SUPABASE_SECRET_KEY,
+        { auth: { autoRefreshToken: false, persistSession: false } },
+      );
+      const events = await this.claimOutboxEvents();
+      for (const event of events) {
+        try {
+          const handler = handlers[event.eventType];
+          if (handler && (await handler(event))) {
+            processed += 1;
+            continue;
+          }
+          if (
+            event.eventType === 'notification.push' &&
+            (await deliverPush(this.#prisma, this.environment, event))
+          ) {
+            processed += 1;
+            continue;
+          }
+          if (event.eventType === 'account.erase') await this.eraseAccount(event.aggregateId);
+          else if (
+            event.eventType !== 'system.healthcheck' &&
+            event.eventType !== 'notification.push' &&
+            !handler
+          )
+            throw new Error('UNSUPPORTED_JOB_TYPE');
+          await this.#prisma.outboxEvent.update({
+            where: { id: event.id },
+            data: {
+              status: 'PUBLISHED',
+              publishedAt: new Date(),
+              lockedAt: null,
+              lastErrorCode: null,
+            },
+          });
+          processed += 1;
+        } catch (error) {
+          const code =
+            error instanceof Error && /^[A-Z][A-Z_0-9]{1,99}$/.test(error.message)
+              ? error.message
+              : error instanceof Error
+                ? error.name
+                : 'JOB_FAILED';
+          await this.failPublish(event.id, code);
+          failed += 1;
+          this.#logger.error(`Scheduled outbox job ${event.id} failed.`, undefined);
+        }
+      }
+      return { processed, failed };
+    } finally {
+      await this.#prisma.$disconnect();
+    }
+  }
+
   private async pollOutbox(): Promise<void> {
     if (this.#polling || this.#queue === null) return;
     this.#polling = true;
@@ -109,7 +181,8 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
       await transaction.outboxEvent.updateMany({
         where: {
           status: 'PROCESSING',
-          lockedAt: { lt: new Date(Date.now() - 5 * 60_000) },
+          // Longer than Vercel's maximum 300-second invocation, so a live job is never reclaimed.
+          lockedAt: { lt: new Date(Date.now() - 10 * 60_000) },
         },
         data: {
           status: 'FAILED',
@@ -124,7 +197,8 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
         WHERE status IN ('PENDING', 'FAILED')
           AND "availableAt" <= NOW()
           AND "attemptCount" < ${this.environment.OUTBOX_MAX_ATTEMPTS}
-        ORDER BY "createdAt" ASC
+        -- Requeued imports yield to older due work, so push jobs are not starved.
+        ORDER BY "availableAt" ASC, "createdAt" ASC
         FOR UPDATE SKIP LOCKED
         LIMIT ${this.environment.OUTBOX_BATCH_SIZE}
       `);
@@ -155,7 +229,16 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
           payload: event.payloadJson,
           occurredAt: event.createdAt.toISOString(),
         },
-        { ...defaultJobOptions, jobId: event.id },
+        {
+          ...defaultJobOptions,
+          jobId:
+            event.eventType === 'notification.push' &&
+            typeof event.payloadJson === 'object' &&
+            event.payloadJson !== null &&
+            'receiptId' in event.payloadJson
+              ? `${event.id}-receipt`
+              : event.id,
+        },
       );
       await this.#prisma.outboxEvent.update({
         where: { id: event.id },
@@ -188,6 +271,14 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
 
   private async process(job: Job<OutboxJobPayload>): Promise<void> {
     if (job.name === 'system.healthcheck') return Promise.resolve();
+    if (job.name === 'notification.push') {
+      await deliverPush(this.#prisma, this.environment, {
+        id: job.data.outboxEventId,
+        payloadJson: job.data.payload as Prisma.JsonValue,
+        createdAt: new Date(job.data.occurredAt),
+      });
+      return;
+    }
     if (job.name === 'account.erase') return this.eraseAccount(job.data.aggregateId);
     throw new Error(`No worker handler is registered for ${job.name}.`);
   }
@@ -309,6 +400,9 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
         await tx.auditLog.updateMany({
           where: { actorUserId: userId },
           data: { actorSubject: null, reason: null, metadataJson: {} },
+        });
+        await tx.outboxEvent.deleteMany({
+          where: { aggregateType: 'data-import', aggregateId: userId },
         });
         await tx.user.delete({ where: { id: userId } });
       }

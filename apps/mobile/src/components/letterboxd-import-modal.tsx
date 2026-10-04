@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useQueryClient } from '@tanstack/react-query';
-import React, { useState } from 'react';
+import type { DataImportSummary } from '@cinewrapped/shared-types';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Modal,
@@ -12,6 +13,9 @@ import {
   View,
 } from 'react-native';
 
+import { api } from '../lib/api';
+import { errorMessage } from '../lib/error-message';
+import { useAuth } from '../providers/auth-provider';
 import { haptics } from '../lib/haptics';
 import { parseLetterboxdCsv, type LetterboxdImportSummary } from '../lib/letterboxd-importer';
 import { useColors } from './ui';
@@ -31,12 +35,34 @@ const SAMPLE_CSV = `Date,Name,Year,Letterboxd URI,Rating,Rewatch,Tags,Watched Da
 
 export function LetterboxdImportModal({ visible, onClose }: LetterboxdImportModalProps) {
   const colors = useColors();
-  const { showInfo } = useDialog();
+  const { showInfo, showError } = useDialog();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [csvContent, setCsvContent] = useState('');
   const [summary, setSummary] = useState<LetterboxdImportSummary | null>(null);
-  const [isImporting, setIsImporting] = useState(false);
-  const [progress, setProgress] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
+
+  const importsKey = ['data-imports', user?.id] as const;
+  const imports = useQuery({
+    queryKey: importsKey,
+    queryFn: () => api.request<DataImportSummary[]>('data-transfer/imports'),
+    enabled: visible && user !== null,
+    refetchInterval: visible ? 5_000 : false,
+  });
+  const activeJob = imports.data?.[0];
+  const isImporting =
+    submitting ||
+    (activeJob !== undefined &&
+      (activeJob.status === 'PENDING' ||
+        activeJob.status === 'PROCESSING' ||
+        (activeJob.status === 'FAILED' && activeJob.attempts < 10)));
+  const progress = activeJob ? Math.round((activeJob.completed / activeJob.total) * 100) : 0;
+  useEffect(() => {
+    if (activeJob?.status === 'PUBLISHED') {
+      void queryClient.invalidateQueries({ queryKey: ['library'] });
+      void queryClient.invalidateQueries({ queryKey: ['tracking-state'] });
+    }
+  }, [activeJob?.id, activeJob?.status, queryClient]);
 
   const handleParse = (text: string) => {
     setCsvContent(text);
@@ -56,25 +82,23 @@ export function LetterboxdImportModal({ visible, onClose }: LetterboxdImportModa
   const handleStartImport = async () => {
     if (!summary || summary.totalParsed === 0) return;
     haptics.clapperSnap();
-    setIsImporting(true);
-    setProgress(0);
+    setSubmitting(true);
 
-    // Simulate batch ingestion progress
-    for (let i = 1; i <= 100; i += 20) {
-      await new Promise((resolve) => setTimeout(resolve, 150));
-      setProgress(i);
+    try {
+      await api.request<DataImportSummary>('data-transfer/imports', {
+        method: 'POST',
+        body: { entries: summary.entries },
+      });
+      await queryClient.invalidateQueries({ queryKey: importsKey });
+      showInfo(
+        'Import started',
+        'Your import continues when you close this screen. Return here to see progress and unmatched titles. Existing ratings are preserved and imported reviews stay private.',
+      );
+    } catch (reason) {
+      showError('Could not start import', errorMessage(reason));
+    } finally {
+      setSubmitting(false);
     }
-
-    setProgress(100);
-    setIsImporting(false);
-    await queryClient.invalidateQueries({ queryKey: ['library'] });
-    await queryClient.invalidateQueries({ queryKey: ['journal'] });
-    haptics.celebration();
-    showInfo(
-      'Import Successful 🎉',
-      `Imported ${summary.totalParsed} films and ${summary.withReviews} reviews from Letterboxd into your CineWrapped library.`,
-    );
-    onClose();
   };
 
   return (
@@ -127,6 +151,7 @@ export function LetterboxdImportModal({ visible, onClose }: LetterboxdImportModa
 
             {/* Quick Sample Button */}
             <Pressable
+              disabled={isImporting}
               onPress={handleLoadSample}
               style={[styles.sampleBtn, { borderColor: colors.border }]}
             >
@@ -144,6 +169,8 @@ export function LetterboxdImportModal({ visible, onClose }: LetterboxdImportModa
               <TextInput
                 multiline
                 numberOfLines={8}
+                editable={!isImporting}
+                maxLength={500_000}
                 onChangeText={handleParse}
                 placeholder="Date,Name,Year,Letterboxd URI,Rating,Rewatch,Tags..."
                 placeholderTextColor={colors.textSecondary}
@@ -224,13 +251,54 @@ export function LetterboxdImportModal({ visible, onClose }: LetterboxdImportModa
               <View style={styles.progressWrap}>
                 <View style={styles.progressHeader}>
                   <Text style={[styles.progressText, { color: colors.textPrimary }]}>
-                    Ingesting Letterboxd records...
+                    Importing Letterboxd records...
                   </Text>
                   <Text style={[styles.progressPercent, { color: '#00E054' }]}>{progress}%</Text>
                 </View>
                 <View style={[styles.progressBarTrack, { backgroundColor: colors.surfaceRaised }]}>
                   <View style={[styles.progressBarFill, { width: `${progress}%` }]} />
                 </View>
+              </View>
+            ) : null}
+
+            {activeJob ? (
+              <View style={styles.summaryCard}>
+                <Text style={{ color: colors.textPrimary }}>
+                  Latest import: {activeJob.completed}/{activeJob.total} processed
+                </Text>
+                <Text style={{ color: colors.textSecondary }}>
+                  {activeJob.results.filter((item) => item.status === 'imported').length} imported ·{' '}
+                  {activeJob.results.filter((item) => item.status !== 'imported').length} need a
+                  title match
+                </Text>
+                {activeJob.results
+                  .filter((item) => item.status !== 'imported')
+                  .map((item, index) => (
+                    <Text key={index} style={{ color: colors.textSecondary }}>
+                      {item.title}: {item.status}
+                    </Text>
+                  ))}
+                {activeJob.errorCode ? (
+                  <Text accessibilityRole="alert" style={{ color: colors.danger }}>
+                    {activeJob.errorCode === 'IMPORT_CANCELLED'
+                      ? 'Import cancelled. Saved records remain in your library.'
+                      : `Import paused: ${activeJob.errorCode}`}
+                  </Text>
+                ) : null}
+                {activeJob.status === 'PENDING' || activeJob.status === 'FAILED' ? (
+                  <Pressable
+                    onPress={() =>
+                      void api
+                        .request(`data-transfer/imports/${activeJob.id}`, { method: 'DELETE' })
+                        .then(() => queryClient.invalidateQueries({ queryKey: importsKey }))
+                        .catch((reason: unknown) =>
+                          showError('Could not cancel import', errorMessage(reason)),
+                        )
+                    }
+                  >
+                    <Text style={{ color: colors.danger }}>Cancel remaining records</Text>
+                  </Pressable>
+                ) : null}
               </View>
             ) : null}
 

@@ -29,6 +29,17 @@ describe('Letterboxd CSV Importer', () => {
     expect(result.entries[1]?.rating).toBe(5.0);
   });
 
+  it('does not invent a viewing date from the date a rating was logged', () => {
+    const parsed = parseLetterboxdCsv('Date,Name,Year,Rating\n2026-09-01,Arrival,2016,4.5');
+    expect(parsed.entries[0]?.loggedDate).toBe('2026-09-01');
+    expect(parsed.entries[0]?.watchedDate).toBeNull();
+    expect(parsed.withWatchedDates).toBe(0);
+  });
+  it('does not import an incomplete quoted CSV', () => {
+    expect(
+      parseLetterboxdCsv('Date,Name,Year,Rating\n2026-09-01,"Arrival,2016,4.5').totalParsed,
+    ).toBe(0);
+  });
   it('handles empty or malformed inputs gracefully', () => {
     expect(parseLetterboxdCsv('').totalParsed).toBe(0);
     expect(parseLetterboxdCsv('HeaderOnly,Column2\n').totalParsed).toBe(0);

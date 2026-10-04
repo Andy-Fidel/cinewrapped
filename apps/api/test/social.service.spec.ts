@@ -51,7 +51,14 @@ describe('SocialService', () => {
         findUnique: vi.fn().mockResolvedValueOnce(viewer).mockResolvedValueOnce(friend),
       },
       userBlock: { findFirst: vi.fn(() => Promise.resolve(null)) },
-      friendship: { upsert },
+      $transaction: (run: (tx: unknown) => unknown) =>
+        run({
+          friendship: { upsert, findUnique: vi.fn().mockResolvedValue(null) },
+          notification: {
+            create: vi.fn().mockResolvedValue({ id: 'notification-1', userId: friend.id }),
+          },
+          pushDevice: { findMany: vi.fn().mockResolvedValue([]) },
+        }),
     } as unknown as PrismaService;
 
     const result = await new SocialService(prisma).createFriendship(principal, friend.id);
@@ -69,7 +76,14 @@ describe('SocialService', () => {
     const upsert = vi.fn();
     const prisma = {
       user: { findUnique: vi.fn(() => Promise.resolve(viewer)) },
-      friendship: { upsert },
+      $transaction: (run: (tx: unknown) => unknown) =>
+        run({
+          friendship: { upsert, findUnique: vi.fn().mockResolvedValue(null) },
+          notification: {
+            create: vi.fn().mockResolvedValue({ id: 'notification-1', userId: friend.id }),
+          },
+          pushDevice: { findMany: vi.fn().mockResolvedValue([]) },
+        }),
     } as unknown as PrismaService;
 
     await expect(

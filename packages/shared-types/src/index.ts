@@ -1211,3 +1211,48 @@ export interface StoryPresentation {
   defaultTheme: StoryThemePreset;
   createdAt: string;
 }
+
+export interface DataImportSummary {
+  id: string;
+  status: string;
+  completed: number;
+  total: number;
+  results: Array<{
+    title: string;
+    status: 'imported' | 'unmatched' | 'ambiguous';
+    mediaId?: string;
+  }>;
+  errorCode: string | null;
+  attempts: number;
+}
+
+export const accountExportCollections = [
+  'profile',
+  'library',
+  'viewings',
+  'episodeProgress',
+  'ratings',
+  'reviews',
+  'journal',
+  'calendar',
+  'watchlists',
+  'watchlistItems',
+  'comments',
+  'reactions',
+  'notifications',
+  'wraps',
+  'searchHistory',
+  'soundtrackSaves',
+  'sceneIdentifications',
+  'friendships',
+  'following',
+  'followers',
+  'blocks',
+  'mutes',
+  'clubs',
+  'clubMemberships',
+  'clubPosts',
+  'clubPolls',
+  'clubWatchEvents',
+  'clubWatchlistSuggestions',
+] as const;

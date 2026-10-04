@@ -11,6 +11,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { randomUUID } from 'expo-crypto';
+import { offlineViewings } from '../lib/offline-viewings';
 import { api } from '../lib/api';
 import { errorMessage } from '../lib/error-message';
 import { haptics } from '../lib/haptics';
@@ -44,14 +46,6 @@ const VIEWING_FORMATS = [
   { id: 'STREAM_4K', label: '📺 4K Stream' },
   { id: 'PHYSICAL', label: '💿 Criterion / Disc' },
 ];
-
-function operationId(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/gu, (character) => {
-    const value = Math.floor(Math.random() * 16);
-    const digit = character === 'x' ? value : (value & 0x3) | 0x8;
-    return digit.toString(16);
-  });
-}
 
 interface TrackingPanelProps {
   mediaId: string;
@@ -121,16 +115,21 @@ export function TrackingPanel({
   const watchedMutation = useMutation({
     mutationFn: () => {
       haptics.clapperSnap();
-      return api.request(`library/media/${mediaId}/viewings`, {
-        method: 'POST',
-        body: {
-          clientOperationId: operationId(),
+      return offlineViewings.enqueue(
+        mediaId,
+        {
+          clientOperationId: randomUUID(),
           watchedAt: new Date().toISOString(),
           completed: true,
         },
-      });
+        mediaTitle,
+      );
     },
-    onSuccess: refresh,
+    onSuccess: async () => {
+      setReviewNotice('Viewing saved on this device. It will sync when connected.');
+      await offlineViewings.flush();
+      await refresh();
+    },
   });
 
   const watchlistMutation = useMutation({

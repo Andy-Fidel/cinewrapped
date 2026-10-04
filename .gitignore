@@ -23,6 +23,7 @@ apps/mobile/.expo/
 *.log
 .DS_Store
 .turbo/
+.vercel/
 .idea/
 .vscode/
 

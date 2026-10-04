@@ -14,6 +14,8 @@ import {
   useState,
 } from 'react';
 
+import { useQueryClient } from '@tanstack/react-query';
+import { setOfflineOwner } from '../lib/offline-viewings';
 import { api } from '../lib/api';
 import { authCallbackUrl, completeAuthRedirect } from '../lib/auth-links';
 import { devicePlatform, getInstallationId } from '../lib/installation';
@@ -34,6 +36,9 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const queryClient = useQueryClient();
+  const bootstrapGeneration = useRef(0);
+  const ownerSubject = useRef<string | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [loading, setLoading] = useState(true);
@@ -41,48 +46,64 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const bootstrapToken = useRef<string | null>(null);
   const bootstrapInFlight = useRef<Promise<void> | null>(null);
 
-  const bootstrap = useCallback(async (nextSession: Session | null, force = false) => {
-    setSession(nextSession);
-    if (nextSession === null) {
-      bootstrapToken.current = null;
-      setUser(null);
-      setLoading(false);
-      return;
-    }
-    if (!force && bootstrapToken.current === nextSession.access_token) {
-      await bootstrapInFlight.current;
-      return;
-    }
-    bootstrapToken.current = nextSession.access_token;
-    const operation = (async () => {
-      setLoading(true);
-      try {
-        const locale = Intl.DateTimeFormat().resolvedOptions().locale || 'en-US';
-        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-        const current = await api.request<CurrentUser>('auth/bootstrap', {
-          method: 'POST',
-          body: {
-            locale,
-            timezone,
-            platform: devicePlatform(),
-            installationId: await getInstallationId(),
-          },
-        });
-        setUser(current);
-        setError(null);
-      } catch (reason) {
-        bootstrapToken.current = null;
-        setError(
-          reason instanceof Error ? reason.message : 'Unable to load your CineWrapped profile.',
-        );
-      } finally {
-        setLoading(false);
-        bootstrapInFlight.current = null;
+  const bootstrap = useCallback(
+    async (nextSession: Session | null, force = false) => {
+      if (nextSession && !force && bootstrapToken.current === nextSession.access_token) {
+        setSession(nextSession);
+        await bootstrapInFlight.current;
+        return;
       }
-    })();
-    bootstrapInFlight.current = operation;
-    await operation;
-  }, []);
+      const generation = ++bootstrapGeneration.current;
+      const subject = nextSession?.user.id ?? null;
+      if (ownerSubject.current !== subject) {
+        ownerSubject.current = subject;
+        queryClient.clear();
+        setUser(null);
+        await setOfflineOwner(null, null);
+      }
+      if (generation !== bootstrapGeneration.current) return;
+      setSession(nextSession);
+      if (nextSession === null) {
+        bootstrapToken.current = null;
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+      bootstrapToken.current = nextSession.access_token;
+      const operation = (async () => {
+        setLoading(true);
+        try {
+          const locale = Intl.DateTimeFormat().resolvedOptions().locale || 'en-US';
+          const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+          const current = await api.request<CurrentUser>('auth/bootstrap', {
+            method: 'POST',
+            body: {
+              locale,
+              timezone,
+              platform: devicePlatform(),
+              installationId: await getInstallationId(),
+            },
+          });
+          if (generation !== bootstrapGeneration.current) return;
+          setUser(current);
+          setError(null);
+        } catch (reason) {
+          if (generation !== bootstrapGeneration.current) return;
+          bootstrapToken.current = null;
+          setError(
+            reason instanceof Error ? reason.message : 'Unable to load your CineWrapped profile.',
+          );
+        } finally {
+          if (generation !== bootstrapGeneration.current) return;
+          setLoading(false);
+          bootstrapInFlight.current = null;
+        }
+      })();
+      bootstrapInFlight.current = operation;
+      await operation;
+    },
+    [queryClient],
+  );
 
   useEffect(() => {
     let active = true;
@@ -151,7 +172,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [bootstrap, session]);
 
   const signOut = useCallback(async () => {
+    await setOfflineOwner(null, null);
+    queryClient.clear();
     try {
+      await api.request(`notifications/devices/${encodeURIComponent(await getInstallationId())}`, {
+        method: 'DELETE',
+      });
       const sessions = await api.request<Array<{ id: string; current: boolean }>>('auth/sessions');
       const current = sessions.find((candidate) => candidate.current);
       if (current !== undefined) {
@@ -162,7 +188,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     const { error: authError } = await supabase.auth.signOut();
     if (authError !== null) throw authError;
-  }, []);
+  }, [queryClient]);
 
   const oauth = useCallback(async (provider: 'google' | 'apple') => {
     const redirectTo = authCallbackUrl;

@@ -4,7 +4,7 @@ import { Platform } from 'react-native';
 import { api } from './api';
 import { devicePlatform, getInstallationId } from './installation';
 
-export async function registerForPushNotifications(): Promise<void> {
+export async function registerForPushNotifications(prompt = true): Promise<void> {
   if (Platform.OS === 'web') throw new Error('Push notifications require the iOS or Android app.');
 
   if (Constants.executionEnvironment === ExecutionEnvironment.StoreClient) {
@@ -26,12 +26,21 @@ export async function registerForPushNotifications(): Promise<void> {
   const permission =
     current.status === Notifications.PermissionStatus.GRANTED
       ? current
-      : await Notifications.requestPermissionsAsync();
+      : prompt
+        ? await Notifications.requestPermissionsAsync()
+        : current;
   if (permission.status !== Notifications.PermissionStatus.GRANTED) {
     throw new Error('Notification permission was not granted in your phone settings.');
   }
 
-  const projectId = process.env.EXPO_PUBLIC_EAS_PROJECT_ID;
+  const easConfig: unknown = Constants.easConfig;
+  const linkedProjectId =
+    typeof easConfig === 'object' && easConfig !== null && 'projectId' in easConfig
+      ? easConfig.projectId
+      : undefined;
+  const projectId =
+    process.env.EXPO_PUBLIC_EAS_PROJECT_ID ??
+    (typeof linkedProjectId === 'string' ? linkedProjectId : undefined);
   if (typeof projectId !== 'string' || projectId.length === 0) {
     throw new Error('Push delivery will be available after the CineWrapped EAS project is linked.');
   }

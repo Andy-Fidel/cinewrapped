@@ -3,6 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "main": "./dist/worker.service.js",
+  "types": "./dist/worker.service.d.ts",
+  "exports": {
+    ".": "./dist/worker.service.js"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "dev": "tsx watch src/main.ts",

@@ -137,9 +137,8 @@ describe('NotificationsService', () => {
       user: {
         findFirst: vi.fn(() => Promise.resolve(mockUser)),
       },
-      pushDevice: {
-        upsert,
-      },
+      $transaction: (run: (tx: unknown) => unknown) =>
+        run({ pushDevice: { upsert, deleteMany: vi.fn() } }),
     } as unknown as PrismaService;
 
     const service = new NotificationsService(prisma, tokenCrypto);

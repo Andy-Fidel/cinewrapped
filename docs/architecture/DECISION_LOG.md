@@ -52,6 +52,18 @@ This log records the architecture decisions established during Task 1. Detailed 
 | ADR-046 | Store collaborative watchlist and poll votes as normalized member records                    | Accepted | 2026-08-03 | Votes are auditable, reversible, uniquely constrained, and can be aggregated without trusting client totals                                                                        |
 | ADR-047 | Add advanced intelligence through an auditable provider port and grounded local adapter      | Accepted | 2026-08-04 | Natural-language filters and drafts remain useful without pretending a remote model is active; future providers must preserve provenance, approval, privacy, and factual grounding |
 
+## ADR-048 — Free-plan asynchronous features (2026-10-04)
+
+**Context:** Imports and social notifications must survive request failures while hosting remains on Vercel Hobby and Supabase Free. The application already has a durable PostgreSQL outbox and a private scheduler.
+
+**Decision:** Keep data transfer as a module in the API. Reuse the outbox for owned import checkpoints and per-device push envelopes. Commit library writes with their checkpoints. Export authenticated pages directly to a user-owned local JSON file. Queue only append-only viewing logs offline, with owner-scoped operation identifiers and database uniqueness.
+
+**Alternatives:** A permanent Redis worker adds hosting cost and operational work. A new queue provider duplicates existing durable state. A separate import-job table would become useful with more import sources or more complex workflow states, but is unnecessary for this bounded CSV workflow. Generic offline replay of all mutations would require conflict resolution for editable/private data.
+
+**Trade-offs and consequences:** Free scheduling has limited throughput; jobs are bounded and yield between batches. Expo sends are at least once and require receipt checks. Exports are page-by-page reads, not a single consistent database snapshot. Native offline persistence uses two encrypted slots to tolerate failed writes; web tabs serialize with Web Locks. Import envelopes have retention and erasure cleanup because they duplicate personal data.
+
+**Reconsideration:** Measure queue age, function duration, database/storage usage and import failure rates. Introduce a dedicated job model/worker only if real workflow or throughput needs outgrow these limits. Broader offline edits require explicit version/conflict UX first.
+
 ## Decision change process
 
 1. Describe the observed problem and supporting measurement.

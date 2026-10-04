@@ -142,35 +142,53 @@ export class NotificationsService {
     const pushTokenHash = this.tokenCrypto.hash(dto.pushToken);
     const encryptedToken = this.tokenCrypto.encrypt(dto.pushToken);
 
-    const device = await this.prisma.pushDevice.upsert({
-      where: {
-        userId_installationId: {
+    const device = await this.prisma.$transaction(async (tx) => {
+      // One token belongs to the currently signed-in owner, including on shared phones.
+      await tx.pushDevice.deleteMany({
+        where: {
           userId,
           installationId: dto.installationId,
+          pushTokenHash: { not: pushTokenHash },
         },
-      },
-      create: {
-        userId,
-        installationId: dto.installationId,
-        platform: dto.platform,
-        pushTokenHash,
-        encryptedToken,
-        locale: dto.locale ?? null,
-        timezone: dto.timezone ?? null,
-        lastSeenAt: new Date(),
-      },
-      update: {
-        platform: dto.platform,
-        pushTokenHash,
-        encryptedToken,
-        locale: dto.locale ?? null,
-        timezone: dto.timezone ?? null,
-        lastSeenAt: new Date(),
-        disabledAt: null,
-      },
+      });
+      return tx.pushDevice.upsert({
+        where: { pushTokenHash },
+        create: {
+          userId,
+          installationId: dto.installationId,
+          platform: dto.platform,
+          pushTokenHash,
+          encryptedToken,
+          locale: dto.locale ?? null,
+          timezone: dto.timezone ?? null,
+          lastSeenAt: new Date(),
+        },
+        update: {
+          userId,
+          installationId: dto.installationId,
+          platform: dto.platform,
+          encryptedToken,
+          locale: dto.locale ?? null,
+          timezone: dto.timezone ?? null,
+          lastSeenAt: new Date(),
+          disabledAt: null,
+        },
+      });
     });
 
     return { success: true, deviceId: device.id };
+  }
+
+  public async disableDevice(
+    principal: AuthPrincipal,
+    installationId: string,
+  ): Promise<{ success: true }> {
+    const userId = await this.userId(principal.subject);
+    await this.prisma.pushDevice.updateMany({
+      where: { userId, installationId },
+      data: { disabledAt: new Date() },
+    });
+    return { success: true };
   }
 
   private async userId(subject: string): Promise<string> {

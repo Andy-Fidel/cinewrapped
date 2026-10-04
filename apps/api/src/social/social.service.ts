@@ -12,6 +12,8 @@ import type {
 import { Prisma } from '@cinewrapped/database';
 import { Injectable } from '@nestjs/common';
 
+import { createNotification } from '../notifications/create-notification.js';
+
 import type { AuthPrincipal } from '../auth/auth.types.js';
 import { AppException } from '../common/app.exception.js';
 import { PrismaService } from '../database/prisma.service.js';
@@ -184,11 +186,30 @@ export class SocialService {
     const target = await this.requireTarget(targetId);
     this.assertDifferentUsers(viewer.id, target.id);
     await this.assertNotBlocked(viewer.id, target.id);
-    await this.prisma.follow.upsert({
-      where: { followerId_followingId: { followerId: viewer.id, followingId: target.id } },
-      update: { status: 'ACTIVE' },
-      create: { followerId: viewer.id, followingId: target.id },
-    });
+    await this.prisma.$transaction(
+      async (tx) => {
+        const existing = await tx.follow.findUnique({
+          where: { followerId_followingId: { followerId: viewer.id, followingId: target.id } },
+        });
+        await tx.follow.upsert({
+          where: { followerId_followingId: { followerId: viewer.id, followingId: target.id } },
+          update: { status: 'ACTIVE' },
+          create: { followerId: viewer.id, followingId: target.id },
+        });
+        if (existing?.status !== 'ACTIVE')
+          await createNotification(tx, {
+            userId: target.id,
+            actorUserId: viewer.id,
+            type: 'NEW_FOLLOWER',
+            entityType: 'USER',
+            entityId: viewer.id,
+            title: 'New follower',
+            body: `${viewer.displayName} followed you.`,
+            deepLink: `/users/${viewer.username}`,
+          });
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
     return this.relationship(viewer.id, target.id);
   }
 
@@ -208,21 +229,41 @@ export class SocialService {
     this.assertDifferentUsers(requester.id, addressee.id);
     await this.assertNotBlocked(requester.id, addressee.id);
     const [userAId, userBId] = [requester.id, addressee.id].sort();
-    const friendship = await this.prisma.friendship.upsert({
-      where: { userAId_userBId: { userAId: userAId as string, userBId: userBId as string } },
-      update: {
-        requesterId: requester.id,
-        addresseeId: addressee.id,
-        status: 'PENDING',
-        respondedAt: null,
+    const friendship = await this.prisma.$transaction(
+      async (tx) => {
+        const existing = await tx.friendship.findUnique({
+          where: { userAId_userBId: { userAId: userAId as string, userBId: userBId as string } },
+        });
+        if (existing?.status === 'ACCEPTED' || existing?.status === 'PENDING') return existing;
+        const created = await tx.friendship.upsert({
+          where: { userAId_userBId: { userAId: userAId as string, userBId: userBId as string } },
+          update: {
+            requesterId: requester.id,
+            addresseeId: addressee.id,
+            status: 'PENDING',
+            respondedAt: null,
+          },
+          create: {
+            userAId: userAId as string,
+            userBId: userBId as string,
+            requesterId: requester.id,
+            addresseeId: addressee.id,
+          },
+        });
+        await createNotification(tx, {
+          userId: addressee.id,
+          actorUserId: requester.id,
+          type: 'FRIEND_REQUEST',
+          entityType: 'FRIENDSHIP',
+          entityId: created.id,
+          title: 'New friend request',
+          body: `${requester.displayName} sent you a friend request.`,
+          deepLink: `/users/${requester.username}`,
+        });
+        return created;
       },
-      create: {
-        userAId: userAId as string,
-        userBId: userBId as string,
-        requesterId: requester.id,
-        addresseeId: addressee.id,
-      },
-    });
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
     return this.friendshipSummary(friendship, requester.id, addressee);
   }
 
@@ -261,11 +302,31 @@ export class SocialService {
         'The pending friend request was not found.',
       );
     }
-    const updated = await this.prisma.friendship.update({
-      where: { id: friendshipId },
-      data: { status: action === 'ACCEPT' ? 'ACCEPTED' : 'DECLINED', respondedAt: new Date() },
-    });
     const other = await this.requireTarget(friendship.requesterId);
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const result = await tx.friendship.updateMany({
+        where: { id: friendshipId, addresseeId: viewer.id, status: 'PENDING' },
+        data: { status: action === 'ACCEPT' ? 'ACCEPTED' : 'DECLINED', respondedAt: new Date() },
+      });
+      if (!result.count)
+        throw new AppException(
+          409,
+          'FRIENDSHIP_CHANGED',
+          'This friend request has already been answered.',
+        );
+      if (action === 'ACCEPT')
+        await createNotification(tx, {
+          userId: other.id,
+          actorUserId: viewer.id,
+          type: 'FRIEND_REQUEST_ACCEPTED',
+          entityType: 'FRIENDSHIP',
+          entityId: friendshipId,
+          title: 'Friend request accepted',
+          body: `${viewer.displayName} accepted your friend request.`,
+          deepLink: `/users/${viewer.username}`,
+        });
+      return tx.friendship.findUniqueOrThrow({ where: { id: friendshipId } });
+    });
     return this.friendshipSummary(updated, viewer.id, other);
   }
 
@@ -391,17 +452,32 @@ export class SocialService {
       if (parent === null)
         throw new AppException(422, 'COMMENT_PARENT_INVALID', 'The reply target is invalid.');
     }
-    const row = await this.prisma.comment.create({
-      data: {
-        userId: viewer.id,
-        parentType,
-        parentId,
-        parentCommentId: input.parentCommentId ?? null,
-        body: input.body,
-        containsSpoilers: input.containsSpoilers,
-        visibility: 'PUBLIC',
-      },
-      include: { user: true, _count: { select: { replies: true } } },
+    const row = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.comment.create({
+        data: {
+          userId: viewer.id,
+          parentType,
+          parentId,
+          parentCommentId: input.parentCommentId ?? null,
+          body: input.body,
+          containsSpoilers: input.containsSpoilers,
+          visibility: 'PUBLIC',
+        },
+        include: { user: true, _count: { select: { replies: true } } },
+      });
+      const recipient = await this.notificationRecipient(tx, parentType, parentId);
+      if (recipient && recipient.userId !== viewer.id)
+        await createNotification(tx, {
+          userId: recipient.userId,
+          actorUserId: viewer.id,
+          type: 'COMMENT',
+          entityType: 'COMMENT',
+          entityId: created.id,
+          title: 'New comment',
+          body: `${viewer.displayName} commented on your activity.`,
+          deepLink: recipient.deepLink,
+        });
+      return created;
     });
     return this.commentSummary(row);
   }
@@ -424,18 +500,45 @@ export class SocialService {
   ): Promise<ReactionSummary> {
     const viewer = await this.requireUser(principal.subject);
     await this.assertReactionTargetVisible(viewer.id, targetType, targetId);
-    await this.prisma.reaction.upsert({
-      where: {
-        userId_targetType_targetId_reactionType: {
-          userId: viewer.id,
-          targetType,
-          targetId,
-          reactionType,
-        },
+    await this.prisma.$transaction(
+      async (tx) => {
+        const existing = await tx.reaction.findUnique({
+          where: {
+            userId_targetType_targetId_reactionType: {
+              userId: viewer.id,
+              targetType,
+              targetId,
+              reactionType,
+            },
+          },
+        });
+        const created = await tx.reaction.upsert({
+          where: {
+            userId_targetType_targetId_reactionType: {
+              userId: viewer.id,
+              targetType,
+              targetId,
+              reactionType,
+            },
+          },
+          update: {},
+          create: { userId: viewer.id, targetType, targetId, reactionType },
+        });
+        const recipient = await this.notificationRecipient(tx, targetType, targetId);
+        if (!existing && recipient && recipient.userId !== viewer.id)
+          await createNotification(tx, {
+            userId: recipient.userId,
+            actorUserId: viewer.id,
+            type: 'REACTION',
+            entityType: 'REACTION',
+            entityId: created.id,
+            title: 'New reaction',
+            body: `${viewer.displayName} reacted to your activity.`,
+            deepLink: recipient.deepLink,
+          });
       },
-      update: {},
-      create: { userId: viewer.id, targetType, targetId, reactionType },
-    });
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
     return (
       (await this.reactionMap(viewer.id, targetType, [targetId])).get(targetId) ?? {
         counts: {},
@@ -527,6 +630,34 @@ export class SocialService {
   public async unmute(principal: AuthPrincipal, targetId: string): Promise<void> {
     const viewer = await this.requireUser(principal.subject);
     await this.prisma.userMute.deleteMany({ where: { muterId: viewer.id, mutedId: targetId } });
+  }
+
+  private async notificationRecipient(
+    tx: Prisma.TransactionClient,
+    type: 'REVIEW' | 'FEED_ACTIVITY' | 'COMMENT',
+    id: string,
+  ): Promise<{ userId: string; deepLink: string } | null> {
+    if (type === 'REVIEW') {
+      const row = await tx.review.findUnique({
+        where: { id },
+        select: { userId: true, mediaId: true },
+      });
+      return row ? { userId: row.userId, deepLink: `/media/${row.mediaId}` } : null;
+    }
+    if (type === 'COMMENT') {
+      const row = await tx.comment.findUnique({ where: { id }, select: { userId: true } });
+      return row ? { userId: row.userId, deepLink: '/notifications' } : null;
+    }
+    const row = await tx.feedActivity.findUnique({
+      where: { id },
+      select: { actorUserId: true, mediaId: true },
+    });
+    return row
+      ? {
+          userId: row.actorUserId,
+          deepLink: row.mediaId ? `/media/${row.mediaId}` : '/notifications',
+        }
+      : null;
   }
 
   private async syncActivities(actorIds: string[]): Promise<void> {

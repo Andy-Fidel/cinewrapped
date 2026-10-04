@@ -48,7 +48,10 @@ docker compose --profile storage up -d minio
 ```
 
 See [Local development](docs/deployment/LOCAL_DEVELOPMENT.md) for service URLs and troubleshooting.
-Configure the identity providers and avatar bucket using [Supabase setup](docs/deployment/SUPABASE_SETUP.md) before testing authentication.
+See [Vercel migration](docs/deployment/VERCEL_PRODUCTION.md) for the free-plan hosting configuration and rollout checks.
+
+- [Feature release: imports, exports, social push and offline viewings](docs/deployment/FEATURE_RELEASE.md)
+  Configure the identity providers and avatar bucket using [Supabase setup](docs/deployment/SUPABASE_SETUP.md) before testing authentication.
 
 ## Verification
 

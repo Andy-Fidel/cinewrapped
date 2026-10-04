@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@cinewrapped/config": "workspace:*",
+    "@cinewrapped/worker": "workspace:*",
     "@cinewrapped/database": "workspace:*",
     "@cinewrapped/shared-types": "workspace:*",
     "@cinewrapped/validation": "workspace:*",

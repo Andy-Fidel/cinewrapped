@@ -69,6 +69,30 @@ describe('MediaCatalogService', () => {
     expect(transaction.mediaGenre.createMany).toHaveBeenCalledOnce();
   });
 
+  it('does not persist unrelated or wrong-year candidates during an import lookup', async () => {
+    const transaction = vi.fn();
+    const provider = {
+      searchMedia: vi.fn().mockResolvedValue([
+        { title: 'Arrival', mediaType: 'MOVIE', releaseYear: 1996 },
+        { title: 'The Arrival', mediaType: 'MOVIE', releaseYear: 2016 },
+        { title: 'Arrival', mediaType: 'TV', releaseYear: 2016 },
+      ]),
+    } as unknown as MediaProvider;
+    const service = new MediaCatalogService(
+      { $transaction: transaction } as unknown as PrismaService,
+      provider,
+    );
+    expect(
+      await service.search(
+        'Arrival',
+        'en-US',
+        { exactTitle: 'Arrival', mediaType: 'MOVIE', releaseYear: 2016, limit: 50 },
+        1,
+      ),
+    ).toEqual([]);
+    expect(transaction).not.toHaveBeenCalled();
+  });
+
   it('does not request an external identifier for an unknown internal media ID', async () => {
     const prisma = {
       media: { findUnique: vi.fn(() => Promise.resolve(null)) },

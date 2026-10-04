@@ -9,7 +9,7 @@ const sharedServerSchema = z.object({
   NODE_ENV: nodeEnvironmentSchema.default('development'),
   LOG_LEVEL: logLevelSchema.default('info'),
   DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
-  REDIS_URL: z.url({ protocol: /^rediss?$/ }),
+  REDIS_URL: z.url({ protocol: /^rediss?$/ }).optional(),
 });
 
 const apiEnvironmentSchema = sharedServerSchema.extend({
@@ -34,9 +34,13 @@ const apiEnvironmentSchema = sharedServerSchema.extend({
   SENTRY_DSN: z.union([z.url(), z.literal('')]).optional(),
   POSTHOG_API_KEY: z.string().optional(),
   PUSH_TOKEN_ENCRYPTION_KEY: secretSchema.optional(),
+  CRON_SECRET: z.string().min(32).optional(),
 });
 
 const workerEnvironmentSchema = sharedServerSchema.extend({
+  PUSH_TOKEN_ENCRYPTION_KEY: secretSchema.optional(),
+  S3_SECRET_KEY: secretSchema.optional(),
+  EXPO_PUSH_ACCESS_TOKEN: secretSchema.optional(),
   WORKER_CONCURRENCY: z.coerce.number().int().min(1).max(100).default(4),
   OUTBOX_POLL_INTERVAL_MS: z.coerce.number().int().min(250).max(60_000).default(2_000),
   OUTBOX_BATCH_SIZE: z.coerce.number().int().min(1).max(500).default(50),
@@ -69,6 +73,9 @@ export function parseApiEnvironment(
   const apiPublicUrl =
     environment.API_PUBLIC_URL ??
     environment.RENDER_EXTERNAL_URL ??
+    (environment.VERCEL_PROJECT_PRODUCTION_URL
+      ? `https://${environment.VERCEL_PROJECT_PRODUCTION_URL}`
+      : undefined) ??
     `http://localhost:${apiPort ?? '4000'}`;
 
   return apiEnvironmentSchema.parse({

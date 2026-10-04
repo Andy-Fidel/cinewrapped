@@ -456,7 +456,12 @@ export const notificationInboxQuerySchema = z.object({
 export const registerPushDeviceSchema = z.object({
   installationId: z.string().trim().min(1).max(255),
   platform: z.enum(['IOS', 'ANDROID', 'WEB', 'UNKNOWN']),
-  pushToken: z.string().trim().min(16).max(4_096).regex(/^\S+$/u),
+  pushToken: z
+    .string()
+    .trim()
+    .min(16)
+    .max(255)
+    .regex(/^(?:Expo|Exponent)PushToken\[[A-Za-z0-9_-]+\]$/u),
   locale: languageTagSchema.optional(),
   timezone: z.string().trim().min(1).max(64).optional(),
 });

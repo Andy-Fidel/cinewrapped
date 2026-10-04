@@ -22,6 +22,7 @@ import {
   settingsControlStyles,
 } from '../../src/components/settings-controls';
 import { Button, Field, Screen, useColors } from '../../src/components/ui';
+import { downloadAccountExport } from '../../src/lib/account-export';
 import { api } from '../../src/lib/api';
 import { errorMessage } from '../../src/lib/error-message';
 import { useAuth } from '../../src/providers/auth-provider';
@@ -64,6 +65,20 @@ export default function PreferenceSettingsScreen() {
   const [favoriteSearch, setFavoriteSearch] = useState('');
   const [favoriteResults, setFavoriteResults] = useState<MediaSummary[]>([]);
   const [message, setMessage] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [exportProgress, setExportProgress] = useState<string | null>(null);
+  const exportAccount = async () => {
+    setExporting(true);
+    try {
+      await downloadAccountExport(setExportProgress);
+      setMessage('Account export ready.');
+    } catch (reason) {
+      setMessage(errorMessage(reason));
+    } finally {
+      setExporting(false);
+      setExportProgress(null);
+    }
+  };
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
   useEffect(() => {
@@ -464,6 +479,17 @@ export default function PreferenceSettingsScreen() {
         />
       </SettingsCard>
 
+      <SettingsCard
+        icon="download-outline"
+        title="Export account data"
+        body="Download your profile, preferences, library, diary, reviews, journal, calendar and other application records as JSON. Attachment metadata is included; original media files are excluded."
+      >
+        <Button
+          label={exportProgress ? `Exporting ${exportProgress}…` : 'Download account export'}
+          loading={exporting}
+          onPress={() => void exportAccount()}
+        />
+      </SettingsCard>
       <LetterboxdImportModal
         visible={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}

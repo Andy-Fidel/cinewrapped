@@ -315,44 +315,78 @@ export class LibraryService {
         userId_clientOperationId: { userId: user.id, clientOperationId: input.clientOperationId },
       },
     });
-    if (duplicate !== null) return viewingSummary(duplicate);
-    return this.prisma.$transaction(async (transaction) => {
-      const history = await transaction.watchHistory.upsert({
-        where: { userId_mediaId: { userId: user.id, mediaId } },
-        create: {
-          userId: user.id,
-          mediaId,
-          status: input.completed ? 'COMPLETED' : 'WATCHING',
-          startedAt: new Date(input.watchedAt),
-          completedAt: input.completed ? new Date(input.watchedAt) : null,
-          progressPercent: input.completed ? 100 : 0,
-          watchCount: input.completed ? 1 : 0,
-          lastWatchedAt: new Date(input.watchedAt),
-        },
-        update: {
-          status: input.completed ? 'COMPLETED' : 'WATCHING',
-          completedAt: input.completed ? new Date(input.watchedAt) : null,
-          ...(input.completed ? { progressPercent: 100, watchCount: { increment: 1 } } : {}),
-          lastWatchedAt: new Date(input.watchedAt),
-          version: { increment: 1 },
-        },
+    if (duplicate !== null) {
+      if (
+        duplicate.mediaId !== mediaId ||
+        duplicate.watchedAt.getTime() !== new Date(input.watchedAt).getTime() ||
+        (duplicate.completedAt !== null) !== input.completed
+      ) {
+        throw new AppException(
+          409,
+          'OPERATION_ID_CONFLICT',
+          'This operation identifier was already used for another viewing.',
+        );
+      }
+      return viewingSummary(duplicate);
+    }
+    try {
+      return await this.prisma.$transaction(async (transaction) => {
+        const history = await transaction.watchHistory.upsert({
+          where: { userId_mediaId: { userId: user.id, mediaId } },
+          create: {
+            userId: user.id,
+            mediaId,
+            status: input.completed ? 'COMPLETED' : 'WATCHING',
+            startedAt: new Date(input.watchedAt),
+            completedAt: input.completed ? new Date(input.watchedAt) : null,
+            progressPercent: input.completed ? 100 : 0,
+            watchCount: input.completed ? 1 : 0,
+            lastWatchedAt: new Date(input.watchedAt),
+          },
+          update: {
+            status: input.completed ? 'COMPLETED' : 'WATCHING',
+            completedAt: input.completed ? new Date(input.watchedAt) : null,
+            ...(input.completed ? { progressPercent: 100, watchCount: { increment: 1 } } : {}),
+            lastWatchedAt: new Date(input.watchedAt),
+            version: { increment: 1 },
+          },
+        });
+        const viewing = await transaction.viewing.create({
+          data: {
+            userId: user.id,
+            mediaId,
+            watchHistoryId: history.id,
+            clientOperationId: input.clientOperationId,
+            watchedAt: new Date(input.watchedAt),
+            completedAt: input.completed ? new Date(input.watchedAt) : null,
+            durationWatchedMin: input.durationWatchedMin ?? null,
+            viewingPlatform: input.viewingPlatform ?? null,
+            notes: input.notes ?? null,
+            isRewatch: history.watchCount > (input.completed ? 1 : 0),
+          },
+        });
+        return viewingSummary(viewing);
       });
-      const viewing = await transaction.viewing.create({
-        data: {
-          userId: user.id,
-          mediaId,
-          watchHistoryId: history.id,
-          clientOperationId: input.clientOperationId,
-          watchedAt: new Date(input.watchedAt),
-          completedAt: input.completed ? new Date(input.watchedAt) : null,
-          durationWatchedMin: input.durationWatchedMin ?? null,
-          viewingPlatform: input.viewingPlatform ?? null,
-          notes: input.notes ?? null,
-          isRewatch: history.watchCount > (input.completed ? 1 : 0),
-        },
-      });
-      return viewingSummary(viewing);
-    });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        const saved = await this.prisma.viewing.findUnique({
+          where: {
+            userId_clientOperationId: {
+              userId: user.id,
+              clientOperationId: input.clientOperationId,
+            },
+          },
+        });
+        if (
+          saved !== null &&
+          saved.mediaId === mediaId &&
+          saved.watchedAt.getTime() === new Date(input.watchedAt).getTime() &&
+          (saved.completedAt !== null) === input.completed
+        )
+          return viewingSummary(saved);
+      }
+      throw error;
+    }
   }
 
   public async episodes(

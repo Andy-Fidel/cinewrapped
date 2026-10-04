@@ -3,6 +3,7 @@ export const CINEWRAPPED_DEAD_LETTER_QUEUE = 'cinewrapped-jobs-dead-letter';
 
 export const jobNames = [
   'system.healthcheck',
+  'notification.push',
   'journal.export',
   'data.import',
   'data.export',

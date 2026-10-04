@@ -6,6 +6,7 @@ import {
 } from '@cinewrapped/validation';
 import {
   Body,
+  Delete,
   Controller,
   Get,
   HttpCode,
@@ -73,6 +74,19 @@ export class NotificationsController {
     return {
       success: true as const,
       data,
+      meta: { requestId: request.id },
+    };
+  }
+
+  @Delete('devices/:installationId')
+  public async disableDevice(
+    @CurrentPrincipal() principal: AuthPrincipal,
+    @Param('installationId') installationId: string,
+    @Req() request: FastifyRequest,
+  ) {
+    return {
+      success: true as const,
+      data: await this.notificationsService.disableDevice(principal, installationId),
       meta: { requestId: request.id },
     };
   }

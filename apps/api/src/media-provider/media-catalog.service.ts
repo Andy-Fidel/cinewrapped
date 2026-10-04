@@ -30,6 +30,7 @@ type DetailsPayload = Prisma.MediaGetPayload<{
 }>;
 
 export interface MediaSearchFilters {
+  exactTitle?: string;
   mediaType?: 'MOVIE' | 'TV';
   releaseYear?: number;
   genreIds?: string[];
@@ -123,9 +124,19 @@ export class MediaCatalogService {
     filters: MediaSearchFilters,
     page: number,
   ): Promise<MediaSummary[]> {
-    const media = await this.persistSummaries(
-      await this.provider.searchMedia(query, language, page),
-    );
+    const results = await this.provider.searchMedia(query, language, page);
+    // Imports resolve only exact candidates before persisting provider metadata.
+    const candidates =
+      filters.exactTitle === undefined
+        ? results
+        : results.filter(
+            (item) =>
+              item.title.normalize('NFKC').toLowerCase() ===
+                filters.exactTitle?.normalize('NFKC').toLowerCase() &&
+              (filters.mediaType === undefined || item.mediaType === filters.mediaType) &&
+              (filters.releaseYear === undefined || item.releaseYear === filters.releaseYear),
+          );
+    const media = candidates.length === 0 ? [] : await this.persistSummaries(candidates);
     return media
       .filter((item) => filters.mediaType === undefined || item.mediaType === filters.mediaType)
       .filter(

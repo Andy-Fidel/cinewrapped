@@ -57,6 +57,8 @@ function parseCsvRows(csvText: string): string[][] {
     }
   }
 
+  if (insideQuote) return [];
+
   if (currentToken.length > 0 || currentRow.length > 0) {
     currentRow.push(currentToken.trim());
     if (currentRow.some((col) => col.length > 0)) {
@@ -136,11 +138,7 @@ export function parseLetterboxdCsv(csvText: string): LetterboxdImportSummary {
     const rawWatchedDate =
       colWatchedDate !== -1 && row[colWatchedDate] ? row[colWatchedDate] : undefined;
     const rawDate = colDate !== -1 && row[colDate] ? row[colDate] : undefined;
-    const watchedDate = rawWatchedDate?.trim()
-      ? rawWatchedDate.trim()
-      : rawDate?.trim()
-        ? rawDate.trim()
-        : null;
+    const watchedDate = rawWatchedDate?.trim() ? rawWatchedDate.trim() : null;
     if (watchedDate) withWatchedDates++;
 
     const rawRewatch = colRewatch !== -1 && row[colRewatch] ? row[colRewatch] : undefined;
