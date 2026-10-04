@@ -51,6 +51,7 @@ See [Local development](docs/deployment/LOCAL_DEVELOPMENT.md) for service URLs a
 See [Vercel migration](docs/deployment/VERCEL_PRODUCTION.md) for the free-plan hosting configuration and rollout checks.
 
 - [Feature release: imports, exports, social push and offline viewings](docs/deployment/FEATURE_RELEASE.md)
+- [PWA installation, offline fallback and update behavior](docs/deployment/PWA.md)
   Configure the identity providers and avatar bucket using [Supabase setup](docs/deployment/SUPABASE_SETUP.md) before testing authentication.
 
 ## Verification

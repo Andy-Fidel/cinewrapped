@@ -15,6 +15,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { PushNotificationProvider } from '../src/providers/push-notification-provider';
 import { OfflineSyncProvider } from '../src/providers/offline-sync-provider';
+import { PwaProvider } from '../src/providers/pwa-provider';
 import { AppLoadingScreen } from '../src/components/app-loading-screen';
 import { AuthProvider, useAuth } from '../src/providers/auth-provider';
 import { FeatureFlagsProvider } from '../src/providers/feature-flags-provider';
@@ -66,7 +67,9 @@ export default function RootLayout() {
               <FeatureFlagsProvider>
                 <PushNotificationProvider>
                   <OfflineSyncProvider>
-                    <ThemedNavigation />
+                    <PwaProvider>
+                      <ThemedNavigation />
+                    </PwaProvider>
                   </OfflineSyncProvider>
                 </PushNotificationProvider>
               </FeatureFlagsProvider>
