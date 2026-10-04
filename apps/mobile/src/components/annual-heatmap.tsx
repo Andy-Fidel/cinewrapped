@@ -10,6 +10,7 @@ export type HeatmapPalette = 'EMERALD' | 'AMBER' | 'VIOLET' | 'CRIMSON' | 'CYAN'
 
 interface AnnualHeatmapProps {
   data: ActivityHeatmapSummary;
+  onPaletteChange?: (palette: HeatmapPalette) => void;
   selectedDate: string | null;
   onSelectDate: (day: ActivityHeatmapDay) => void;
 }
@@ -88,7 +89,12 @@ const PALETTE_CONFIGS: Record<
   },
 };
 
-export function AnnualHeatmap({ data, selectedDate, onSelectDate }: AnnualHeatmapProps) {
+export function AnnualHeatmap({
+  data,
+  selectedDate,
+  onSelectDate,
+  onPaletteChange,
+}: AnnualHeatmapProps) {
   const colors = useColors();
   const [activePalette, setActivePalette] = useState<HeatmapPalette>('EMERALD');
 
@@ -181,6 +187,7 @@ export function AnnualHeatmap({ data, selectedDate, onSelectDate }: AnnualHeatma
               onPress={() => {
                 haptics.selection();
                 setActivePalette(pKey);
+                onPaletteChange?.(pKey);
               }}
               style={[
                 styles.paletteChip,

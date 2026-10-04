@@ -16,8 +16,10 @@ import { Button, useColors } from './ui';
 export function GraphicCardPreview({
   card,
   posterUrl,
+  svgOverride,
 }: {
   card: GraphicCard;
+  svgOverride?: string;
   posterUrl?: string | null | undefined;
 }) {
   const colors = useColors();
@@ -33,10 +35,12 @@ export function GraphicCardPreview({
   const [failure, setFailure] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
   const ready = !posterUrl || poster.url === posterUrl;
-  const svg = renderGraphicCard({
-    ...card,
-    posterDataUrl: poster.url === posterUrl ? poster.data : null,
-  });
+  const svg =
+    svgOverride ??
+    renderGraphicCard({
+      ...card,
+      posterDataUrl: poster.url === posterUrl ? poster.data : null,
+    });
   useEffect(() => {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10_000);

@@ -504,20 +504,13 @@ export class InsightsService {
     if (wrap.status !== 'COMPLETED' || wrap.statistics === null || wrap.storySlides === null) {
       throw new AppException(409, 'WRAP_NOT_READY', 'The wrap is not ready to share.');
     }
-    const slide = wrap.storySlides[input.slideIndex] ?? wrap.storySlides[0];
-    if (slide === undefined)
-      throw new AppException(409, 'WRAP_EMPTY', 'The wrap has no shareable slides.');
-    return {
-      wrapId,
-      title: slide.title,
-      subtitle: slide.body,
-      statValue: slide.statValue ?? String(wrap.statistics.viewingCount),
-      statLabel: slide.statLabel ?? 'viewings',
-      accent: slide.accent,
-      deepLink: `cinewrapped://wraps/${wrapId}`,
-      webUrl: `https://cinewrapped.example/wraps/${wrapId}`,
-      expiresAt: new Date(Date.now() + input.expiresInMinutes * 60_000).toISOString(),
-    };
+    if (wrap.storySlides[input.slideIndex] === undefined)
+      throw new AppException(422, 'WRAP_SLIDE_INVALID', 'The selected wrap slide does not exist.');
+    throw new AppException(
+      501,
+      'PUBLIC_WRAP_LINKS_UNAVAILABLE',
+      'Public expiring wrap links are unavailable. Export a PNG card from the wrap viewer instead.',
+    );
   }
 
   private checkedPeriod(period: Period): Period {

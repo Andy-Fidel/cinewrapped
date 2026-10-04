@@ -1,11 +1,14 @@
 import type { GamificationDashboard } from '@cinewrapped/shared-types';
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Redirect, Stack, router } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Screen, useColors } from '../../src/components/ui';
+import { appLink } from '../../src/lib/text-sharing';
+import { useTextShare } from '../../src/lib/use-text-share';
+import { ShareLoginRedirect } from '../../src/components/share-login-redirect';
 import { api } from '../../src/lib/api';
 import { haptics } from '../../src/lib/haptics';
 import { useAuth } from '../../src/providers/auth-provider';
@@ -78,6 +81,7 @@ const TRIVIA_SET: {
 
 export default function CinemaTriviaScreen() {
   const colors = useColors();
+  const share = useTextShare();
   const queryClient = useQueryClient();
   const { session } = useAuth();
 
@@ -108,7 +112,7 @@ export default function CinemaTriviaScreen() {
     },
   });
 
-  if (session === null) return <Redirect href="/(auth)/login" />;
+  if (session === null) return <ShareLoginRedirect path="/trivia" />;
 
   const questions = TRIVIA_SET.questions;
   const currentQ: TriviaQuestion = questions[currentIndex] ?? questions[0]!;
@@ -140,9 +144,11 @@ export default function CinemaTriviaScreen() {
     }
   };
 
-  const handleShareScore = async () => {
+  const handleShareScore = () => {
     haptics.selection();
-    await Share.share({
+    share({
+      title: 'Cinema Trivia Score',
+      url: appLink('/trivia'),
       message: `🎬 I scored ${score}/${questions.length} on this week's CineWrapped Cinema Trivia (${TRIVIA_SET.seasonTitle})! Can you beat my score?`,
     });
   };

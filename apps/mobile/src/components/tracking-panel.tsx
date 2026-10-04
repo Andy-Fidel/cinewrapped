@@ -9,6 +9,7 @@ import type {
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { randomUUID } from 'expo-crypto';
@@ -73,7 +74,6 @@ export function TrackingPanel({
   const [assistantStyle, setAssistantStyle] = useState<ReviewAssistantStyle>('SHORT');
   const [assistedDraft, setAssistedDraft] = useState(false);
   const [draftApproved, setDraftApproved] = useState(false);
-  const [shareReviewActivity, setShareReviewActivity] = useState(false);
   const [reviewNotice, setReviewNotice] = useState<string | null>(null);
   const [isShareCardOpen, setIsShareCardOpen] = useState(false);
 
@@ -195,36 +195,19 @@ export function TrackingPanel({
                 expectedVersion: existing.version,
               },
             });
-      let sharingEnabled = privacy.data?.shareReviewActivity === true;
-      let sharingFailed = false;
-      if (!sharingEnabled && shareReviewActivity) {
-        try {
-          const updatedPrivacy = await api.request<PrivacySettingsSummary>('users/me/privacy', {
-            method: 'PATCH',
-            body: { shareReviewActivity: true },
-          });
-          queryClient.setQueryData(['privacy-settings'], updatedPrivacy);
-          sharingEnabled = true;
-        } catch {
-          sharingFailed = true;
-        }
-      }
-      return { review, sharingEnabled, sharingFailed };
+      return { review, sharingEnabled: privacy.data?.shareReviewActivity === true };
     },
-    onSuccess: async ({ sharingEnabled, sharingFailed }) => {
+    onSuccess: async ({ sharingEnabled }) => {
       haptics.celebration();
       setReviewBody(null);
       setFavoriteQuote('');
       setSpoilers(null);
       setAssistedDraft(false);
       setDraftApproved(false);
-      setShareReviewActivity(false);
       setReviewNotice(
-        sharingFailed
-          ? 'Review published, but Social sharing could not be enabled. You can enable it in Settings.'
-          : sharingEnabled
-            ? 'Review published and shared to your Social feed.'
-            : 'Review published. Social sharing remains off in your privacy settings.',
+        sharingEnabled
+          ? 'Review published and shared to your Social feed.'
+          : 'Review published. Social sharing remains off in your privacy settings.',
       );
       await Promise.all([
         refresh(),
@@ -573,22 +556,16 @@ export function TrackingPanel({
           </Text>
         </View>
       ) : (
-        <Pressable
-          accessibilityRole="checkbox"
-          accessibilityState={{ checked: shareReviewActivity }}
-          disabled={privacy.isPending}
-          onPress={() => setShareReviewActivity((value) => !value)}
-          style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 }}
-        >
-          <Ionicons
-            name={shareReviewActivity ? 'checkbox' : 'square-outline'}
-            size={20}
-            color={colors.brand}
-          />
+        <View style={[styles.shareNotice, { backgroundColor: colors.surfaceRaised }]}>
           <Text style={{ color: colors.textSecondary }}>
-            Also share published review to Social feed
+            Social sharing is off. Publishing keeps your sharing preferences unchanged.
           </Text>
-        </Pressable>
+          <Button
+            label="Manage account-wide Social sharing"
+            variant="secondary"
+            onPress={() => router.push('/settings/privacy')}
+          />
+        </View>
       )}
 
       <Button

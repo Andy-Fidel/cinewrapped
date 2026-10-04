@@ -91,7 +91,9 @@ export function CalendarSyncModal({ visible, onClose, event }: CalendarSyncModal
                 <Ionicons name="calendar" size={22} color={colors.brand} />
               </View>
               <View>
-                <Text style={[styles.title, { color: colors.textPrimary }]}>Add to Calendar</Text>
+                <Text style={[styles.title, { color: colors.textPrimary }]}>
+                  Export to Calendar
+                </Text>
                 <Text numberOfLines={1} style={[styles.subtitle, { color: colors.textSecondary }]}>
                   {event.title}
                 </Text>
@@ -151,7 +153,7 @@ export function CalendarSyncModal({ visible, onClose, event }: CalendarSyncModal
                   Apple Calendar / iOS
                 </Text>
                 <Text style={[styles.optionDesc, { color: colors.textSecondary }]}>
-                  Sync to iOS Calendar with reminder alerts
+                  Download or share a calendar file with your reminders
                 </Text>
               </View>
               {loadingType === 'apple' ? (

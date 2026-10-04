@@ -1,5 +1,5 @@
 import { accountExportCollections } from '@cinewrapped/shared-types';
-import { Platform } from 'react-native';
+import { exportTextFile } from './file-export';
 import { api } from './api';
 import { supabase } from './supabase';
 
@@ -9,9 +9,7 @@ interface ExportPage {
   asOf: string;
 }
 
-export async function downloadAccountExport(
-  onProgress: (collection: string) => void,
-): Promise<void> {
+export async function downloadAccountExport(onProgress: (collection: string) => void) {
   const owner = (await supabase.auth.getSession()).data.session?.user.id;
   if (!owner) throw new Error('Sign in before exporting your account.');
   const data: Record<string, unknown[]> = {};
@@ -48,27 +46,5 @@ export async function downloadAccountExport(
     2,
   );
   const name = `cinewrapped-export-${new Date().toISOString().slice(0, 10)}.json`;
-  if (Platform.OS === 'web') {
-    const url = URL.createObjectURL(new Blob([content], { type: 'application/json' }));
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = name;
-    anchor.click();
-    setTimeout(() => URL.revokeObjectURL(url), 60_000);
-    return;
-  }
-  const { File, Paths } = await import('expo-file-system');
-  const { isAvailableAsync, shareAsync } = await import('expo-sharing');
-  if (!(await isAvailableAsync())) throw new Error('File sharing is unavailable on this device.');
-  const file = new File(Paths.cache, name);
-  try {
-    file.create({ overwrite: true });
-    file.write(content);
-    await shareAsync(file.uri, {
-      mimeType: 'application/json',
-      dialogTitle: 'Save CineWrapped account export',
-    });
-  } finally {
-    if (file.exists) file.delete();
-  }
+  return exportTextFile(content, name, 'application/json', 'Save CineWrapped account export');
 }

@@ -16,6 +16,7 @@ const apiEnvironmentSchema = sharedServerSchema.extend({
   API_HOST: z.string().min(1).default('0.0.0.0'),
   API_PORT: z.coerce.number().int().min(1).max(65_535).default(4000),
   API_PUBLIC_URL: z.url(),
+  PUBLIC_WEB_ORIGIN: z.url({ protocol: /^https?$/ }).optional(),
   TRUST_PROXY: booleanEnvironmentSchema.default(false),
   API_DOCS_ENABLED: booleanEnvironmentSchema.optional(),
   CORS_ORIGINS: z
@@ -56,6 +57,7 @@ const adminPublicEnvironmentSchema = z.object({
 
 const mobilePublicEnvironmentSchema = z.object({
   EXPO_PUBLIC_API_BASE_URL: z.url(),
+  EXPO_PUBLIC_WEB_ORIGIN: z.url({ protocol: /^https?$/ }).optional(),
   EXPO_PUBLIC_SUPABASE_URL: z.url({ protocol: /^https$/ }),
   EXPO_PUBLIC_SUPABASE_ANON_KEY: z.string().min(16),
   EXPO_PUBLIC_EAS_PROJECT_ID: z.string().uuid().optional(),

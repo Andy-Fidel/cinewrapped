@@ -1,3 +1,4 @@
+import { publicAppUrl } from '@cinewrapped/shared-types';
 export interface CalendarEventPayload {
   id?: string | undefined;
   title: string;
@@ -33,7 +34,9 @@ export function buildGoogleCalendarUrl(event: CalendarEventPayload): string {
   if (event.mediaTitle && event.mediaTitle !== event.title) {
     lines.push(`🎬 Title: ${event.mediaTitle}`);
   }
-  lines.push('🍿 Scheduled with CineWrapped (https://cinewrapped.app)');
+  lines.push(
+    `🍿 Scheduled with CineWrapped (${publicAppUrl('/', process.env.EXPO_PUBLIC_WEB_ORIGIN)})`,
+  );
 
   const params = new URLSearchParams({
     action: 'TEMPLATE',
@@ -70,7 +73,9 @@ export function generateIcsContent(event: CalendarEventPayload): string {
   if (event.mediaTitle && event.mediaTitle !== event.title) {
     notesLines.push(`Title: ${event.mediaTitle}`);
   }
-  notesLines.push('Scheduled with CineWrapped — https://cinewrapped.app');
+  notesLines.push(
+    `Scheduled with CineWrapped — ${publicAppUrl('/', process.env.EXPO_PUBLIC_WEB_ORIGIN)}`,
+  );
 
   const icsLines = [
     'BEGIN:VCALENDAR',
@@ -84,15 +89,14 @@ export function generateIcsContent(event: CalendarEventPayload): string {
     `DTSTART:${formatIcs(start)}`,
     `DTEND:${formatIcs(end)}`,
     `SUMMARY:${escapeIcs(event.title)}`,
-    `DESCRIPTION:${escapeIcs(notesLines.join('\\n\\n'))}`,
+    `DESCRIPTION:${escapeIcs(notesLines.join('\n\n'))}`,
     'LOCATION:CineWrapped Watch Night',
     'STATUS:CONFIRMED',
     'CATEGORIES:Cinema,Entertainment,Movies',
   ];
 
   // Add Alarm / Reminder for Apple Calendar
-  const reminders =
-    event.reminderMinutes && event.reminderMinutes.length > 0 ? event.reminderMinutes : [30];
+  const reminders = event.reminderMinutes ?? [30];
 
   for (const reminder of reminders) {
     icsLines.push(

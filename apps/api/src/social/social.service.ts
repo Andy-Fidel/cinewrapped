@@ -1,3 +1,4 @@
+import { publicAppUrl } from '@cinewrapped/shared-types';
 import type {
   CommentSummary,
   FeedActivitySummary,
@@ -574,7 +575,7 @@ export class SocialService {
     return {
       mediaId,
       deepLink: `cinewrapped://media/${mediaId}`,
-      webUrl: `https://cinewrapped.example/media/${mediaId}`,
+      webUrl: publicAppUrl(`/media/${mediaId}`, process.env.PUBLIC_WEB_ORIGIN),
       title: media.title,
     };
   }

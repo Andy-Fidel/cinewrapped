@@ -70,8 +70,14 @@ export default function PreferenceSettingsScreen() {
   const exportAccount = async () => {
     setExporting(true);
     try {
-      await downloadAccountExport(setExportProgress);
-      setMessage('Account export ready.');
+      const outcome = await downloadAccountExport(setExportProgress);
+      setMessage(
+        outcome === 'cancelled'
+          ? 'Export cancelled.'
+          : outcome === 'downloaded'
+            ? 'Account export downloaded.'
+            : 'File share sheet completed.',
+      );
     } catch (reason) {
       setMessage(errorMessage(reason));
     } finally {

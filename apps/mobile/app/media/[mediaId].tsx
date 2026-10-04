@@ -1,8 +1,8 @@
-import type { CreditSummary, MediaDetails, ShareReceipt } from '@cinewrapped/shared-types';
+import type { CreditSummary, MediaDetails } from '@cinewrapped/shared-types';
 import { Ionicons } from '@expo/vector-icons';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import * as Linking from 'expo-linking';
-import { Redirect, Stack, router, useLocalSearchParams } from 'expo-router';
+import { Stack, router, useLocalSearchParams } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import React, { useMemo, useState } from 'react';
 import {
@@ -11,7 +11,6 @@ import {
   Platform,
   Pressable,
   ScrollView,
-  Share,
   StyleSheet,
   Text,
   View,
@@ -19,11 +18,14 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 
+import { ShareLoginRedirect } from '../../src/components/share-login-redirect';
 import { FilmographyCompletionTracker } from '../../src/components/filmography-completion-tracker';
 import { MediaReviewsFeed } from '../../src/components/media-reviews-feed';
 import { SoundtracksPanel } from '../../src/components/soundtracks-panel';
 import { TrackingPanel } from '../../src/components/tracking-panel';
 import { Button, PosterImage, StarRating, useColors } from '../../src/components/ui';
+import { appLink } from '../../src/lib/text-sharing';
+import { useTextShare } from '../../src/lib/use-text-share';
 import { api } from '../../src/lib/api';
 import { haptics } from '../../src/lib/haptics';
 import { useAuth } from '../../src/providers/auth-provider';
@@ -241,20 +243,23 @@ export default function MediaDetailScreen() {
     staleTime: 6 * 60 * 60 * 1000,
   });
 
-  const shareMedia = useMutation({
-    mutationFn: () => api.request<ShareReceipt>(`media/${mediaId}/shares`, { method: 'POST' }),
-    onSuccess: async (receipt) => {
-      haptics.selection();
-      await Share.share({ message: `${receipt.title}\n${receipt.webUrl}`, url: receipt.deepLink });
-    },
-  });
+  const share = useTextShare();
+  const shareMedia = () => {
+    if (!details.data) return;
+    haptics.selection();
+    share({
+      title: details.data.title,
+      message: `Check out ${details.data.title} on CineWrapped!`,
+      url: appLink(`/media/${encodeURIComponent(mediaId)}`),
+    });
+  };
 
   const ambient = useMemo(
     () => getAmbientPalette(details.data?.genres ?? []),
     [details.data?.genres],
   );
 
-  if (session === null) return <Redirect href="/(auth)/login" />;
+  if (session === null) return <ShareLoginRedirect path={`/media/${mediaId}`} />;
   if (details.isPending)
     return (
       <SafeAreaView style={[styles.center, { backgroundColor: colors.background }]}>
@@ -295,7 +300,7 @@ export default function MediaDetailScreen() {
             <Pressable
               accessibilityLabel="Share Title"
               accessibilityRole="button"
-              onPress={() => shareMedia.mutate()}
+              onPress={() => shareMedia()}
               style={{ marginRight: 8 }}
             >
               <Ionicons name="share-outline" size={22} color={colors.textPrimary} />
@@ -431,7 +436,7 @@ export default function MediaDetailScreen() {
 
             <Pressable
               accessibilityRole="button"
-              onPress={() => shareMedia.mutate()}
+              onPress={() => shareMedia()}
               style={({ pressed }) => [
                 styles.actionButton,
                 {

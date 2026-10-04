@@ -22,6 +22,7 @@ export interface GraphicCard {
   ratingScale?: number | null;
   metric?: { value: string; label: string };
   theme: CardTheme;
+  palette?: { background: string; accent: string };
   containsSpoilers?: boolean;
   posterDataUrl?: string | null;
 }
@@ -94,7 +95,13 @@ function textLines(
 }
 
 export function renderGraphicCard(card: GraphicCard): string {
-  const theme = CARD_THEMES[card.theme];
+  const baseTheme = CARD_THEMES[card.theme];
+  const theme =
+    card.palette &&
+    /^#[0-9a-f]{6}$/iu.test(card.palette.background) &&
+    /^#[0-9a-f]{6}$/iu.test(card.palette.accent)
+      ? { ...baseTheme, ...card.palette }
+      : baseTheme;
   const poster =
     card.posterDataUrl &&
     /^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/u.test(card.posterDataUrl)
@@ -121,7 +128,7 @@ ${poster}
 ${textLines(card.title, 895, 52, 28, 2, '#FFFFFF', '700')}
 ${textLines(card.subtitle ?? '', 1000, 28, 50, 1, '#BDC7D9')}
 ${stars}
-${textLines(card.metric ? `${card.metric.value} · ${card.metric.label}` : ratingLabel(card.ratingValue, card.ratingScale), 1155, 38, 35, 1, theme.accent, '700')}
+${textLines(card.metric ? `${card.metric.value} · ${card.metric.label}` : 'ratingValue' in card || 'ratingScale' in card ? ratingLabel(card.ratingValue, card.ratingScale) : '', 1155, 38, 35, 1, theme.accent, '700')}
 ${textLines(card.quote ? `“${card.quote}”` : '', 1230, 30, 44, 2, theme.accent)}
 ${textLines(card.body, card.quote ? 1340 : 1260, 34, 42, card.quote ? 7 : 9, '#FFFFFF')}
 <path d="M80 1690 H1000" stroke="#596174"/>

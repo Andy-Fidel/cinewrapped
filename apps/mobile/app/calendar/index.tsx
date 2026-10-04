@@ -8,16 +8,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Redirect, Stack, router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  Share,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { HeatmapShareModal } from '../../src/components/heatmap-share-modal';
+import type { HeatmapSharePalette } from '../../src/lib/heatmap-share';
 import { AnnualHeatmap } from '../../src/components/annual-heatmap';
 import { CalendarSyncModal } from '../../src/components/calendar-sync-modal';
 import { FeatureGate } from '../../src/components/feature-gate';
@@ -120,6 +114,8 @@ function formatEventDate(dateStr: string): { dayName: string; dayNum: string; mo
 
 export default function CalendarScreen() {
   const colors = useColors();
+  const [heatmapShareVisible, setHeatmapShareVisible] = useState(false);
+  const [heatmapSharePalette, setHeatmapSharePalette] = useState<HeatmapSharePalette>('EMERALD');
   const queryClient = useQueryClient();
   const { session, user } = useAuth();
   const { confirm, showError } = useDialog();
@@ -264,13 +260,10 @@ export default function CalendarScreen() {
     };
   }, [heatmap.data?.totalViewings, annualGoal]);
 
-  const handleShareYearPixels = async () => {
+  const handleShareYearPixels = () => {
     if (!heatmap.data) return;
     haptics.selection();
-    const data = heatmap.data;
-    await Share.share({
-      message: `🎬 My ${data.year} Cinema Year in Pixels on CineWrapped!\n\n🍿 ${data.totalViewings} Movies & Episodes watched\n🔥 ${data.currentStreakDays}-day streak (Longest: ${data.longestStreakDays}d)\n👑 Peak Night: ${data.mostActiveWeekday.name}\n🌙 Persona: ${data.circadianRhythm.persona}\n\nTrack your cinema journey on CineWrapped!`,
-    });
+    setHeatmapShareVisible(true);
   };
 
   if (session === null) return <Redirect href="/(auth)/login" />;
@@ -510,6 +503,7 @@ export default function CalendarScreen() {
 
                 {/* GitHub-style Annual Heatmap with Chromatic Palettes */}
                 <AnnualHeatmap
+                  onPaletteChange={setHeatmapSharePalette}
                   data={heatmapData}
                   onSelectDate={(day) => {
                     setSelectedDayKey(day.date);
@@ -1033,7 +1027,9 @@ export default function CalendarScreen() {
                           accessibilityRole="button"
                           onPress={() => {
                             haptics.selection();
-                            void openAppleCalendar(event);
+                            void openAppleCalendar(event).catch((error: unknown) =>
+                              showError('Could not export calendar', errorMessage(error)),
+                            );
                           }}
                           style={[
                             styles.calendarActionBtn,
@@ -1059,7 +1055,9 @@ export default function CalendarScreen() {
                               durationMinutes: event.durationMinutes,
                               notes: event.notes,
                               mediaTitle: event.media?.title,
-                            });
+                            }).catch((error: unknown) =>
+                              showError('Could not open Google Calendar', errorMessage(error)),
+                            );
                           }}
                           style={[
                             styles.calendarActionBtn,
@@ -1133,6 +1131,16 @@ export default function CalendarScreen() {
           </View>
         )}
 
+        {heatmapData ? (
+          <HeatmapShareModal
+            visible={heatmapShareVisible}
+            onClose={() => setHeatmapShareVisible(false)}
+            data={heatmapData}
+            author={user?.displayName ?? 'Cinephile'}
+            handle={user?.username ?? 'cinephile'}
+            palette={heatmapSharePalette}
+          />
+        ) : null}
         {/* 1-Tap Google & Apple Calendar Sync Modal */}
         <CalendarSyncModal
           event={selectedSyncEvent}

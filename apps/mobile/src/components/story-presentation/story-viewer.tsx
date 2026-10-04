@@ -233,6 +233,7 @@ export function StoryViewer({
         onClose={() => setExportModalVisible(false)}
         presentation={presentation}
         currentSlideIndex={currentSlideIndex}
+        selectedTheme={currentTheme}
       />
     </SafeAreaView>
   );

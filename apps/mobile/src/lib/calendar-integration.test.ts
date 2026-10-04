@@ -53,3 +53,17 @@ describe('calendar integration core', () => {
     expect(ics).toContain('END:VCALENDAR');
   });
 });
+
+it('escapes paragraph separators once and preserves an explicitly empty reminder list', () => {
+  const ics = generateIcsContent({
+    title: 'Film',
+    startsAt: '2026-10-05T20:00:00Z',
+    notes: 'First\nSecond',
+    mediaTitle: 'Movie',
+    reminderMinutes: [],
+  });
+  expect(ics).toContain('DESCRIPTION:First\\nSecond\\n\\nTitle: Movie');
+  expect(ics).not.toContain('\\\\n');
+  expect(ics).not.toContain('BEGIN:VALARM');
+  expect(ics).toContain('https://cinewrapped.vercel.app/');
+});

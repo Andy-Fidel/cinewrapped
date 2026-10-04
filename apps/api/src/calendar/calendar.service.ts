@@ -1,3 +1,4 @@
+import { publicAppUrl } from '@cinewrapped/shared-types';
 import { Prisma } from '@cinewrapped/database';
 import type { CalendarEventSummary, MediaSummary } from '@cinewrapped/shared-types';
 import { createCalendarEventSchema, updateCalendarEventSchema } from '@cinewrapped/validation';
@@ -143,16 +144,17 @@ export class CalendarService {
         .toISOString()
         .replace(/[-:]/gu, '')
         .replace(/\.\d{3}Z$/u, 'Z');
-    const escape = (value: string) => value.replace(/([\\,;])/gu, '\\$1').replace(/\n/gu, '\\n');
+    const escape = (value: string) =>
+      value.replace(/([\\,;])/gu, '\\$1').replace(/\r\n|\n|\r/gu, '\\n');
     const end = new Date(event.startsAt.getTime() + event.durationMinutes * 60_000);
 
     const description = [
       event.notes ?? '',
       event.media?.title ? `Movie/Show: ${event.media.title}` : '',
-      'Scheduled via CineWrapped (https://cinewrapped.app)',
+      `Scheduled via CineWrapped (${publicAppUrl('/', process.env.PUBLIC_WEB_ORIGIN)})`,
     ]
       .filter(Boolean)
-      .join('\\n\\n');
+      .join('\n\n');
 
     const lines = [
       'BEGIN:VCALENDAR',

@@ -1,20 +1,23 @@
-import type { StoryPresentation } from '@cinewrapped/shared-types';
+import type { StoryPresentation, StoryThemePreset } from '@cinewrapped/shared-types';
 import { useState } from 'react';
-import { Modal, Platform, ScrollView, Text, View } from 'react-native';
+import { Modal, ScrollView, Text, View } from 'react-native';
 import { GraphicCardPreview } from '../graphic-card-preview';
 import { Button, useColors } from '../ui';
-import type { CardTheme } from '../../lib/share-card-model';
+import { exportTextFile } from '../../lib/file-export';
+import { getStoryTheme } from './story-theme';
 
 export function StoryExportModal({
   visible,
   onClose,
   presentation,
   currentSlideIndex,
+  selectedTheme,
 }: {
   visible: boolean;
   onClose: () => void;
   presentation: StoryPresentation;
   currentSlideIndex: number;
+  selectedTheme: StoryThemePreset;
 }) {
   const colors = useColors();
   const [message, setMessage] = useState('');
@@ -24,49 +27,35 @@ export function StoryExportModal({
     setExporting(true);
     setMessage('');
     try {
-      const content = JSON.stringify(presentation, null, 2);
-      if (Platform.OS === 'web') {
-        const url = URL.createObjectURL(new Blob([content], { type: 'application/json' }));
-        const anchor = document.createElement('a');
-        anchor.href = url;
-        anchor.download = 'cinewrapped-presentation.json';
-        document.body.appendChild(anchor);
-        anchor.click();
-        anchor.remove();
-        setTimeout(() => URL.revokeObjectURL(url), 60_000);
-        setMessage('Presentation JSON downloaded.');
-      } else {
-        const { File, Paths } = await import('expo-file-system');
-        const { isAvailableAsync, shareAsync } = await import('expo-sharing');
-        if (!(await isAvailableAsync()))
-          throw new Error('File sharing is unavailable on this device.');
-        const file = new File(Paths.cache, `cinewrapped-presentation-${Date.now()}.json`);
-        try {
-          file.create();
-          file.write(content);
-          await shareAsync(file.uri, {
-            mimeType: 'application/json',
-            dialogTitle: 'Save presentation JSON',
-          });
-          setMessage('File share sheet completed.');
-        } finally {
-          if (file.exists) file.delete();
-        }
-      }
+      const content = JSON.stringify(
+        {
+          ...presentation,
+          defaultTheme: selectedTheme,
+          slides: presentation.slides.map((item) => ({ ...item, theme: selectedTheme })),
+        },
+        null,
+        2,
+      );
+      const outcome = await exportTextFile(
+        content,
+        'cinewrapped-presentation.json',
+        'application/json',
+        'Save presentation JSON',
+      );
+      setMessage(
+        outcome === 'cancelled'
+          ? 'Export cancelled.'
+          : outcome === 'downloaded'
+            ? 'Presentation JSON downloaded.'
+            : 'File share sheet completed.',
+      );
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Could not export the presentation.');
     } finally {
       setExporting(false);
     }
   };
-  const theme: CardTheme =
-    slide?.theme === 'CRIMSON_NOIR'
-      ? 'CRIMSON'
-      : slide?.theme === 'NEON_CYBER' || slide?.theme === 'EMERALD_VAULT'
-        ? 'CYAN'
-        : slide?.theme === 'MIDNIGHT_GOLD'
-          ? 'GOLD'
-          : 'MIDNIGHT';
+  const storyColors = getStoryTheme(selectedTheme);
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={{ flex: 1, backgroundColor: '#000000B8', justifyContent: 'flex-end' }}>
@@ -81,7 +70,10 @@ export function StoryExportModal({
         >
           <ScrollView contentContainerStyle={{ gap: 12, paddingBottom: 20 }}>
             <Text style={{ color: colors.textPrimary, fontSize: 20, fontWeight: '800' }}>
-              Share & Export Slide
+              Share Slide Summary
+            </Text>
+            <Text style={{ color: colors.textSecondary }}>
+              A still summary card using your selected story palette.
             </Text>
             <Button label="Close export" variant="secondary" onPress={onClose} />
             {visible && slide ? (
@@ -103,7 +95,8 @@ export function StoryExportModal({
                     .join(' · '),
                   author: presentation.author.displayName,
                   handle: presentation.author.username,
-                  theme,
+                  theme: 'MIDNIGHT',
+                  palette: { background: storyColors.bgGradient[0], accent: storyColors.accent },
                   ...(slide.metric
                     ? {
                         metric: {

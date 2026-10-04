@@ -2,6 +2,8 @@ import 'reflect-metadata';
 import { randomUUID } from 'node:crypto';
 import { PrismaClient } from '@cinewrapped/database';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { SocialService } from '../src/social/social.service.js';
+import { InsightsService } from '../src/insights/insights.service.js';
 import { LibraryService } from '../src/library/library.service.js';
 import type { PrismaService } from '../src/database/prisma.service.js';
 import type { AuthPrincipal } from '../src/auth/auth.types.js';
@@ -143,5 +145,56 @@ describe.runIf(databaseUrl !== undefined)('public review rating privacy', () => 
         ratingValue: null,
         ratingScale: null,
       });
+  });
+  it('publishes without changing sharing preferences, restoring old activities, or constructing placeholder links', async () => {
+    const before = await db.privacySettings.findUniqueOrThrow({ where: { userId: viewer } });
+    const review = await db.review.findFirstOrThrow({ where: { userId: viewer, mediaId } });
+    await service.updateReview(principal, review.id, {
+      body: 'Published update',
+      status: 'PUBLISHED',
+      expectedVersion: review.version,
+    });
+    const social = new SocialService(db as unknown as PrismaService);
+    const receipt = await social.shareMedia(principal, mediaId);
+    expect(receipt.webUrl).toBe(`https://cinewrapped.vercel.app/media/${mediaId}`);
+    expect(
+      (await db.privacySettings.findUniqueOrThrow({ where: { userId: viewer } }))
+        .shareReviewActivity,
+    ).toBe(before.shareReviewActivity);
+    const feed = await social.feed(principal, 50);
+    expect(
+      feed.items.some(
+        (item) => item.actor.id === viewer && item.activityType === 'USER_REVIEWED_MEDIA',
+      ),
+    ).toBe(false);
+  });
+  it('keeps wraps owner-only and does not advertise fake expiring public links', async () => {
+    const wrap = await db.wrap.create({
+      data: {
+        userId: viewer,
+        wrapType: 'MONTHLY',
+        periodStart: new Date('2026-01-01T00:00:00Z'),
+        periodEnd: new Date('2026-02-01T00:00:00Z'),
+        timezone: 'UTC',
+        status: 'COMPLETED',
+        statisticsJson: { viewingCount: 3 },
+        storySlidesJson: [
+          { id: 'slide-1', title: 'Cinema', body: 'Summary', eyebrow: 'Stats', accent: 'TEAL' },
+        ],
+      },
+    });
+    const insights = new InsightsService(db as unknown as PrismaService);
+    await expect(
+      insights.shareCard(principal, wrap.id, { slideIndex: 0, expiresInMinutes: 60 }),
+    ).rejects.toMatchObject({ code: 'PUBLIC_WRAP_LINKS_UNAVAILABLE' });
+    await expect(
+      insights.shareCard(principal, wrap.id, { slideIndex: 8, expiresInMinutes: 60 }),
+    ).rejects.toMatchObject({ code: 'WRAP_SLIDE_INVALID' });
+    await expect(
+      insights.shareCard({ ...principal, subject: `card-${publicAuthor}` }, wrap.id, {
+        slideIndex: 0,
+        expiresInMinutes: 60,
+      }),
+    ).rejects.toMatchObject({ code: 'WRAP_NOT_FOUND' });
   });
 });

@@ -1258,3 +1258,17 @@ export const accountExportCollections = [
   'clubWatchEvents',
   'clubWatchlistSuggestions',
 ] as const;
+
+/** Public recipient links use HTTPS by default; native schemes remain separate. */
+export function publicAppUrl(
+  path = '/',
+  configuredOrigin = 'https://cinewrapped.vercel.app',
+): string {
+  const origin = new URL(configuredOrigin);
+  if (!['https:', 'http:'].includes(origin.protocol) || origin.username || origin.password)
+    throw new Error('The public app origin must be an HTTP(S) origin without credentials.');
+  if (!path.startsWith('/') || path.startsWith('//')) throw new Error('Invalid app link path.');
+  const url = new URL(path, origin.origin);
+  if (url.origin !== origin.origin) throw new Error('Invalid app link origin.');
+  return url.toString();
+}

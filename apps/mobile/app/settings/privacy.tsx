@@ -125,7 +125,7 @@ export default function PrivacySettingsScreen() {
           <SettingsCard
             icon="share-social-outline"
             title="Activity Sharing"
-            body="Visibility decides the audience; these switches decide whether an activity is shared at all."
+            body="These account-wide switches apply to past and future activities. Turning review sharing on can restore older review activities to the selected audience. Visibility decides who can see them."
           >
             {(
               [

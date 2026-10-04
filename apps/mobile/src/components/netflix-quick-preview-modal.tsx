@@ -3,8 +3,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { Image, Modal, Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import { Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { appLink } from '../lib/text-sharing';
+import { useTextShare } from '../lib/use-text-share';
 import { api } from '../lib/api';
 import { haptics } from '../lib/haptics';
 import { useColors } from './ui';
@@ -45,6 +47,7 @@ export function NetflixQuickPreviewModal({
   matchScore,
 }: NetflixQuickPreviewModalProps) {
   const colors = useColors();
+  const share = useTextShare();
   const queryClient = useQueryClient();
 
   const [inWatchlist, setInWatchlist] = useState(false);
@@ -91,11 +94,12 @@ export function NetflixQuickPreviewModal({
     .filter(Boolean)
     .slice(0, 4);
 
-  const handleShare = async () => {
+  const handleShare = () => {
     haptics.selection();
-    await Share.share({
-      message: `🎬 Check out "${media.title}" (${releaseYear}) on CineWrapped! https://cinewrapped.app/media/${media.id}`,
+    share({
       title: media.title,
+      message: `🎬 Check out "${media.title}" (${releaseYear}) on CineWrapped!`,
+      url: appLink(`/media/${encodeURIComponent(media.id)}`),
     });
   };
 
