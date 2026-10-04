@@ -858,16 +858,38 @@ export class LibraryService {
   }
 
   public async listMediaReviews(
-    _principal: AuthPrincipal,
+    principal: AuthPrincipal,
     mediaId: string,
     limit = 20,
   ): Promise<PublicReviewItem[]> {
+    const viewer = await this.requireUser(principal.subject);
+    const [blocks, friendships] = await Promise.all([
+      this.prisma.userBlock.findMany({
+        where: { OR: [{ blockerId: viewer.id }, { blockedId: viewer.id }] },
+        select: { blockerId: true, blockedId: true },
+      }),
+      this.prisma.friendship.findMany({
+        where: { status: 'ACCEPTED', OR: [{ userAId: viewer.id }, { userBId: viewer.id }] },
+        select: { userAId: true, userBId: true },
+      }),
+    ]);
+    const blockedIds = blocks.map((block) =>
+      block.blockerId === viewer.id ? block.blockedId : block.blockerId,
+    );
+    const friendIds = friendships.map((friend) =>
+      friend.userAId === viewer.id ? friend.userBId : friend.userAId,
+    );
     const reviews = await this.prisma.review.findMany({
       where: {
         mediaId,
         status: 'PUBLISHED',
         visibility: 'PUBLIC',
         deletedAt: null,
+        user: {
+          id: { notIn: blockedIds },
+          deletedAt: null,
+          status: { notIn: ['BANNED', 'SUSPENDED'] },
+        },
       },
       include: {
         user: {
@@ -891,14 +913,22 @@ export class LibraryService {
         mediaId,
         userId: { in: userIds },
         deletedAt: null,
+        user: {
+          OR: [
+            { id: viewer.id },
+            { privacySettings: { is: { ratingsVisibility: 'PUBLIC' } } },
+            { id: { in: friendIds }, privacySettings: { is: { ratingsVisibility: 'FRIENDS' } } },
+          ],
+        },
       },
       select: {
         userId: true,
         ratingValue: true,
+        ratingScale: true,
       },
     });
 
-    const ratingMap = new Map(ratings.map((r) => [r.userId, Number(r.ratingValue)]));
+    const ratingMap = new Map(ratings.map((r) => [r.userId, r]));
 
     return reviews.map((r) => ({
       id: r.id,
@@ -910,7 +940,11 @@ export class LibraryService {
       commentCount: r.commentCount,
       publishedAt: r.publishedAt?.toISOString() ?? null,
       createdAt: r.createdAt.toISOString(),
-      ratingValue: ratingMap.get(r.userId) ?? null,
+      ratingValue:
+        ratingMap.get(r.userId)?.ratingValue == null
+          ? null
+          : Number(ratingMap.get(r.userId)!.ratingValue),
+      ratingScale: ratingMap.get(r.userId)?.ratingScale ?? null,
       user: {
         id: r.user.id,
         handle: r.user.username,

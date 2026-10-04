@@ -6,6 +6,7 @@ import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'rea
 
 import { api } from '../lib/api';
 import { haptics } from '../lib/haptics';
+import { ratingLabel } from '../lib/share-card-model';
 import { ReportContentModal, type ReportTarget } from './report-content-modal';
 import { ReviewShareCardModal } from './review-share-card-modal';
 import { useColors } from './ui';
@@ -127,7 +128,9 @@ export function MediaReviewsFeed({
                         ]}
                       >
                         <Ionicons name="star" size={13} color="#F59E0B" />
-                        <Text style={styles.ratingText}>{review.ratingValue}.0</Text>
+                        <Text style={styles.ratingText}>
+                          {ratingLabel(review.ratingValue, review.ratingScale)}
+                        </Text>
                       </View>
                     ) : null}
 

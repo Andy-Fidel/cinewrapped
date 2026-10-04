@@ -305,6 +305,7 @@ export interface PublicReviewItem {
   publishedAt: string | null;
   createdAt: string;
   ratingValue: number | null;
+  ratingScale: number | null;
   user: {
     id: string;
     handle: string;

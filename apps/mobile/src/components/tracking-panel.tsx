@@ -643,6 +643,8 @@ export function TrackingPanel({
           review={{
             body: currentReviewBody,
             ratingValue: state.rating?.ratingValue ?? null,
+            ratingScale: state.rating?.ratingScale ?? null,
+            containsSpoilers,
             quote: favoriteQuote.trim() || null,
             vibeTags: selectedVibeTags,
             user: {

@@ -1,15 +1,9 @@
-import type { StoryPresentation, StorySlideData } from '@cinewrapped/shared-types';
-import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
-import { Modal, Platform, Pressable, Share, StyleSheet, Text, View } from 'react-native';
-
-import { useColors } from '../ui';
-import { haptics } from '../../lib/haptics';
-
-export interface StoryExportOptions {
-  platform: 'INSTAGRAM' | 'WHATSAPP' | 'TIKTOK' | 'DOWNLOAD_IMAGE' | 'COPY_JSON';
-  slideIndex: number;
-}
+import type { StoryPresentation } from '@cinewrapped/shared-types';
+import { useState } from 'react';
+import { Modal, Platform, ScrollView, Text, View } from 'react-native';
+import { GraphicCardPreview } from '../graphic-card-preview';
+import { Button, useColors } from '../ui';
+import type { CardTheme } from '../../lib/share-card-model';
 
 export function StoryExportModal({
   visible,
@@ -23,307 +17,122 @@ export function StoryExportModal({
   currentSlideIndex: number;
 }) {
   const colors = useColors();
-  const [copiedNotification, setCopiedNotification] = useState(false);
-
-  const activeSlide: StorySlideData =
-    presentation.slides[currentSlideIndex] ?? presentation.slides[0]!;
-
-  const handleSharePlatform = async (platform: StoryExportOptions['platform']) => {
-    haptics.clapperSnap();
-
-    if (platform === 'COPY_JSON') {
-      const jsonString = JSON.stringify(presentation, null, 2);
+  const [message, setMessage] = useState('');
+  const [exporting, setExporting] = useState(false);
+  const slide = presentation.slides[currentSlideIndex];
+  const exportJson = async () => {
+    setExporting(true);
+    setMessage('');
+    try {
+      const content = JSON.stringify(presentation, null, 2);
       if (Platform.OS === 'web') {
+        const url = URL.createObjectURL(new Blob([content], { type: 'application/json' }));
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = 'cinewrapped-presentation.json';
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 60_000);
+        setMessage('Presentation JSON downloaded.');
+      } else {
+        const { File, Paths } = await import('expo-file-system');
+        const { isAvailableAsync, shareAsync } = await import('expo-sharing');
+        if (!(await isAvailableAsync()))
+          throw new Error('File sharing is unavailable on this device.');
+        const file = new File(Paths.cache, `cinewrapped-presentation-${Date.now()}.json`);
         try {
-          await navigator.clipboard.writeText(jsonString);
-        } catch {
-          // Fallback
+          file.create();
+          file.write(content);
+          await shareAsync(file.uri, {
+            mimeType: 'application/json',
+            dialogTitle: 'Save presentation JSON',
+          });
+          setMessage('File share sheet completed.');
+        } finally {
+          if (file.exists) file.delete();
         }
       }
-      setCopiedNotification(true);
-      setTimeout(() => {
-        setCopiedNotification(false);
-      }, 2500);
-      return;
-    }
-
-    const platformLabels: Record<string, string> = {
-      INSTAGRAM: 'Instagram Stories (9:16)',
-      WHATSAPP: 'WhatsApp Status',
-      TIKTOK: 'TikTok (9:16 Slide)',
-      DOWNLOAD_IMAGE: 'Download Image Card',
-    };
-
-    const message = `🎬 ${presentation.title} — ${activeSlide.headline}\n\n${activeSlide.description ?? ''}\n\n🍿 Explore on CineWrapped: https://cinewrapped.app/stories/${presentation.id}`;
-
-    try {
-      await Share.share({
-        title: `${presentation.title} - ${platformLabels[platform]}`,
-        message,
-        url: `https://cinewrapped.app/stories/${presentation.id}?slide=${currentSlideIndex}`,
-      });
-    } catch {
-      // Ignore dismiss
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Could not export the presentation.');
+    } finally {
+      setExporting(false);
     }
   };
-
+  const theme: CardTheme =
+    slide?.theme === 'CRIMSON_NOIR'
+      ? 'CRIMSON'
+      : slide?.theme === 'NEON_CYBER' || slide?.theme === 'EMERALD_VAULT'
+        ? 'CYAN'
+        : slide?.theme === 'MIDNIGHT_GOLD'
+          ? 'GOLD'
+          : 'MIDNIGHT';
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose}>
-        <Pressable
-          style={[styles.sheet, { backgroundColor: colors.surface, borderColor: colors.border }]}
-          onPress={(e) => e.stopPropagation()}
+      <View style={{ flex: 1, backgroundColor: '#000000B8', justifyContent: 'flex-end' }}>
+        <View
+          style={{
+            backgroundColor: colors.background,
+            maxHeight: '92%',
+            padding: 16,
+            borderTopLeftRadius: 24,
+            borderTopRightRadius: 24,
+          }}
         >
-          {/* Header */}
-          <View style={styles.sheetHeader}>
-            <View style={{ gap: 2 }}>
-              <Text style={[styles.sheetTitle, { color: colors.textPrimary }]}>
-                Share & Export Slide
-              </Text>
-              <Text style={[styles.sheetSubtitle, { color: colors.textSecondary }]}>
-                Slide {currentSlideIndex + 1} of {presentation.slides.length} · 9:16 High Res Format
-              </Text>
-            </View>
-
-            <Pressable
-              accessibilityRole="button"
-              onPress={onClose}
-              style={[styles.closeBtn, { backgroundColor: colors.surfaceRaised }]}
-            >
-              <Ionicons name="close" size={18} color={colors.textPrimary} />
-            </Pressable>
-          </View>
-
-          {copiedNotification ? (
-            <View style={styles.copiedBanner}>
-              <Ionicons name="checkmark-circle" size={16} color="#10B981" />
-              <Text style={styles.copiedBannerText}>
-                Structured Story JSON copied to clipboard!
-              </Text>
-            </View>
-          ) : null}
-
-          {/* Social Platforms Grid */}
-          <View style={styles.platformsGrid}>
-            {/* 1. Instagram Stories */}
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => void handleSharePlatform('INSTAGRAM')}
-              style={({ pressed }) => [
-                styles.platformCard,
-                {
-                  backgroundColor: 'rgba(225, 48, 108, 0.12)',
-                  borderColor: '#E1306C',
-                  opacity: pressed ? 0.8 : 1,
-                },
-              ]}
-            >
-              <View style={[styles.platformIconBox, { backgroundColor: '#E1306C' }]}>
-                <Ionicons name="logo-instagram" size={22} color="#FFFFFF" />
-              </View>
-              <Text style={[styles.platformName, { color: colors.textPrimary }]}>
-                Instagram Stories
-              </Text>
-              <Text style={[styles.platformSpec, { color: colors.textSecondary }]}>
-                9:16 Full Bleed
-              </Text>
-            </Pressable>
-
-            {/* 2. WhatsApp Status */}
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => void handleSharePlatform('WHATSAPP')}
-              style={({ pressed }) => [
-                styles.platformCard,
-                {
-                  backgroundColor: 'rgba(37, 211, 102, 0.12)',
-                  borderColor: '#25D366',
-                  opacity: pressed ? 0.8 : 1,
-                },
-              ]}
-            >
-              <View style={[styles.platformIconBox, { backgroundColor: '#25D366' }]}>
-                <Ionicons name="logo-whatsapp" size={22} color="#FFFFFF" />
-              </View>
-              <Text style={[styles.platformName, { color: colors.textPrimary }]}>
-                WhatsApp Status
-              </Text>
-              <Text style={[styles.platformSpec, { color: colors.textSecondary }]}>
-                9:16 Instant Share
-              </Text>
-            </Pressable>
-
-            {/* 3. TikTok */}
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => void handleSharePlatform('TIKTOK')}
-              style={({ pressed }) => [
-                styles.platformCard,
-                {
-                  backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                  borderColor: colors.brand,
-                  opacity: pressed ? 0.8 : 1,
-                },
-              ]}
-            >
-              <View style={[styles.platformIconBox, { backgroundColor: colors.brand }]}>
-                <Ionicons name="logo-tiktok" size={22} color="#000000" />
-              </View>
-              <Text style={[styles.platformName, { color: colors.textPrimary }]}>TikTok</Text>
-              <Text style={[styles.platformSpec, { color: colors.textSecondary }]}>
-                9:16 Slide Deck
-              </Text>
-            </Pressable>
-
-            {/* 4. Download Image Card */}
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => void handleSharePlatform('DOWNLOAD_IMAGE')}
-              style={({ pressed }) => [
-                styles.platformCard,
-                {
-                  backgroundColor: colors.surfaceRaised,
-                  borderColor: colors.border,
-                  opacity: pressed ? 0.8 : 1,
-                },
-              ]}
-            >
-              <View
-                style={[
-                  styles.platformIconBox,
-                  {
-                    backgroundColor: colors.surfaceRaised,
-                    borderWidth: 1,
-                    borderColor: colors.border,
-                  },
-                ]}
-              >
-                <Ionicons name="download-outline" size={22} color={colors.brand} />
-              </View>
-              <Text style={[styles.platformName, { color: colors.textPrimary }]}>
-                Download Card
-              </Text>
-              <Text style={[styles.platformSpec, { color: colors.textSecondary }]}>
-                Ultra-HD Image
-              </Text>
-            </Pressable>
-          </View>
-
-          {/* Structured JSON Export Action */}
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => void handleSharePlatform('COPY_JSON')}
-            style={({ pressed }) => [
-              styles.jsonExportBtn,
-              {
-                backgroundColor: colors.surfaceRaised,
-                borderColor: colors.border,
-                opacity: pressed ? 0.7 : 1,
-              },
-            ]}
-          >
-            <Ionicons name="code-slash" size={16} color={colors.brand} />
-            <Text style={[styles.jsonExportText, { color: colors.textPrimary }]}>
-              Export Structured Presentation JSON
+          <ScrollView contentContainerStyle={{ gap: 12, paddingBottom: 20 }}>
+            <Text style={{ color: colors.textPrimary, fontSize: 20, fontWeight: '800' }}>
+              Share & Export Slide
             </Text>
-          </Pressable>
-        </Pressable>
-      </Pressable>
+            <Button label="Close export" variant="secondary" onPress={onClose} />
+            {visible && slide ? (
+              <GraphicCardPreview
+                card={{
+                  title: slide.headline,
+                  subtitle: slide.eyebrow,
+                  body: [
+                    slide.description,
+                    ...(slide.rankingItems ?? []).map(
+                      (item) =>
+                        `${item.rank}. ${item.title}${item.score != null ? ` · ${item.score}` : ''}`,
+                    ),
+                    ...(slide.secondaryMetrics ?? []).map(
+                      (item) => `${item.value} · ${item.label}`,
+                    ),
+                  ]
+                    .filter(Boolean)
+                    .join(' · '),
+                  author: presentation.author.displayName,
+                  handle: presentation.author.username,
+                  theme,
+                  ...(slide.metric
+                    ? {
+                        metric: {
+                          value: `${slide.metric.prefix ?? ''}${slide.metric.value}${slide.metric.suffix ?? ''}`,
+                          label: slide.metric.label,
+                        },
+                      }
+                    : {}),
+                }}
+                posterUrl={slide.media?.posterUrl}
+              />
+            ) : (
+              <Text style={{ color: colors.textSecondary }}>This slide is unavailable.</Text>
+            )}
+            <Button
+              label="Export presentation JSON"
+              variant="secondary"
+              disabled={exporting}
+              loading={exporting}
+              onPress={() => void exportJson()}
+            />
+            {message ? (
+              <Text accessibilityLiveRegion="polite" style={{ color: colors.textSecondary }}>
+                {message}
+              </Text>
+            ) : null}
+          </ScrollView>
+        </View>
+      </View>
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
-    justifyContent: 'flex-end',
-  },
-  sheet: {
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    borderWidth: 1,
-    padding: 22,
-    gap: 16,
-  },
-  sheetHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  sheetTitle: {
-    fontSize: 18,
-    fontWeight: '900',
-    letterSpacing: -0.3,
-  },
-  sheetSubtitle: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  closeBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  copiedBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: 'rgba(16, 185, 129, 0.15)',
-    borderColor: '#10B981',
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
-  },
-  copiedBannerText: {
-    color: '#10B981',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  platformsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  platformCard: {
-    width: '48%',
-    borderRadius: 18,
-    borderWidth: 1,
-    padding: 14,
-    alignItems: 'center',
-    gap: 6,
-  },
-  platformIconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 4,
-  },
-  platformName: {
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  platformSpec: {
-    fontSize: 10,
-    fontWeight: '600',
-  },
-  jsonExportBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 12,
-    borderRadius: 14,
-    borderWidth: 1,
-    marginTop: 4,
-  },
-  jsonExportText: {
-    fontSize: 13,
-    fontWeight: '700',
-  },
-});
