@@ -486,6 +486,7 @@ export const createWrapSchema = z
     periodEnd: z.iso.datetime({ offset: true }).optional(),
     timezone: z.string().trim().min(1).max(64),
     inputVersion: z.number().int().min(1).max(10).default(1),
+    refresh: z.boolean().default(false),
   })
   .refine((value) => (value.periodStart === undefined) === (value.periodEnd === undefined), {
     message: 'Period start and end must be supplied together.',

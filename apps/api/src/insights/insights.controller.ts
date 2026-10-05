@@ -116,6 +116,24 @@ export class InsightsController {
     return this.ok(await this.insights.createWrap(principal, input), request.id);
   }
 
+  @Post('wraps/:wrapId/refresh')
+  public async refreshWrap(
+    @CurrentPrincipal() principal: AuthPrincipal,
+    @Param('wrapId', new ZodValidationPipe(uuidSchema)) wrapId: string,
+    @Req() request: FastifyRequest,
+  ) {
+    return this.ok(await this.insights.regenerateWrap(principal, wrapId, true), request.id);
+  }
+
+  @Post('wraps/:wrapId/retry')
+  public async retryWrap(
+    @CurrentPrincipal() principal: AuthPrincipal,
+    @Param('wrapId', new ZodValidationPipe(uuidSchema)) wrapId: string,
+    @Req() request: FastifyRequest,
+  ) {
+    return this.ok(await this.insights.regenerateWrap(principal, wrapId, false), request.id);
+  }
+
   @Get('wraps/:wrapId')
   public async wrap(
     @CurrentPrincipal() principal: AuthPrincipal,

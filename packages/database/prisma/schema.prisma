@@ -776,6 +776,7 @@ model TvEpisode {
 
   season       TvSeason              @relation(fields: [seasonId], references: [id], onDelete: Cascade)
   watchHistory EpisodeWatchHistory[]
+  viewings     Viewing[]
 
   @@unique([seasonId, episodeNumber])
   @@unique([externalProvider, externalId])
@@ -886,6 +887,7 @@ model Viewing {
   watchedAt          DateTime    @db.Timestamptz(3)
   completedAt        DateTime?   @db.Timestamptz(3)
   durationWatchedMin Int?
+  episodeId          String?     @db.Uuid
   viewingPlatform    String?     @db.VarChar(120)
   viewingLocation    String?     @db.VarChar(200)
   source             WatchSource @default(MANUAL)
@@ -898,6 +900,7 @@ model Viewing {
   user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   media        Media              @relation(fields: [mediaId], references: [id], onDelete: Restrict)
   watchHistory WatchHistory       @relation(fields: [watchHistoryId], references: [id], onDelete: Cascade)
+  episode      TvEpisode?         @relation(fields: [episodeId], references: [id], onDelete: SetNull)
   companions   ViewingCompanion[]
   journalEntry JournalEntry?
 
@@ -905,6 +908,8 @@ model Viewing {
   @@index([userId, watchedAt(sort: Desc), id])
   @@index([mediaId, watchedAt(sort: Desc)])
   @@index([watchHistoryId, watchedAt(sort: Desc)])
+  @@index([userId, episodeId, watchedAt(sort: Desc)])
+  @@index([episodeId])
   @@index([deletedAt])
   @@map("viewings")
 }
@@ -1638,27 +1643,30 @@ model UserChallenge {
 }
 
 model Wrap {
-  id              String     @id @default(uuid()) @db.Uuid
-  userId          String     @db.Uuid
-  wrapType        WrapType
-  periodStart     DateTime   @db.Timestamptz(3)
-  periodEnd       DateTime   @db.Timestamptz(3)
-  timezone        String     @db.VarChar(64)
-  status          WrapStatus @default(PENDING)
-  inputVersion    Int        @default(1)
-  statisticsJson  Json?      @db.JsonB
-  highlightsJson  Json?      @db.JsonB
-  storySlidesJson Json?      @db.JsonB
-  shareImageUrl   String?    @db.VarChar(2048)
-  failureCode     String?    @db.VarChar(100)
-  generatedAt     DateTime?  @db.Timestamptz(3)
-  createdAt       DateTime   @default(now()) @db.Timestamptz(3)
-  updatedAt       DateTime   @updatedAt @db.Timestamptz(3)
-  deletedAt       DateTime?  @db.Timestamptz(3)
+  id                  String     @id @default(uuid()) @db.Uuid
+  userId              String     @db.Uuid
+  wrapType            WrapType
+  periodStart         DateTime   @db.Timestamptz(3)
+  periodEnd           DateTime   @db.Timestamptz(3)
+  timezone            String     @db.VarChar(64)
+  status              WrapStatus @default(PENDING)
+  inputVersion        Int        @default(1)
+  revision            Int        @default(1)
+  generationAttemptId String?    @db.Uuid
+  generationStartedAt DateTime?  @db.Timestamptz(3)
+  statisticsJson      Json?      @db.JsonB
+  highlightsJson      Json?      @db.JsonB
+  storySlidesJson     Json?      @db.JsonB
+  shareImageUrl       String?    @db.VarChar(2048)
+  failureCode         String?    @db.VarChar(100)
+  generatedAt         DateTime?  @db.Timestamptz(3)
+  createdAt           DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime   @updatedAt @db.Timestamptz(3)
+  deletedAt           DateTime?  @db.Timestamptz(3)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, wrapType, periodStart, periodEnd, inputVersion])
+  @@unique([userId, wrapType, periodStart, periodEnd, timezone, inputVersion, revision], map: "wraps_snapshot_identity_key")
   @@index([userId, periodEnd(sort: Desc), id])
   @@index([status, createdAt])
   @@index([deletedAt])

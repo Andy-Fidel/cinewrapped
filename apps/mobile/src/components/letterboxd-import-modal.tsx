@@ -1,3 +1,4 @@
+import { invalidateInsights } from '../lib/insights-query';
 import { Ionicons } from '@expo/vector-icons';
 import type { DataImportSummary } from '@cinewrapped/shared-types';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -61,6 +62,7 @@ export function LetterboxdImportModal({ visible, onClose }: LetterboxdImportModa
     if (activeJob?.status === 'PUBLISHED') {
       void queryClient.invalidateQueries({ queryKey: ['library'] });
       void queryClient.invalidateQueries({ queryKey: ['tracking-state'] });
+      void invalidateInsights(queryClient);
     }
   }, [activeJob?.id, activeJob?.status, queryClient]);
 

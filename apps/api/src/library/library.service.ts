@@ -512,50 +512,138 @@ export class LibraryService {
         return rows.find((row) => row.episodeId === episodeId) as EpisodeProgressSummary;
       }
     }
+    // Completion operation IDs remain durable after subsequent progress edits.
+    if (input.clientOperationId !== undefined) {
+      const occurrence = await this.prisma.viewing.findUnique({
+        where: {
+          userId_clientOperationId: { userId: user.id, clientOperationId: input.clientOperationId },
+        },
+      });
+      if (occurrence) {
+        if (
+          occurrence.episodeId !== episodeId ||
+          !input.completed ||
+          (input.watchedAt != null &&
+            occurrence.watchedAt.getTime() !== new Date(input.watchedAt).getTime())
+        ) {
+          throw new AppException(
+            409,
+            'OPERATION_ID_CONFLICT',
+            'This operation identifier was already used.',
+          );
+        }
+        const rows = await this.episodes(
+          principal,
+          episode.season.mediaId,
+          episode.season.seasonNumber,
+          'en-US',
+        );
+        return rows.find((row) => row.episodeId === episodeId) as EpisodeProgressSummary;
+      }
+    }
     const existing = await this.prisma.episodeWatchHistory.findUnique({
       where: { userId_episodeId: { userId: user.id, episodeId } },
     });
-    const watchedAt =
-      input.watchedAt === undefined
-        ? input.completed
-          ? new Date()
-          : null
-        : input.watchedAt === null
-          ? null
-          : new Date(input.watchedAt);
-    if (existing === null) {
-      if (input.expectedVersion !== undefined) this.versionConflict('EPISODE_VERSION_CONFLICT');
-      await this.prisma.episodeWatchHistory.create({
-        data: {
-          userId: user.id,
-          episodeId,
-          ...(input.clientOperationId === undefined
-            ? {}
-            : { clientOperationId: input.clientOperationId }),
-          completed: input.completed,
-          progressSeconds: input.progressSeconds ?? null,
-          watchedAt,
-          watchCount: input.completed ? 1 : 0,
-        },
+    const watchedAt = input.completed
+      ? new Date(input.watchedAt ?? existing?.watchedAt ?? new Date())
+      : input.watchedAt == null
+        ? null
+        : new Date(input.watchedAt);
+    await this.prisma
+      .$transaction(async (transaction) => {
+        // Lock the shared series row before changing episodes so concurrent completions
+        // calculate aggregate progress after the preceding transaction commits.
+        await transaction.watchHistory.upsert({
+          where: { userId_mediaId: { userId: user.id, mediaId: episode.season.mediaId } },
+          create: {
+            userId: user.id,
+            mediaId: episode.season.mediaId,
+            status: 'WATCHING',
+            startedAt: new Date(),
+          },
+          update: { lastWatchedAt: new Date() },
+        });
+        if (existing === null) {
+          if (input.expectedVersion !== undefined) this.versionConflict('EPISODE_VERSION_CONFLICT');
+          await transaction.episodeWatchHistory.create({
+            data: {
+              userId: user.id,
+              episodeId,
+              ...(input.clientOperationId === undefined
+                ? {}
+                : { clientOperationId: input.clientOperationId }),
+              completed: input.completed,
+              progressSeconds: input.progressSeconds ?? null,
+              watchedAt,
+              watchCount: input.completed ? 1 : 0,
+            },
+          });
+        } else {
+          if (input.expectedVersion === undefined || input.expectedVersion !== existing.version) {
+            this.versionConflict('EPISODE_VERSION_CONFLICT');
+          }
+          const result = await transaction.episodeWatchHistory.updateMany({
+            where: { id: existing.id, version: input.expectedVersion },
+            data: {
+              clientOperationId: input.clientOperationId ?? existing.clientOperationId,
+              completed: input.completed,
+              progressSeconds: input.progressSeconds ?? null,
+              watchedAt,
+              ...(!existing.completed && input.completed ? { watchCount: { increment: 1 } } : {}),
+              version: { increment: 1 },
+            },
+          });
+          if (result.count === 0) this.versionConflict('EPISODE_VERSION_CONFLICT');
+        }
+        await this.updateSeriesProgress(user.id, episode.season.mediaId, transaction);
+        const history = await transaction.watchHistory.findUniqueOrThrow({
+          where: { userId_mediaId: { userId: user.id, mediaId: episode.season.mediaId } },
+        });
+        const latest = await transaction.viewing.findFirst({
+          where: { userId: user.id, episodeId, deletedAt: null },
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        });
+        if (input.completed && watchedAt !== null) {
+          if (existing?.completed && latest) {
+            // Editing progress/date updates this occurrence; completing again after undo creates a new one.
+            await transaction.viewing.update({
+              where: { id: latest.id },
+              data: {
+                watchedAt,
+                completedAt: watchedAt,
+                durationWatchedMin: episode.runtimeMinutes,
+              },
+            });
+          } else {
+            const count = await transaction.viewing.count({
+              where: { userId: user.id, episodeId, deletedAt: null },
+            });
+            await transaction.viewing.create({
+              data: {
+                userId: user.id,
+                mediaId: episode.season.mediaId,
+                watchHistoryId: history.id,
+                episodeId,
+                watchedAt,
+                completedAt: watchedAt,
+                durationWatchedMin: episode.runtimeMinutes,
+                isRewatch: count > 0,
+                clientOperationId: input.clientOperationId ?? null,
+              },
+            });
+          }
+        } else if (!input.completed && latest) {
+          await transaction.viewing.update({
+            where: { id: latest.id },
+            data: { deletedAt: new Date() },
+          });
+        }
+      })
+      .catch((error: unknown) => {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002')
+          this.versionConflict('EPISODE_VERSION_CONFLICT');
+        throw error;
       });
-    } else {
-      if (input.expectedVersion === undefined || input.expectedVersion !== existing.version) {
-        this.versionConflict('EPISODE_VERSION_CONFLICT');
-      }
-      const result = await this.prisma.episodeWatchHistory.updateMany({
-        where: { id: existing.id, version: input.expectedVersion },
-        data: {
-          clientOperationId: input.clientOperationId ?? existing.clientOperationId,
-          completed: input.completed,
-          progressSeconds: input.progressSeconds ?? null,
-          watchedAt,
-          ...(!existing.completed && input.completed ? { watchCount: { increment: 1 } } : {}),
-          version: { increment: 1 },
-        },
-      });
-      if (result.count === 0) this.versionConflict('EPISODE_VERSION_CONFLICT');
-    }
-    await this.updateSeriesProgress(user.id, episode.season.mediaId);
     const rows = await this.episodes(
       principal,
       episode.season.mediaId,
@@ -1007,10 +1095,14 @@ export class LibraryService {
     );
   }
 
-  private async updateSeriesProgress(userId: string, mediaId: string): Promise<void> {
+  private async updateSeriesProgress(
+    userId: string,
+    mediaId: string,
+    database: Prisma.TransactionClient = this.prisma,
+  ): Promise<void> {
     const [media, completed] = await Promise.all([
-      this.prisma.media.findUnique({ where: { id: mediaId }, include: { seasons: true } }),
-      this.prisma.episodeWatchHistory.count({
+      database.media.findUnique({ where: { id: mediaId }, include: { seasons: true } }),
+      database.episodeWatchHistory.count({
         where: { userId, completed: true, episode: { season: { mediaId } } },
       }),
     ]);
@@ -1018,7 +1110,7 @@ export class LibraryService {
     const total = media.seasons.reduce((sum, season) => sum + (season.episodeCount ?? 0), 0);
     const percent = total === 0 ? 0 : Math.min(100, (completed / total) * 100);
     const isComplete = total > 0 && completed >= total;
-    await this.prisma.watchHistory.upsert({
+    await database.watchHistory.upsert({
       where: { userId_mediaId: { userId, mediaId } },
       create: {
         userId,

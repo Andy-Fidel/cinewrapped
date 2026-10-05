@@ -71,7 +71,7 @@ export function StorySlideRenderer({
             {slide.footer?.handle ?? (userHandle ? `@${userHandle}` : 'cinewrapped.app')}
           </Text>
           <Text style={[styles.footerSpec, { color: theme.textSecondary }]}>
-            {slide.footer?.branding ?? '2026 Cinema Intelligence'}
+            {slide.footer?.branding ?? 'CineWrapped'}
           </Text>
         </View>
 
@@ -118,28 +118,28 @@ function renderHeroStats(slide: StorySlideData, theme: ReturnType<typeof getStor
     <View style={styles.heroStatsContainer}>
       <Text style={[styles.headline, { color: theme.textPrimary }]}>{slide.headline}</Text>
 
-      {/* Giant Metric Core */}
-      <View
-        style={[
-          styles.giantMetricCard,
-          { backgroundColor: theme.cardBg, borderColor: theme.cardBorder },
-        ]}
-      >
-        {slide.metric?.badge ? (
-          <View style={[styles.metricBadgePill, { backgroundColor: theme.pillBg }]}>
-            <Text style={[styles.metricBadgeText, { color: theme.accent }]}>
-              {slide.metric.badge}
-            </Text>
-          </View>
-        ) : null}
+      {/* Only render metrics supplied by the saved snapshot. */}
+      {slide.metric ? (
+        <View
+          style={[
+            styles.giantMetricCard,
+            { backgroundColor: theme.cardBg, borderColor: theme.cardBorder },
+          ]}
+        >
+          {slide.metric.badge ? (
+            <View style={[styles.metricBadgePill, { backgroundColor: theme.pillBg }]}>
+              <Text style={[styles.metricBadgeText, { color: theme.accent }]}>
+                {slide.metric.badge}
+              </Text>
+            </View>
+          ) : null}
 
-        <Text style={[styles.giantNumber, { color: theme.accent }]}>
-          {slide.metric?.value ?? '142'}
-        </Text>
-        <Text style={[styles.giantLabel, { color: theme.textSecondary }]}>
-          {slide.metric?.label ?? 'FILMS LOGGED'}
-        </Text>
-      </View>
+          <Text style={[styles.giantNumber, { color: theme.accent }]}>{slide.metric.value}</Text>
+          <Text style={[styles.giantLabel, { color: theme.textSecondary }]}>
+            {slide.metric.label}
+          </Text>
+        </View>
+      ) : null}
 
       {slide.description ? (
         <Text style={[styles.descriptionText, { color: theme.textSecondary }]}>
@@ -262,11 +262,15 @@ function renderCinematicPoster(slide: StorySlideData, theme: ReturnType<typeof g
 
       <View style={styles.cinematicMetaBlock}>
         <Text style={[styles.cinematicTitle, { color: theme.textPrimary }]}>
-          {slide.media?.title ?? 'Masterpiece'}
+          {slide.media?.title}
         </Text>
         <Text style={[styles.cinematicSub, { color: theme.textSecondary }]}>
-          {slide.media?.director ? `Directed by ${slide.media.director} · ` : ''}
-          {slide.media?.releaseYear ?? '2026'}
+          {[
+            slide.media?.director ? `Directed by ${slide.media.director}` : null,
+            slide.media?.releaseYear,
+          ]
+            .filter(Boolean)
+            .join(' · ')}
         </Text>
       </View>
 
@@ -281,13 +285,7 @@ function renderCinematicPoster(slide: StorySlideData, theme: ReturnType<typeof g
 
 // 4. RADAR RADIAL LAYOUT
 function renderRadarRadial(slide: StorySlideData, theme: ReturnType<typeof getStoryTheme>) {
-  const tags = slide.vibeTags ?? [
-    'Auteur Cinema',
-    '70mm IMAX',
-    'Neo-Noir',
-    'Mind-Bending',
-    'Slow Cinema',
-  ];
+  const tags = slide.vibeTags ?? [];
   return (
     <View style={styles.radarContainer}>
       <Text style={[styles.headline, { color: theme.textPrimary }]}>{slide.headline}</Text>
@@ -360,7 +358,7 @@ function renderQuoteSpotlight(slide: StorySlideData, theme: ReturnType<typeof ge
           {slide.media?.title ?? 'Cinema Line of the Year'}
         </Text>
         <Text style={[styles.quoteSpeaker, { color: theme.textSecondary }]}>
-          {slide.media?.director ?? 'Iconic Scene'} · {slide.media?.releaseYear ?? '2026'}
+          {[slide.media?.director, slide.media?.releaseYear].filter(Boolean).join(' · ')}
         </Text>
       </View>
 

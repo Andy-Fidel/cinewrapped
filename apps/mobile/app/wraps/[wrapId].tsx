@@ -1,7 +1,7 @@
-import type { StoryPresentation, StorySlideData, WrapDetail } from '@cinewrapped/shared-types';
-import { useQuery } from '@tanstack/react-query';
+import type { WrapDetail } from '@cinewrapped/shared-types';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Redirect, Stack, router, useLocalSearchParams } from 'expo-router';
-import React, { useMemo } from 'react';
+import { useRef } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -9,92 +9,53 @@ import { StoryViewer } from '../../src/components/story-presentation';
 import { Button, useColors } from '../../src/components/ui';
 import { api } from '../../src/lib/api';
 import { errorMessage } from '../../src/lib/error-message';
+import { wrapPresentation } from '../../src/lib/wrap-presentation';
 import { useAuth } from '../../src/providers/auth-provider';
 
 export default function WrapStoryScreen() {
   const colors = useColors();
   const { session, user } = useAuth();
   const { wrapId } = useLocalSearchParams<{ wrapId: string }>();
-
+  const queryClient = useQueryClient();
+  const pollingDeadline = useRef(Date.now() + 120_000);
   const wrap = useQuery({
     queryKey: ['wrap', wrapId],
     queryFn: () => api.request<WrapDetail>(`wraps/${encodeURIComponent(wrapId)}`),
     enabled: session !== null && typeof wrapId === 'string',
+    refetchInterval: (query) =>
+      ['PENDING', 'GENERATING'].includes(query.state.data?.status ?? '') &&
+      Date.now() < pollingDeadline.current
+        ? 3_000
+        : false,
   });
-
-  const presentation: StoryPresentation | null = useMemo(() => {
-    if (!wrap.data) return null;
-
-    const wrapYear = new Date(wrap.data.periodStart).getFullYear() || 2026;
-    const rawSlides = wrap.data.storySlides ?? [];
-    const formattedSlides: StorySlideData[] = rawSlides.map((s) => {
-      // Map accent to theme preset
-      const themePreset =
-        s.accent === 'CORAL'
-          ? 'CRIMSON_NOIR'
-          : s.accent === 'GOLD'
-            ? 'MIDNIGHT_GOLD'
-            : s.accent === 'TEAL'
-              ? 'EMERALD_VAULT'
-              : 'AMETHYST_DREAM';
-
-      const slideObj: StorySlideData = {
-        id: s.id,
-        layout: s.media?.posterUrl ? 'CINEMATIC_POSTER' : 'HERO_STATS',
-        theme: themePreset,
-        eyebrow: s.eyebrow,
-        headline: s.title,
-        description: s.body,
-        footer: {
-          branding: 'CineWrapped Annual Intelligence',
-          handle: user ? `@${user.username}` : '@cinewrapped',
-          badgeText: `${wrapYear} Verified Wrap`,
-        },
-      };
-
-      if (s.media) {
-        slideObj.media = {
-          title: s.media.title,
-          posterUrl: s.media.posterUrl ?? null,
-        };
-      }
-
-      if (s.statValue) {
-        slideObj.metric = {
-          value: s.statValue,
-          label: s.statLabel ?? 'KEY STATISTIC',
-        };
-      }
-
-      return slideObj;
-    });
-
-    return {
-      id: wrap.data.id,
-      type: 'ANNUAL_WRAP',
-      title: `${wrapYear} Cinema Wrapped`,
-      subtitle: `${user?.displayName ?? 'Your'} Year in Review`,
-      year: wrapYear,
-      author: {
-        userId: user?.id ?? 'user-id',
-        displayName: user?.displayName ?? 'Cinema Enthusiast',
-        username: user?.username ?? 'cinephile',
-        avatarUrl: user?.avatarUrl ?? null,
-      },
-      slides: formattedSlides.length > 0 ? formattedSlides : [],
-      defaultTheme: 'MIDNIGHT_GOLD',
-      createdAt: wrap.data.generatedAt ?? new Date().toISOString(),
-    };
-  }, [wrap.data, user]);
+  const regenerate = useMutation({
+    mutationFn: (action: 'refresh' | 'retry') =>
+      api.request<WrapDetail>(`wraps/${encodeURIComponent(wrapId)}/${action}`, { method: 'POST' }),
+    onSuccess: async (result) => {
+      pollingDeadline.current = Date.now() + 120_000;
+      queryClient.setQueryData(['wrap', result.id], result);
+      await queryClient.invalidateQueries({ queryKey: ['wrap-archive'] });
+      if (result.id !== wrapId) router.replace(`/wraps/${result.id}`);
+      else await wrap.refetch();
+    },
+  });
+  const presentation =
+    wrap.data && user
+      ? wrapPresentation(wrap.data, {
+          userId: user.id,
+          displayName: user.displayName,
+          username: user.username,
+          avatarUrl: user.avatarUrl,
+        })
+      : null;
 
   if (session === null) return <Redirect href="/(auth)/login" />;
-
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: '#0A0912' }]}>
       <Stack.Screen options={{ headerShown: false }} />
       {wrap.isPending ? (
         <View style={styles.center}>
-          <Text style={{ color: colors.textSecondary }}>Preparing your Cinema Story…</Text>
+          <Text style={{ color: colors.textSecondary }}>Loading your saved wrap…</Text>
         </View>
       ) : wrap.isError ? (
         <View style={styles.center}>
@@ -102,25 +63,53 @@ export default function WrapStoryScreen() {
           <Button label="Try again" onPress={() => void wrap.refetch()} />
         </View>
       ) : presentation && presentation.slides.length > 0 ? (
-        <StoryViewer
-          presentation={presentation}
-          onClose={() => {
-            if (router.canGoBack()) {
-              router.back();
-            } else {
-              router.replace('/(tabs)');
-            }
-          }}
-        />
+        <>
+          {wrap.data.wrapType !== 'CUSTOM' ? (
+            <Button
+              label={regenerate.isPending ? 'Updating…' : 'Save updated revision'}
+              disabled={regenerate.isPending}
+              onPress={() => regenerate.mutate('refresh')}
+            />
+          ) : null}
+          {regenerate.isError ? (
+            <Text accessibilityRole="alert" style={{ color: colors.danger }}>
+              {errorMessage(regenerate.error)}
+            </Text>
+          ) : null}
+          <StoryViewer presentation={presentation} onClose={() => router.replace('/insights')} />
+        </>
       ) : (
         <View style={styles.center}>
-          <Text style={{ color: colors.textSecondary }}>No wrap slides found.</Text>
+          <Text style={{ color: colors.textSecondary }}>
+            {wrap.data.status === 'FAILED'
+              ? 'Wrap generation failed. Your activity is still saved.'
+              : 'Your wrap is being prepared. Check its status or retry an interrupted attempt.'}
+          </Text>
+          {wrap.data.canRetry && wrap.data.wrapType !== 'CUSTOM' ? (
+            <Button
+              label={regenerate.isPending ? 'Retrying…' : 'Retry generation'}
+              disabled={regenerate.isPending}
+              onPress={() => regenerate.mutate('retry')}
+            />
+          ) : null}
+          <Button
+            label="Check status"
+            onPress={() => {
+              pollingDeadline.current = Date.now() + 120_000;
+              void wrap.refetch();
+            }}
+          />
+          <Button label="Back to archive" onPress={() => router.replace('/insights')} />
+          {regenerate.isError ? (
+            <Text accessibilityRole="alert" style={{ color: colors.danger }}>
+              {errorMessage(regenerate.error)}
+            </Text>
+          ) : null}
         </View>
       )}
     </SafeAreaView>
   );
 }
-
 const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   center: { alignItems: 'center', flex: 1, gap: 16, justifyContent: 'center', padding: 24 },

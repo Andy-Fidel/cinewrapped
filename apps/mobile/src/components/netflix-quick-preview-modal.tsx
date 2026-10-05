@@ -1,3 +1,4 @@
+import { invalidateInsights } from '../lib/insights-query';
 import type { MediaSummary } from '@cinewrapped/shared-types';
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -77,6 +78,7 @@ export function NetflixQuickPreviewModal({
       setUserRating(5);
       await queryClient.invalidateQueries({ queryKey: ['tracking-state', media?.id] });
       await queryClient.invalidateQueries({ queryKey: ['recommendations'] });
+      await invalidateInsights(queryClient);
     },
   });
 

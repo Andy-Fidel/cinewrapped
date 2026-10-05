@@ -1,4 +1,4 @@
-import type { ErrorResponse, SuccessResponse } from '@cinewrapped/shared-types';
+import type { CollectionResponse, ErrorResponse, SuccessResponse } from '@cinewrapped/shared-types';
 
 export interface AccessTokenProvider {
   getAccessToken(): Promise<string | null>;
@@ -57,11 +57,42 @@ export class ApiClient {
   public constructor(options: ApiClientOptions) {
     this.#baseUrl = options.baseUrl.replace(/\/$/u, '');
     this.#accessTokenProvider = options.accessTokenProvider;
-    this.#fetch = options.fetchImplementation ?? fetch;
+    this.#fetch = options.fetchImplementation ?? ((input, init) => globalThis.fetch(input, init));
     this.#idempotencyKeyProvider = options.idempotencyKeyProvider;
   }
 
   public async request<TData>(path: string, options: ApiRequestOptions = {}): Promise<TData> {
+    const response = await this.requestEnvelope<TData>(path, options);
+    return response?.data as TData;
+  }
+
+  public async requestCollection<TItem>(
+    path: string,
+    options: ApiRequestOptions = {},
+  ): Promise<CollectionResponse<TItem>> {
+    const response = await this.requestEnvelope<TItem[]>(path, options);
+    const collection = response as
+      | {
+          data?: TItem[];
+          meta?: { requestId?: string; page?: CollectionResponse<TItem>['meta']['page'] };
+        }
+      | undefined;
+    if (!Array.isArray(collection?.data) || !collection.meta?.page) {
+      throw new ApiClientError(
+        502,
+        'INVALID_API_RESPONSE',
+        'The API omitted pagination metadata.',
+        collection?.meta?.requestId ?? 'unknown',
+        null,
+      );
+    }
+    return collection as CollectionResponse<TItem>;
+  }
+
+  private async requestEnvelope<TData>(
+    path: string,
+    options: ApiRequestOptions,
+  ): Promise<SuccessResponse<TData> | undefined> {
     const { body, headers: headerValues, idempotencyKey, ...requestInit } = options;
     const accessToken = await this.#accessTokenProvider.getAccessToken();
     const headers = new Headers(headerValues);
@@ -84,7 +115,7 @@ export class ApiClient {
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     });
 
-    if (response.status === 204) return undefined as TData;
+    if (response.status === 204) return undefined;
 
     const payload: unknown = await response.json();
     if (!response.ok) {
@@ -107,7 +138,7 @@ export class ApiClient {
     }
 
     const success = payload as SuccessResponse<TData>;
-    return success.data;
+    return success;
   }
 
   public async requestText(path: string, options: ApiRequestOptions = {}): Promise<string> {

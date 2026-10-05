@@ -33,6 +33,7 @@ export function StoryViewer({
 }) {
   const [currentSlideIndex, setCurrentSlideIndex] = useState(initialSlideIndex);
   const [isPaused, setIsPaused] = useState(false);
+  const [readingMode, setReadingMode] = useState(true);
   const [exportModalVisible, setExportModalVisible] = useState(false);
   const [currentTheme, setCurrentTheme] = useState<StoryThemePreset>(presentation.defaultTheme);
 
@@ -49,7 +50,7 @@ export function StoryViewer({
 
   // Animation controller for the active slide progress bar
   useEffect(() => {
-    if (isPaused || exportModalVisible) {
+    if (isPaused || readingMode || exportModalVisible) {
       if (currentSlideAnimRef.current) {
         currentSlideAnimRef.current.stop();
       }
@@ -74,7 +75,7 @@ export function StoryViewer({
     return () => {
       anim.stop();
     };
-  }, [currentSlideIndex, isPaused, exportModalVisible]);
+  }, [currentSlideIndex, isPaused, readingMode, exportModalVisible]);
 
   const handleNextSlide = () => {
     if (currentSlideIndex < totalSlides - 1) {
@@ -110,6 +111,16 @@ export function StoryViewer({
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: themeColors.bgGradient[0] }]}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={readingMode ? 'Play story' : 'Pause story'}
+        onPress={() => setReadingMode((paused) => !paused)}
+        style={{ padding: 12 }}
+      >
+        <Text style={{ color: themeColors.textPrimary }}>
+          {readingMode ? 'Play story' : 'Pause story'}
+        </Text>
+      </Pressable>
       {/* Top Segmented Story Progress Bar */}
       <View style={styles.progressBarContainer}>
         {presentation.slides.map((_, index) => {

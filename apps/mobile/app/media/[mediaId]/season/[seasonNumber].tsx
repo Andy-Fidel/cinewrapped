@@ -1,3 +1,4 @@
+import { invalidateInsights } from '../../../../src/lib/insights-query';
 import type { EpisodeProgressSummary } from '@cinewrapped/shared-types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Redirect, Stack, useLocalSearchParams } from 'expo-router';
@@ -38,6 +39,7 @@ export default function SeasonScreen() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['episodes', mediaId, seasonNumber] }),
         queryClient.invalidateQueries({ queryKey: ['library'] }),
+        invalidateInsights(queryClient),
         queryClient.invalidateQueries({ queryKey: ['tracking-state', mediaId] }),
       ]);
     },

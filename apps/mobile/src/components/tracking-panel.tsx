@@ -1,3 +1,4 @@
+import { invalidateInsights } from '../lib/insights-query';
 import type {
   MediaTrackingState,
   PrivacySettingsSummary,
@@ -93,6 +94,7 @@ export function TrackingPanel({
       queryClient.invalidateQueries({ queryKey: ['media-reviews', mediaId] }),
       queryClient.invalidateQueries({ queryKey: ['library'] }),
       queryClient.invalidateQueries({ queryKey: ['watchlists'] }),
+      invalidateInsights(queryClient),
     ]);
   };
 

@@ -1,3 +1,4 @@
+import { invalidateInsights } from '../lib/insights-query';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { AppState, Platform, Text, View } from 'react-native';
@@ -19,7 +20,7 @@ export function OfflineSyncProvider({ children }: { children: React.ReactNode })
           await Promise.all([
             queryClient.invalidateQueries({ queryKey: ['tracking-state'] }),
             queryClient.invalidateQueries({ queryKey: ['library'] }),
-            queryClient.invalidateQueries({ queryKey: ['insights'] }),
+            invalidateInsights(queryClient),
             queryClient.invalidateQueries({ queryKey: ['journal'] }),
           ]);
       } catch {

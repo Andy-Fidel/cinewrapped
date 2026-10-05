@@ -8,7 +8,7 @@ import type {
   WrapType,
 } from '@cinewrapped/shared-types';
 import { Ionicons } from '@expo/vector-icons';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Redirect, Stack, router } from 'expo-router';
 import {
   ActivityIndicator,
@@ -25,7 +25,7 @@ import { MovieDna3D } from '../../src/components/movie-dna-3d';
 import { useColors } from '../../src/components/ui';
 import { api } from '../../src/lib/api';
 import { errorMessage } from '../../src/lib/error-message';
-import { yearPeriod } from '../../src/lib/period';
+import { localYear, wrapPeriodLabel, yearPeriod } from '../../src/lib/period';
 import { useAuth } from '../../src/providers/auth-provider';
 
 function Metric({
@@ -96,7 +96,6 @@ function WrapCard({ wrap }: { wrap: WrapSummary }) {
   return (
     <Pressable
       accessibilityRole="button"
-      disabled={!isCompleted}
       onPress={() => router.push(`/wraps/${wrap.id}`)}
       style={({ pressed }) => [
         styles.wrapCard,
@@ -119,13 +118,21 @@ function WrapCard({ wrap }: { wrap: WrapSummary }) {
         <View style={styles.wrapBadgeRow}>
           <Text style={[styles.wrapTypePill, { color: colors.brand }]}>{wrap.wrapType} WRAP</Text>
         </View>
-        <Text style={[styles.wrapHeadline, { color: colors.textPrimary }]}>
-          {wrap.headline ?? statusLabel}
-        </Text>
+        <Text style={[styles.wrapHeadline, { color: colors.textPrimary }]}>{statusLabel}</Text>
         <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
-          {new Date(wrap.periodStart).toLocaleDateString()} –{' '}
-          {new Date(wrap.periodEnd).toLocaleDateString()}
+          {wrapPeriodLabel(wrap.periodStart, wrap.periodEnd, wrap.timezone)} · Revision{' '}
+          {wrap.revision}
         </Text>
+        {isCompleted && wrap.generatedAt ? (
+          <Text style={{ color: colors.textSecondary, fontSize: 11 }}>
+            Snapshot saved{' '}
+            {new Intl.DateTimeFormat('en-US', {
+              timeZone: wrap.timezone,
+              dateStyle: 'medium',
+              timeStyle: 'short',
+            }).format(new Date(wrap.generatedAt))}
+          </Text>
+        ) : null}
       </View>
 
       {isCompleted ? (
@@ -148,19 +155,19 @@ export default function InsightsScreen() {
   const colors = useColors();
   const queryClient = useQueryClient();
   const { session, user } = useAuth();
-  const year = new Date().getFullYear();
   const timezone = user?.timezone ?? 'UTC';
+  const year = localYear(new Date(), timezone);
   const period = yearPeriod(year, timezone);
   const periodQuery = `periodStart=${encodeURIComponent(period.periodStart)}&periodEnd=${encodeURIComponent(period.periodEnd)}&timezone=${encodeURIComponent(timezone)}`;
 
   const summary = useQuery({
-    queryKey: ['statistics-summary', year, timezone],
+    queryKey: ['statistics', 'summary', year, timezone],
     queryFn: () => api.request<StatisticsSummary>(`statistics/summary?${periodQuery}`),
     enabled: session !== null,
   });
 
   const monthly = useQuery({
-    queryKey: ['statistics-monthly', year, timezone],
+    queryKey: ['statistics', 'monthly', year, timezone],
     queryFn: () =>
       api.request<MonthlyWatchCount[]>(
         `statistics/monthly?year=${year}&timezone=${encodeURIComponent(timezone)}`,
@@ -169,14 +176,19 @@ export default function InsightsScreen() {
   });
 
   const taste = useQuery({
-    queryKey: ['statistics-taste', year, timezone],
+    queryKey: ['statistics', 'taste', year, timezone],
     queryFn: () => api.request<TasteStatistics>(`statistics/taste?${periodQuery}`),
     enabled: session !== null,
   });
 
-  const wraps = useQuery({
+  const wraps = useInfiniteQuery({
     queryKey: ['wrap-archive'],
-    queryFn: () => api.request<WrapSummary[]>('wraps?limit=30'),
+    initialPageParam: null as string | null,
+    queryFn: ({ pageParam }) =>
+      api.requestCollection<WrapSummary>(
+        `wraps?limit=30${pageParam ? `&cursor=${encodeURIComponent(pageParam)}` : ''}`,
+      ),
+    getNextPageParam: (page) => (page.meta.page.hasMore ? page.meta.page.nextCursor : undefined),
     enabled: session !== null,
   });
 
@@ -190,7 +202,7 @@ export default function InsightsScreen() {
     mutationFn: (type: Exclude<WrapType, 'CUSTOM'>) =>
       api.request<WrapDetail>('wraps', {
         method: 'POST',
-        body: { type, timezone, inputVersion: 1 },
+        body: { type, timezone, inputVersion: 1, refresh: true },
       }),
     onSuccess: async (wrap) => {
       await queryClient.invalidateQueries({ queryKey: ['wrap-archive'] });
@@ -342,7 +354,9 @@ export default function InsightsScreen() {
             >
               <View style={styles.dnaHeader}>
                 <View style={styles.grow}>
-                  <Text style={[styles.eyebrow, { color: colors.brand }]}>MOVIE DNA</Text>
+                  <Text style={[styles.eyebrow, { color: colors.brand }]}>
+                    MOVIE DNA · ALL TIME
+                  </Text>
                   <Text style={[styles.heading, { color: colors.textPrimary }]}>
                     {movieDna.data.label}
                   </Text>
@@ -400,7 +414,8 @@ export default function InsightsScreen() {
               <Text style={[styles.heading, { color: colors.textPrimary }]}>Create a Wrap</Text>
             </View>
             <Text style={{ color: colors.textSecondary, fontSize: 14 }}>
-              Generate a factual story from the current calendar period.
+              Save a fresh snapshot of the current calendar period. Previous revisions stay in your
+              archive.
             </Text>
             <View style={styles.generateActions}>
               {[
@@ -443,10 +458,27 @@ export default function InsightsScreen() {
           {/* Wrap Archive */}
           <View style={styles.section}>
             <Text style={[styles.heading, { color: colors.textPrimary }]}>Wrap Archive</Text>
-            {(wraps.data ?? []).map((wrap) => (
+            {wraps.isPending ? <ActivityIndicator color={colors.brand} /> : null}
+            {wraps.isError ? (
+              <Pressable accessibilityRole="button" onPress={() => void wraps.refetch()}>
+                <Text style={{ color: colors.danger }}>{errorMessage(wraps.error)} · Retry</Text>
+              </Pressable>
+            ) : null}
+            {wraps.hasNextPage ? (
+              <Pressable
+                accessibilityRole="button"
+                disabled={wraps.isFetchingNextPage}
+                onPress={() => void wraps.fetchNextPage()}
+              >
+                <Text style={{ color: colors.brand }}>
+                  {wraps.isFetchingNextPage ? 'Loading…' : 'Load more wraps'}
+                </Text>
+              </Pressable>
+            ) : null}
+            {(wraps.data?.pages.flatMap((page) => page.data) ?? []).map((wrap) => (
               <WrapCard key={wrap.id} wrap={wrap} />
             ))}
-            {wraps.data?.length === 0 ? (
+            {wraps.data?.pages[0]?.data.length === 0 ? (
               <Text style={{ color: colors.textSecondary }}>
                 Your generated wraps will appear here.
               </Text>

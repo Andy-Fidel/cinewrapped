@@ -33,3 +33,31 @@ export function yearPeriod(year: number, timezone: string) {
     periodEnd: zonedMidnight(year + 1, 1, 1, timezone).toISOString(),
   };
 }
+
+export function localYear(date: Date, timezone: string): number {
+  return Number(
+    new Intl.DateTimeFormat('en-US', { timeZone: timezone, year: 'numeric' }).format(date),
+  );
+}
+
+export function wrapPeriodLabel(periodStart: string, periodEnd: string, timezone: string): string {
+  const format = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+  return `${format.format(new Date(periodStart))} – ${format.format(new Date(new Date(periodEnd).getTime() - 1))}`;
+}
+
+export function localDateKey(date: Date, timezone: string): string {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+  return ['year', 'month', 'day']
+    .map((type) => parts.find((part) => part.type === type)?.value)
+    .join('-');
+}

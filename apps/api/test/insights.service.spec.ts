@@ -44,6 +44,7 @@ const viewings = [
     mediaId: 'media-1',
     watchedAt: new Date('2026-08-03T20:00:00.000Z'),
     durationWatchedMin: null,
+    completedAt: new Date('2026-08-03T20:00:00.000Z'),
     isRewatch: true,
     media: {
       id: 'media-1',
@@ -116,7 +117,7 @@ describe('InsightsService', () => {
     const upsert = vi.fn();
     const prisma = {
       user: { findUnique: vi.fn(() => Promise.resolve(user)) },
-      wrap: { findUnique: vi.fn(() => Promise.resolve(existing)), upsert },
+      wrap: { findFirst: vi.fn(() => Promise.resolve(existing)), upsert },
     } as unknown as PrismaService;
 
     const result = await new InsightsService(prisma).createWrap(principal, {
@@ -132,40 +133,24 @@ describe('InsightsService', () => {
   });
 
   it('renders a completed wrap story from calculated facts', async () => {
-    const update = vi.fn(({ data }: { data: Record<string, unknown> }) =>
-      Promise.resolve({
-        id: 'wrap-2',
-        userId: user.id,
-        wrapType: 'MONTHLY',
-        periodStart: period.periodStart,
-        periodEnd: period.periodEnd,
-        timezone: period.timezone,
-        inputVersion: 1,
-        shareImageUrl: null,
-        deletedAt: null,
-        ...data,
-      }),
-    );
+    let row: Record<string, unknown> | null = null;
     const prisma = {
       user: { findUnique: vi.fn(() => Promise.resolve(user)) },
       wrap: {
-        findUnique: vi.fn(() => Promise.resolve(null)),
-        upsert: vi.fn(() =>
-          Promise.resolve({
-            id: 'wrap-2',
-            userId: user.id,
-            wrapType: 'MONTHLY',
-            periodStart: period.periodStart,
-            periodEnd: period.periodEnd,
-            timezone: period.timezone,
-            status: 'GENERATING',
-            inputVersion: 1,
-          }),
+        findFirst: vi.fn(() => Promise.resolve(row)),
+        create: vi.fn(({ data }) =>
+          Promise.resolve((row = { id: 'wrap-2', deletedAt: null, shareImageUrl: null, ...data })),
         ),
-        update,
+        updateMany: vi.fn(({ data }) => {
+          row = { ...row, ...data };
+          return Promise.resolve({ count: 1 });
+        }),
       },
       viewing: { findMany: vi.fn(() => Promise.resolve(viewings)) },
       rating: { findMany: vi.fn(() => Promise.resolve([{ normalizedScore: 80 }])) },
+      $transaction: vi.fn((operation: (database: PrismaService) => Promise<unknown>) =>
+        operation(prisma),
+      ),
     } as unknown as PrismaService;
 
     const result = await new InsightsService(prisma).createWrap(principal, {

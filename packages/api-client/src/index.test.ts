@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { ApiClient } from './index.js';
 import type { ApiClientError } from './index.js';
@@ -96,5 +96,72 @@ describe('ApiClient', () => {
       code: 'VERSION_CONFLICT',
       requestId: 'req-2',
     } satisfies Partial<ApiClientError>);
+  });
+  it('preserves cursor metadata and authentication for archive paging', async () => {
+    const client = new ApiClient({
+      baseUrl: 'https://api.example.test',
+      accessTokenProvider: tokenProvider,
+      fetchImplementation: (url, init) => {
+        expect(url).toBe('https://api.example.test/wraps?cursor=next');
+        expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer test-token');
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              success: true,
+              data: [{ id: 'wrap' }],
+              meta: {
+                requestId: 'req-page',
+                page: { nextCursor: 'last', hasMore: true, limit: 30 },
+              },
+            }),
+          ),
+        );
+      },
+    });
+    expect(await client.requestCollection('wraps?cursor=next')).toMatchObject({
+      data: [{ id: 'wrap' }],
+      meta: { page: { nextCursor: 'last', hasMore: true } },
+    });
+  });
+  it('rejects missing collection metadata rather than silently truncating the archive', async () => {
+    const client = new ApiClient({
+      baseUrl: 'https://api.example.test',
+      accessTokenProvider: tokenProvider,
+      fetchImplementation: () =>
+        Promise.resolve(
+          new Response(JSON.stringify({ success: true, data: [], meta: { requestId: 'req' } })),
+        ),
+    });
+    await expect(client.requestCollection('wraps')).rejects.toMatchObject({
+      code: 'INVALID_API_RESPONSE',
+    });
+  });
+  it('retains the no-content response contract', async () => {
+    const client = new ApiClient({
+      baseUrl: 'https://api.example.test',
+      accessTokenProvider: tokenProvider,
+      fetchImplementation: () => Promise.resolve(new Response(null, { status: 204 })),
+    });
+    expect(await client.request('wraps/id', { method: 'DELETE' })).toBeUndefined();
+  });
+  it('calls the platform fetch with its global receiver', async () => {
+    const implementation = vi.fn(function (this: unknown) {
+      expect(this).toBe(globalThis);
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({ success: true, data: 'ok', meta: { requestId: 'platform' } }),
+        ),
+      );
+    });
+    vi.stubGlobal('fetch', implementation);
+    try {
+      const client = new ApiClient({
+        baseUrl: 'https://api.example.test',
+        accessTokenProvider: tokenProvider,
+      });
+      expect(await client.request('health')).toBe('ok');
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

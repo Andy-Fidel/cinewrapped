@@ -14,6 +14,7 @@ import type {
   WrapType,
 } from '@cinewrapped/shared-types';
 import { Prisma } from '@cinewrapped/database';
+import { randomUUID } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 
 import type { AuthPrincipal } from '../auth/auth.types.js';
@@ -119,28 +120,6 @@ function longestStreak(viewings: ViewingRecord[], timezone: string): number {
   return longest;
 }
 
-function currentStreakCalc(viewings: ViewingRecord[], timezone: string, now = new Date()): number {
-  const activeDaysSet = new Set(viewings.map((v) => dateKey(v.watchedAt, timezone)));
-  const todayKey = dateKey(now, timezone);
-  const yesterday = new Date(now);
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayKey = dateKey(yesterday, timezone);
-
-  const checkDate: Date | null = activeDaysSet.has(todayKey)
-    ? new Date(now)
-    : activeDaysSet.has(yesterdayKey)
-      ? yesterday
-      : null;
-  if (checkDate === null) return 0;
-
-  let streak = 0;
-  while (activeDaysSet.has(dateKey(checkDate, timezone))) {
-    streak += 1;
-    checkDate.setDate(checkDate.getDate() - 1);
-  }
-  return streak;
-}
-
 function wrapCursor(cursor: string | undefined): { periodEnd: Date; id: string } | null {
   if (cursor === undefined) return null;
   try {
@@ -212,16 +191,7 @@ export class InsightsService {
     const periodStart = zonedMidnight(year, 1, 1, timezone);
     const periodEnd = zonedMidnight(year + 1, 1, 1, timezone);
 
-    const allViewings = await this.prisma.viewing.findMany({
-      where: { userId: user.id, deletedAt: null },
-      include: { media: { include: { genres: { include: { genre: true } } } } },
-      orderBy: { watchedAt: 'desc' },
-    });
-
-    const yearViewings = allViewings.filter(
-      (v) => v.watchedAt >= periodStart && v.watchedAt < periodEnd,
-    );
-
+    const yearViewings = await this.viewings(user.id, { periodStart, periodEnd, timezone });
     const viewingsByDay = new Map<string, ViewingRecord[]>();
     for (const v of yearViewings) {
       const key = dateKey(v.watchedAt, timezone);
@@ -300,8 +270,8 @@ export class InsightsService {
     );
 
     const activeDaysCount = viewingsByDay.size;
-    const currentStreakDays = currentStreakCalc(allViewings, timezone);
-    const longestStreakDays = longestStreak(allViewings, timezone);
+    const currentStreakDays = await this.currentStreak(user.id, timezone);
+    const longestStreakDays = longestStreak(yearViewings, timezone);
     const totalMinutesWatched = yearViewings.reduce((sum, v) => sum + this.minutes(v), 0);
 
     // Circadian Rhythm
@@ -338,8 +308,8 @@ export class InsightsService {
     else if (maxBucket === morningCount && morningCount > 0) persona = 'Early Bird Cinephile';
 
     const circadianRhythm = {
-      persona,
-      peakHourLabel: formatHourLabel(peakHour),
+      persona: totalYearCount ? persona : 'Not enough activity yet',
+      peakHourLabel: totalYearCount ? formatHourLabel(peakHour) : 'No activity yet',
       morningPercent: totalYearCount > 0 ? Math.round((morningCount / totalYearCount) * 100) : 0,
       afternoonPercent:
         totalYearCount > 0 ? Math.round((afternoonCount / totalYearCount) * 100) : 0,
@@ -355,7 +325,7 @@ export class InsightsService {
       currentStreakDays,
       longestStreakDays,
       mostActiveWeekday: {
-        name: weekdayFullNames[maxWeekdayIndex] ?? 'Friday',
+        name: totalYearCount ? (weekdayFullNames[maxWeekdayIndex] ?? 'Friday') : 'No activity yet',
         index: maxWeekdayIndex,
         count: weekdayCounts[maxWeekdayIndex] ?? 0,
         percent:
@@ -382,6 +352,7 @@ export class InsightsService {
       inputVersion: number;
       periodStart?: string | undefined;
       periodEnd?: string | undefined;
+      refresh?: boolean | undefined;
     },
   ): Promise<WrapDetail> {
     const user = await this.requireUser(principal.subject);
@@ -391,37 +362,100 @@ export class InsightsService {
       input.periodStart,
       input.periodEnd,
     );
-    const key = {
+    const identity = {
       userId: user.id,
       wrapType: input.type,
       periodStart: period.periodStart,
       periodEnd: period.periodEnd,
+      timezone: input.timezone,
       inputVersion: input.inputVersion,
     };
-    const existing = await this.prisma.wrap.findUnique({
-      where: { userId_wrapType_periodStart_periodEnd_inputVersion: key },
-    });
-    if (existing?.status === 'COMPLETED' && existing.deletedAt === null)
-      return this.wrapDetail(existing);
-    const wrap = await this.prisma.wrap.upsert({
-      where: { userId_wrapType_periodStart_periodEnd_inputVersion: key },
-      update: {
-        status: 'GENERATING',
-        failureCode: null,
-        deletedAt: null,
-        timezone: input.timezone,
-      },
-      create: { ...key, timezone: input.timezone, status: 'GENERATING' },
-    });
+    const attemptId = randomUUID();
+    let claimed: Prisma.WrapGetPayload<Record<string, never>> | null = null;
+    for (let retry = 0; retry < 3; retry++) {
+      const existing = await this.prisma.wrap.findFirst({
+        where: identity,
+        orderBy: { revision: 'desc' },
+      });
+      if (existing && existing.deletedAt === null) {
+        if (existing.status === 'COMPLETED' && !input.refresh) return this.wrapDetail(existing);
+        if (existing.status === 'GENERATING' && !this.retryable(existing))
+          return this.wrapDetail(existing);
+      }
+      if (!existing || existing.status === 'COMPLETED' || existing.deletedAt !== null) {
+        try {
+          claimed = await this.prisma.wrap.create({
+            data: {
+              ...identity,
+              revision: (existing?.revision ?? 0) + 1,
+              status: 'GENERATING',
+              generationAttemptId: attemptId,
+              generationStartedAt: new Date(),
+            },
+          });
+          break;
+        } catch (error) {
+          if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+            // A simultaneous request owns this revision. Observe it; do not allocate another.
+            const winner = await this.prisma.wrap.findFirst({
+              where: identity,
+              orderBy: { revision: 'desc' },
+            });
+            if (winner && winner.deletedAt === null) return this.wrapDetail(winner);
+            continue;
+          }
+          throw error;
+        }
+      }
+      const result = await this.prisma.wrap.updateMany({
+        where: {
+          id: existing.id,
+          deletedAt: null,
+          generationAttemptId: existing.generationAttemptId,
+          status: existing.status,
+          updatedAt: existing.updatedAt,
+        },
+        data: {
+          status: 'GENERATING',
+          generationAttemptId: attemptId,
+          generationStartedAt: new Date(),
+          failureCode: null,
+          statisticsJson: Prisma.DbNull,
+          highlightsJson: Prisma.DbNull,
+          storySlidesJson: Prisma.DbNull,
+        },
+      });
+      if (result.count) {
+        claimed = await this.prisma.wrap.findUniqueOrThrow({ where: { id: existing.id } });
+        break;
+      }
+    }
+    if (!claimed)
+      throw new AppException(
+        409,
+        'WRAP_GENERATION_BUSY',
+        'Another request is updating this wrap. Refresh its status.',
+      );
     try {
-      const [statistics, taste] = await Promise.all([
-        this.statistics(user.id, period),
-        this.tasteFor(user.id, period),
-      ]);
+      const { statistics, taste } = await this.prisma.$transaction(
+        async (transaction) => {
+          const records = await this.viewings(user.id, period, transaction);
+          return {
+            statistics: await this.statistics(user.id, period, records, transaction),
+            taste: this.tasteFrom(records, period),
+          };
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead, timeout: 20_000 },
+      );
       const highlights = this.highlights(input.type, statistics);
       const slides = this.slides(input.type, statistics, highlights, taste);
-      const completed = await this.prisma.wrap.update({
-        where: { id: wrap.id },
+      await this.prisma.wrap.updateMany({
+        where: {
+          id: claimed.id,
+          generationAttemptId: attemptId,
+          status: 'GENERATING',
+          deletedAt: null,
+        },
         data: {
           status: 'COMPLETED',
           statisticsJson: statistics as unknown as Prisma.InputJsonValue,
@@ -431,14 +465,53 @@ export class InsightsService {
           failureCode: null,
         },
       });
-      return this.wrapDetail(completed);
+      return await this.wrap(principal, claimed.id);
     } catch (error) {
-      await this.prisma.wrap.update({
-        where: { id: wrap.id },
-        data: { status: 'FAILED', failureCode: 'GENERATION_FAILED' },
-      });
+      const failed = await this.prisma.wrap
+        .updateMany({
+          where: {
+            id: claimed.id,
+            generationAttemptId: attemptId,
+            status: 'GENERATING',
+            deletedAt: null,
+          },
+          data: { status: 'FAILED', failureCode: 'GENERATION_FAILED' },
+        })
+        .catch(() => null);
+      if (failed?.count === 0) return this.wrap(principal, claimed.id);
       throw error;
     }
+  }
+
+  public async regenerateWrap(
+    principal: AuthPrincipal,
+    wrapId: string,
+    refresh: boolean,
+  ): Promise<WrapDetail> {
+    const saved = await this.wrap(principal, wrapId);
+    if (saved.wrapType === 'CUSTOM')
+      throw new AppException(
+        422,
+        'WRAP_TYPE_UNSUPPORTED',
+        'This saved wrap type cannot be regenerated.',
+      );
+    return this.createWrap(principal, {
+      type: saved.wrapType,
+      timezone: saved.timezone,
+      inputVersion: saved.inputVersion,
+      periodStart: saved.periodStart,
+      periodEnd: saved.periodEnd,
+      refresh,
+    });
+  }
+
+  private retryable(row: Prisma.WrapGetPayload<Record<string, never>>): boolean {
+    return (
+      row.status === 'FAILED' ||
+      row.status === 'PENDING' ||
+      (row.status === 'GENERATING' &&
+        (!row.generationStartedAt || row.generationStartedAt.getTime() < Date.now() - 5 * 60_000))
+    );
   }
 
   public async wraps(
@@ -576,13 +649,18 @@ export class InsightsService {
     };
   }
 
-  private async statistics(userId: string, period: Period): Promise<StatisticsSummary> {
-    const viewings = await this.viewings(userId, period);
+  private async statistics(
+    userId: string,
+    period: Period,
+    records?: ViewingRecord[],
+    database: Prisma.TransactionClient = this.prisma,
+  ): Promise<StatisticsSummary> {
+    const viewings = records ?? (await this.viewings(userId, period, database));
     const mediaIds = [...new Set(viewings.map((viewing) => viewing.mediaId))];
     const ratings =
       mediaIds.length === 0
         ? []
-        : await this.prisma.rating.findMany({
+        : await database.rating.findMany({
             where: {
               userId,
               mediaId: { in: mediaIds },
@@ -638,7 +716,10 @@ export class InsightsService {
   }
 
   private async tasteFor(userId: string, period: Period): Promise<TasteStatistics> {
-    const viewings = await this.viewings(userId, period);
+    return this.tasteFrom(await this.viewings(userId, period), period);
+  }
+
+  private tasteFrom(viewings: ViewingRecord[], period: Period): TasteStatistics {
     const runtimeBucket = (minutes: number | null) => {
       if (minutes === null) return { id: 'unknown', label: 'Unknown runtime' };
       if (minutes < 60) return { id: 'under-60', label: 'Under 60 min' };
@@ -680,8 +761,12 @@ export class InsightsService {
     };
   }
 
-  private async viewings(userId: string, period: Period): Promise<ViewingRecord[]> {
-    const rows = await this.prisma.viewing.findMany({
+  private async viewings(
+    userId: string,
+    period: Period,
+    database: Prisma.TransactionClient = this.prisma,
+  ): Promise<ViewingRecord[]> {
+    const rows = await database.viewing.findMany({
       where: {
         userId,
         deletedAt: null,
@@ -698,11 +783,44 @@ export class InsightsService {
         'This period contains too many viewing records. Choose a shorter period.',
       );
     }
-    return rows;
+    // Episode occurrences take precedence over a whole-title TV log on the same local day.
+    const episodeDays = new Set(
+      rows
+        .filter((row) => row.episodeId)
+        .map((row) => `${row.mediaId}:${dateKey(row.watchedAt, period.timezone)}`),
+    );
+    return rows.filter(
+      (row) =>
+        row.episodeId ||
+        row.media.mediaType !== 'TV' ||
+        !episodeDays.has(`${row.mediaId}:${dateKey(row.watchedAt, period.timezone)}`),
+    );
+  }
+
+  private async currentStreak(userId: string, timezone: string): Promise<number> {
+    const today = dateKey(new Date(), timezone);
+    const result = await this.prisma.$queryRaw<Array<{ count: number }>>(Prisma.sql`
+      WITH days AS (
+        SELECT DISTINCT ("watchedAt" AT TIME ZONE ${timezone})::date AS day
+        FROM viewings WHERE "userId" = ${userId}::uuid AND "deletedAt" IS NULL
+          AND ("watchedAt" AT TIME ZONE ${timezone})::date <= ${today}::date
+      ), runs AS (
+        SELECT day, day + (ROW_NUMBER() OVER (ORDER BY day DESC))::int AS run FROM days
+      )
+      SELECT COUNT(*)::int AS count FROM runs WHERE run = (
+        SELECT run FROM runs WHERE day >= ${today}::date - 1 ORDER BY day DESC LIMIT 1
+      )`);
+    return result[0]?.count ?? 0;
   }
 
   private minutes(viewing: ViewingRecord): number {
-    return Math.max(0, viewing.durationWatchedMin ?? viewing.media.runtimeMinutes ?? 0);
+    return Math.max(
+      0,
+      viewing.durationWatchedMin ??
+        (viewing.completedAt !== null && !viewing.episodeId
+          ? (viewing.media.runtimeMinutes ?? 0)
+          : 0),
+    );
   }
 
   private highlights(type: GeneratedWrapType, statistics: StatisticsSummary): WrapHighlights {
@@ -821,6 +939,8 @@ export class InsightsService {
       timezone: row.timezone,
       status: row.status,
       inputVersion: row.inputVersion,
+      revision: row.revision,
+      canRetry: this.retryable(row),
       headline: highlights?.headline ?? null,
       generatedAt: row.generatedAt?.toISOString() ?? null,
     };

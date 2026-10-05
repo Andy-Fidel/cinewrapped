@@ -1,0 +1,1 @@
+DROP INDEX "wraps_userId_wrapType_periodStart_periodEnd_inputVersion_key";

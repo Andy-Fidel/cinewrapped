@@ -711,6 +711,8 @@ export interface WrapSummary {
   timezone: string;
   status: WrapStatus;
   inputVersion: number;
+  revision: number;
+  canRetry: boolean;
   headline: string | null;
   generatedAt: string | null;
 }
@@ -1194,6 +1196,8 @@ export interface StoryPresentation {
   type:
     | 'ANNUAL_WRAP'
     | 'MONTHLY_RECAP'
+    | 'WEEKLY_WRAP'
+    | 'CUSTOM_WRAP'
     | 'TASTE_PROFILE'
     | 'TRIVIA_CHAMPION'
     | 'WATCHLIST_SHOWCASE'
@@ -1203,6 +1207,10 @@ export interface StoryPresentation {
   subtitle: string;
   year?: number;
   periodLabel?: string;
+  periodStart?: string;
+  periodEnd?: string;
+  timezone?: string;
+  revision?: number;
   author: {
     userId: string;
     displayName: string;

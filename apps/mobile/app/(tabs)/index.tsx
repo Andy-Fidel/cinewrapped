@@ -1,3 +1,5 @@
+import { invalidateInsights } from '../../src/lib/insights-query';
+import { localDateKey, localYear } from '../../src/lib/period';
 import type {
   ActivityHeatmapSummary,
   CalendarEventSummary,
@@ -12,8 +14,8 @@ import type {
 import { Ionicons } from '@expo/vector-icons';
 import { FlashList } from '@shopify/flash-list';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { router } from 'expo-router';
-import { useMemo } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback } from 'react';
 import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -43,16 +45,15 @@ export default function HomeScreen() {
   const { session, user } = useAuth();
   const { isEnabled } = useFeatureFlags();
   const calendarEnabled = isEnabled('CALENDAR_INTEGRATION');
-  const statisticsRange = useMemo(() => {
-    const periodEnd = new Date();
-    const periodStart = new Date(periodEnd);
-    periodStart.setDate(periodStart.getDate() - 7);
+  const timezone = user?.timezone ?? 'UTC';
+  const rollingRange = () => {
+    const end = new Date();
     return {
-      periodStart: periodStart.toISOString(),
-      periodEnd: periodEnd.toISOString(),
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+      periodStart: new Date(end.getTime() - 7 * 86_400_000).toISOString(),
+      periodEnd: end.toISOString(),
+      timezone,
     };
-  }, []);
+  };
   const taste = useQuery({
     queryKey: ['taste-profile'],
     queryFn: () => api.request<TasteProfile>('recommendations/taste-profile'),
@@ -95,23 +96,32 @@ export default function HomeScreen() {
     staleTime: 60 * 1000,
   });
   const weeklyStatistics = useQuery({
-    queryKey: ['statistics', 'home-weekly', statisticsRange],
+    queryKey: ['statistics', 'home-weekly', timezone],
     queryFn: () => {
-      const query = new URLSearchParams(statisticsRange);
+      const query = new URLSearchParams(rollingRange());
       return api.request<StatisticsSummary>(`statistics/summary?${query.toString()}`);
     },
     enabled: session !== null,
     staleTime: 60 * 1000,
   });
   const activityHeatmap = useQuery({
-    queryKey: ['statistics', 'home-heatmap', new Date().getFullYear(), statisticsRange.timezone],
+    queryKey: ['statistics', 'home-heatmap', localYear(new Date(), timezone), timezone],
     queryFn: () =>
       api.request<ActivityHeatmapSummary>(
-        `statistics/heatmap?year=${new Date().getFullYear()}&timezone=${encodeURIComponent(statisticsRange.timezone)}`,
+        `statistics/heatmap?year=${localYear(new Date(), timezone)}&timezone=${encodeURIComponent(timezone)}`,
       ),
     enabled: session !== null,
     staleTime: 5 * 60 * 1000,
   });
+  const authenticated = session !== null;
+  useFocusEffect(
+    useCallback(() => {
+      if (!authenticated) return;
+      void weeklyStatistics.refetch({ cancelRefetch: false });
+      void activityHeatmap.refetch({ cancelRefetch: false });
+    }, [authenticated, weeklyStatistics.refetch, activityHeatmap.refetch]),
+  );
+
   const refresh = useMutation({
     mutationFn: () => api.request('recommendations/refresh', { method: 'POST' }),
     onSuccess: async () => {
@@ -155,9 +165,13 @@ export default function HomeScreen() {
         body: { status: 'COMPLETED', progressPercent: 100 },
       }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['library'] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['library'] }),
+        invalidateInsights(queryClient),
+      ]);
     },
   });
+  const statisticsRange = weeklyStatistics.data ?? rollingRange();
   const upcomingEvent = upcomingEvents.data?.at(0);
   const featuredRecommendation = recommendations.data?.[0];
 
@@ -166,7 +180,13 @@ export default function HomeScreen() {
       <FlashList
         data={recommendations.data ?? []}
         keyExtractor={(item) => item.id}
-        onRefresh={() => void recommendations.refetch()}
+        onRefresh={() =>
+          void Promise.all([
+            recommendations.refetch(),
+            weeklyStatistics.refetch(),
+            activityHeatmap.refetch(),
+          ])
+        }
         refreshing={recommendations.isRefetching}
         contentContainerStyle={styles.list}
         ListHeaderComponent={
@@ -457,8 +477,8 @@ export default function HomeScreen() {
               weeklyStatistics={weeklyStatistics.data}
               weeklyActivity={activityHeatmap.data?.days.filter(
                 (day) =>
-                  day.date >= statisticsRange.periodStart.slice(0, 10) &&
-                  day.date <= statisticsRange.periodEnd.slice(0, 10),
+                  day.date >= localDateKey(new Date(statisticsRange.periodStart), timezone) &&
+                  day.date <= localDateKey(new Date(statisticsRange.periodEnd), timezone),
               )}
               onAddToWatchlist={(mediaId) => watchlistMutation.mutate(mediaId)}
               onFinishWatching={(mediaId) => finishWatching.mutate(mediaId)}
