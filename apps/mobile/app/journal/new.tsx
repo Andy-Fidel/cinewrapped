@@ -14,7 +14,7 @@ import { useDialog } from '../../src/providers/dialog-provider';
 
 export default function NewJournalEntryScreen() {
   const colors = useColors();
-  const { session } = useAuth();
+  const { session, loading: authLoading } = useAuth();
   const { showError } = useDialog();
   const queryClient = useQueryClient();
   const { mediaId } = useLocalSearchParams<{ mediaId: string }>();
@@ -49,6 +49,7 @@ export default function NewJournalEntryScreen() {
     },
     onError: (error) => showError('Could not save journal entry', errorMessage(error)),
   });
+  if (authLoading) return null;
   if (session === null) return <Redirect href="/(auth)/login" />;
 
   return (

@@ -9,6 +9,7 @@ import {
   Animated,
   Pressable,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -153,28 +154,15 @@ export function StoryViewer({
         })}
       </View>
 
-      {/* Main Slide Renderer */}
-      <View style={styles.slideCanvas}>
+      <ScrollView
+        style={styles.slideCanvas}
+        contentContainerStyle={styles.slideContent}
+        onTouchStart={() => setIsPaused(true)}
+        onTouchEnd={() => setIsPaused(false)}
+        onTouchCancel={() => setIsPaused(false)}
+      >
         <StorySlideRenderer slide={activeSlide} userHandle={presentation.author.username} />
-
-        {/* Touch Gestures: Left Half = Previous, Right Half = Next, Long Press = Pause */}
-        <View style={styles.gestureOverlay}>
-          <Pressable
-            accessibilityLabel="Previous slide"
-            onPress={handlePreviousSlide}
-            onPressIn={() => setIsPaused(true)}
-            onPressOut={() => setIsPaused(false)}
-            style={styles.touchAreaLeft}
-          />
-          <Pressable
-            accessibilityLabel="Next slide"
-            onPress={handleNextSlide}
-            onPressIn={() => setIsPaused(true)}
-            onPressOut={() => setIsPaused(false)}
-            style={styles.touchAreaRight}
-          />
-        </View>
-      </View>
+      </ScrollView>
 
       {/* Floating Story Bottom Bar */}
       <View style={styles.bottomBar}>
@@ -194,6 +182,22 @@ export function StoryViewer({
           <Ionicons name="close" size={20} color="#FFFFFF" />
         </Pressable>
 
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Previous slide"
+          onPress={handlePreviousSlide}
+          style={styles.actionButton}
+        >
+          <Ionicons name="chevron-back" size={20} color="#FFFFFF" />
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Next slide"
+          onPress={handleNextSlide}
+          style={styles.actionButton}
+        >
+          <Ionicons name="chevron-forward" size={20} color="#FFFFFF" />
+        </Pressable>
         {/* Center: Slide indicator */}
         <View style={styles.slideCounterPill}>
           <Text style={styles.slideCounterText}>
@@ -254,7 +258,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     width: '100%',
-    height: '100%',
+    minHeight: 0,
+    maxWidth: 960,
+    alignSelf: 'center',
     justifyContent: 'space-between',
   },
   progressBarContainer: {
@@ -276,25 +282,16 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: 2,
   },
+  slideContent: { flexGrow: 1 },
   slideCanvas: {
     flex: 1,
+    minHeight: 0,
     position: 'relative',
-  },
-  gestureOverlay: {
-    ...StyleSheet.absoluteFill,
-    flexDirection: 'row',
-    zIndex: 10,
-  },
-  touchAreaLeft: {
-    flex: 1,
-    height: '100%',
-  },
-  touchAreaRight: {
-    flex: 2,
-    height: '100%',
   },
   bottomBar: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 18,
@@ -302,8 +299,8 @@ const styles = StyleSheet.create({
     zIndex: 20,
   },
   actionButton: {
-    width: 38,
-    height: 38,
+    width: 44,
+    height: 44,
     borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
@@ -320,11 +317,14 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   rightActions: {
+    flexWrap: 'wrap',
+    maxWidth: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
   },
   exportButton: {
+    minHeight: 44,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,

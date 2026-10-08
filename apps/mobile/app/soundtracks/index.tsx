@@ -23,7 +23,7 @@ async function openExternal(url: string) {
 
 export default function SavedSoundtracksScreen() {
   const colors = useColors();
-  const { session } = useAuth();
+  const { session, loading: authLoading } = useAuth();
   const { confirm, showError } = useDialog();
   const client = useQueryClient();
   const saved = useQuery({
@@ -53,6 +53,7 @@ export default function SavedSoundtracksScreen() {
     });
     if (accepted) remove.mutate(album.id);
   };
+  if (authLoading) return null;
   if (session === null) return <Redirect href="/(auth)/login" />;
   return (
     <FeatureGate feature="SOUNDTRACKS">

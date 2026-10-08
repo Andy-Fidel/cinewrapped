@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Modal, Pressable, StyleSheet, Text, View, ScrollView } from 'react-native';
 
 import { appLink } from '../lib/text-sharing';
 import { useTextShare } from '../lib/use-text-share';
@@ -126,7 +126,8 @@ export function NetflixQuickPreviewModal({
         <Pressable style={styles.backdropDismiss} onPress={onClose} />
 
         {/* Floating Quick Preview Card */}
-        <View
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
           style={[
             styles.cardContainer,
             { backgroundColor: colors.surface, borderColor: colors.border },
@@ -311,7 +312,7 @@ export function NetflixQuickPreviewModal({
               </Pressable>
             </View>
           </View>
-        </View>
+        </ScrollView>
       </View>
     </Modal>
   );
@@ -327,12 +328,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   cardContainer: {
+    width: '100%',
+    maxWidth: 720,
+    alignSelf: 'center',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     borderWidth: 1,
     maxHeight: '85%',
     overflow: 'hidden',
-    paddingBottom: 28,
+    paddingBottom: 0,
   },
   imageHeader: {
     height: 180,

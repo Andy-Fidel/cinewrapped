@@ -14,7 +14,7 @@ import { useAuth } from '../../src/providers/auth-provider';
 
 export default function WrapStoryScreen() {
   const colors = useColors();
-  const { session, user } = useAuth();
+  const { session, user, loading: authLoading } = useAuth();
   const { wrapId } = useLocalSearchParams<{ wrapId: string }>();
   const queryClient = useQueryClient();
   const pollingDeadline = useRef(Date.now() + 120_000);
@@ -49,6 +49,7 @@ export default function WrapStoryScreen() {
         })
       : null;
 
+  if (authLoading) return null;
   if (session === null) return <Redirect href="/(auth)/login" />;
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: '#0A0912' }]}>

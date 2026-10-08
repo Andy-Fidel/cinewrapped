@@ -12,7 +12,7 @@ import { useAuth } from '../../../../src/providers/auth-provider';
 export default function SeasonScreen() {
   const colors = useColors();
   const queryClient = useQueryClient();
-  const { session, user } = useAuth();
+  const { session, user, loading: authLoading } = useAuth();
   const { mediaId, seasonNumber } = useLocalSearchParams<{
     mediaId: string;
     seasonNumber: string;
@@ -44,6 +44,7 @@ export default function SeasonScreen() {
       ]);
     },
   });
+  if (authLoading) return null;
   if (session === null) return <Redirect href="/(auth)/login" />;
   return (
     <SafeAreaView

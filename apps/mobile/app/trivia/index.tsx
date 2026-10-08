@@ -83,7 +83,7 @@ export default function CinemaTriviaScreen() {
   const colors = useColors();
   const share = useTextShare();
   const queryClient = useQueryClient();
-  const { session } = useAuth();
+  const { session, loading: authLoading } = useAuth();
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
@@ -112,6 +112,7 @@ export default function CinemaTriviaScreen() {
     },
   });
 
+  if (authLoading) return null;
   if (session === null) return <ShareLoginRedirect path="/trivia" />;
 
   const questions = TRIVIA_SET.questions;

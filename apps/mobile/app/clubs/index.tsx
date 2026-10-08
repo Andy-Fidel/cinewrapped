@@ -703,7 +703,7 @@ const styles = StyleSheet.create({
   metricText: { fontSize: 11, fontWeight: '700' },
 
   // Segmented Bar
-  segmentedRow: { flexDirection: 'row', gap: 8, marginTop: 6 },
+  segmentedRow: { flexWrap: 'wrap', flexDirection: 'row', gap: 8, marginTop: 6 },
   segmentBtn: {
     alignItems: 'center',
     borderRadius: 12,
@@ -747,7 +747,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     padding: 16,
   },
-  createHeader: { alignItems: 'center', flexDirection: 'row', gap: 8 },
+  createHeader: { flexWrap: 'wrap', alignItems: 'center', flexDirection: 'row', gap: 8 },
   createTitle: { fontSize: 16, fontWeight: '800' },
   input: {
     borderRadius: 10,
@@ -766,7 +766,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   formCategoryChipText: { fontSize: 12, fontWeight: '600' },
-  membershipTypeRow: { flexDirection: 'row', gap: 10 },
+  membershipTypeRow: { flexWrap: 'wrap', flexDirection: 'row', gap: 10 },
   membershipTypeBtn: {
     alignItems: 'center',
     borderRadius: 10,

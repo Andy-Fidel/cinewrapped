@@ -24,7 +24,7 @@ type FilterTab = 'ALL' | 'COMPLETED' | 'DRAFT' | 'WITH_STUBS' | 'WITH_COMPANIONS
 
 export default function JournalScreen() {
   const colors = useColors();
-  const { session } = useAuth();
+  const { session, loading: authLoading } = useAuth();
   const [query, setQuery] = useState('');
   const deferredQuery = useDeferredValue(query);
   const [activeFilter, setActiveFilter] = useState<FilterTab>('ALL');
@@ -65,6 +65,7 @@ export default function JournalScreen() {
     return list;
   }, [journal.data, activeFilter]);
 
+  if (authLoading) return null;
   if (session === null) return <Redirect href="/(auth)/login" />;
 
   return (

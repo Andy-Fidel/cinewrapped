@@ -708,7 +708,7 @@ const styles = StyleSheet.create({
   matchBadge: { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
   kind: { fontSize: 11, fontWeight: '800', letterSpacing: 0.5 },
   explanation: { fontSize: 14, lineHeight: 20 },
-  actions: { flexDirection: 'row', gap: 10 },
+  actions: { flexWrap: 'wrap', flexDirection: 'row', gap: 10 },
   action: {
     alignItems: 'center',
     borderRadius: 10,

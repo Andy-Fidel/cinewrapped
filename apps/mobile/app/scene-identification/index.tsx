@@ -395,7 +395,7 @@ function ResultCard({
 
 export default function SceneIdentificationScreen() {
   const colors = useColors();
-  const { session, user } = useAuth();
+  const { session, user, loading: authLoading } = useAuth();
   const { confirm, showError } = useDialog();
   const client = useQueryClient();
   const [asset, setAsset] = useState<ImagePicker.ImagePickerAsset | null>(null);
@@ -477,6 +477,7 @@ export default function SceneIdentificationScreen() {
     'Computing neural confidence weights & rankings…',
   ];
 
+  if (authLoading) return null;
   if (session === null) return <Redirect href="/(auth)/login" />;
 
   const pick = async (source: 'camera' | 'library') => {

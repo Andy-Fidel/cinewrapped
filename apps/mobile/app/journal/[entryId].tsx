@@ -21,7 +21,7 @@ import { useDialog } from '../../src/providers/dialog-provider';
 
 export default function JournalEntryScreen() {
   const colors = useColors();
-  const { session, user } = useAuth();
+  const { session, user, loading: authLoading } = useAuth();
   const { confirm, showError, showInfo } = useDialog();
   const queryClient = useQueryClient();
   const { entryId } = useLocalSearchParams<{ entryId: string }>();
@@ -83,6 +83,7 @@ export default function JournalEntryScreen() {
     onError: (error) => showError('Could not delete journal entry', errorMessage(error)),
   });
 
+  if (authLoading) return null;
   if (session === null) return <Redirect href="/(auth)/login" />;
 
   const registerAttachment = async (

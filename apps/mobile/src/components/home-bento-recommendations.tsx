@@ -916,6 +916,8 @@ const styles = StyleSheet.create({
     marginTop: 14,
   },
   headerRow: {
+    flexWrap: 'wrap',
+    gap: 10,
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -951,8 +953,11 @@ const styles = StyleSheet.create({
   },
   rowWide: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
   },
   card: {
+    minWidth: 0,
+    flexShrink: 1,
     borderRadius: 22,
     borderWidth: 1,
     overflow: 'hidden',
@@ -972,6 +977,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(15, 6, 8, 0.68)',
   },
   cardHeaderRow: {
+    flexWrap: 'wrap',
+    gap: 8,
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1035,10 +1042,12 @@ const styles = StyleSheet.create({
   },
   billboardLeft: {
     flex: 1,
+    minWidth: 0,
     gap: 4,
     paddingRight: 12,
   },
   pillTagRow: {
+    flexWrap: 'wrap',
     flexDirection: 'row',
     gap: 6,
     marginBottom: 2,
@@ -1127,10 +1136,12 @@ const styles = StyleSheet.create({
   /* Metric Column */
   metricColumn: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 12,
   },
   cardMetricSquare: {
-    flex: 1,
+    flexGrow: 1,
+    flexBasis: 120,
     justifyContent: 'space-between',
     minHeight: 140,
   },

@@ -63,12 +63,18 @@ export function StoryExportModal({
           style={{
             backgroundColor: colors.background,
             maxHeight: '92%',
+            maxWidth: 720,
+            width: '100%',
+            alignSelf: 'center',
             padding: 16,
             borderTopLeftRadius: 24,
             borderTopRightRadius: 24,
           }}
         >
-          <ScrollView contentContainerStyle={{ gap: 12, paddingBottom: 20 }}>
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{ gap: 12, paddingBottom: 20 }}
+          >
             <Text style={{ color: colors.textPrimary, fontSize: 20, fontWeight: '800' }}>
               Share Slide Summary
             </Text>

@@ -227,7 +227,7 @@ function Person({ credit, onPress }: { credit: CreditSummary; onPress?: () => vo
 export default function MediaDetailScreen() {
   const colors = useColors();
   const { isEnabled } = useFeatureFlags();
-  const { session, user } = useAuth();
+  const { session, user, loading: authLoading } = useAuth();
   const { mediaId } = useLocalSearchParams<{ mediaId: string }>();
   const [showTrailer, setShowTrailer] = useState(false);
   const [trailerFailed, setTrailerFailed] = useState(false);
@@ -259,6 +259,7 @@ export default function MediaDetailScreen() {
     [details.data?.genres],
   );
 
+  if (authLoading) return null;
   if (session === null) return <ShareLoginRedirect path={`/media/${mediaId}`} />;
   if (details.isPending)
     return (
@@ -625,7 +626,7 @@ export default function MediaDetailScreen() {
                 >
                   <Ionicons name="play" size={16} color={colors.brand} />
                 </View>
-                <View>
+                <View style={{ flex: 1, minWidth: 0 }}>
                   <Text style={[styles.accordionTitle, { color: colors.textPrimary }]}>
                     Where to Watch
                   </Text>
@@ -954,7 +955,7 @@ const styles = StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { borderRadius: 999, paddingHorizontal: 13, paddingVertical: 6 },
   overview: { fontSize: 14, lineHeight: 22 },
-  actionButtons: { flexDirection: 'row', gap: 10 },
+  actionButtons: { flexWrap: 'wrap', flexDirection: 'row', gap: 10 },
   journalButton: {
     alignItems: 'center',
     borderRadius: 14,
@@ -1021,12 +1022,17 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   accordionHeader: {
+    flexWrap: 'wrap',
+    gap: 12,
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
     padding: 16,
   },
   accordionHeaderLeft: {
+    flexGrow: 1,
+    flexBasis: 200,
+    minWidth: 0,
     alignItems: 'center',
     flexDirection: 'row',
     gap: 12,
@@ -1093,7 +1099,7 @@ const styles = StyleSheet.create({
   },
   providerInfo: { flex: 1, gap: 2 },
   providerName: { fontSize: 14, fontWeight: '700' },
-  providerTagRow: { flexDirection: 'row', gap: 6 },
+  providerTagRow: { flexWrap: 'wrap', flexDirection: 'row', gap: 6 },
   monetizationBadge: { borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 },
   monetizationText: { fontSize: 10, fontWeight: '800', textTransform: 'uppercase' },
 

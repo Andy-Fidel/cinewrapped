@@ -1,9 +1,10 @@
 import type { StorySlideData, StorySlideRankingItem } from '@cinewrapped/shared-types';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { getStoryTheme } from './story-theme';
+import { metricFontSize } from '../../lib/responsive-layout';
 import { BrandLogo } from '../brand-logo';
 
 export function StorySlideRenderer({
@@ -14,6 +15,8 @@ export function StorySlideRenderer({
   userHandle?: string;
 }) {
   const theme = getStoryTheme(slide.theme);
+  const { width } = useWindowDimensions();
+  const availableWidth = Math.max(0, Math.min(width, 960) - 44);
 
   return (
     <View style={[styles.container, { backgroundColor: theme.bgGradient[0] }]}>
@@ -62,7 +65,7 @@ export function StorySlideRenderer({
       </View>
 
       {/* Main Slide Content Based on Layout */}
-      <View style={styles.contentArea}>{renderLayoutContent(slide, theme)}</View>
+      <View style={styles.contentArea}>{renderLayoutContent(slide, theme, availableWidth)}</View>
 
       {/* Bottom Footer Attribution */}
       <View style={[styles.footer, { borderTopColor: 'rgba(255, 255, 255, 0.1)' }]}>
@@ -92,10 +95,14 @@ export function StorySlideRenderer({
   );
 }
 
-function renderLayoutContent(slide: StorySlideData, theme: ReturnType<typeof getStoryTheme>) {
+function renderLayoutContent(
+  slide: StorySlideData,
+  theme: ReturnType<typeof getStoryTheme>,
+  availableWidth: number,
+) {
   switch (slide.layout) {
     case 'HERO_STATS':
-      return renderHeroStats(slide, theme);
+      return renderHeroStats(slide, theme, availableWidth);
     case 'TOP_FIVE_GRID':
       return renderTopFiveGrid(slide, theme);
     case 'CINEMATIC_POSTER':
@@ -113,7 +120,11 @@ function renderLayoutContent(slide: StorySlideData, theme: ReturnType<typeof get
 }
 
 // 1. HERO STATS LAYOUT
-function renderHeroStats(slide: StorySlideData, theme: ReturnType<typeof getStoryTheme>) {
+function renderHeroStats(
+  slide: StorySlideData,
+  theme: ReturnType<typeof getStoryTheme>,
+  availableWidth: number,
+) {
   return (
     <View style={styles.heroStatsContainer}>
       <Text style={[styles.headline, { color: theme.textPrimary }]}>{slide.headline}</Text>
@@ -134,7 +145,18 @@ function renderHeroStats(slide: StorySlideData, theme: ReturnType<typeof getStor
             </View>
           ) : null}
 
-          <Text style={[styles.giantNumber, { color: theme.accent }]}>{slide.metric.value}</Text>
+          <Text
+            style={[
+              styles.giantNumber,
+              {
+                color: theme.accent,
+                fontSize: metricFontSize(slide.metric.value, availableWidth),
+                lineHeight: metricFontSize(slide.metric.value, availableWidth) + 4,
+              },
+            ]}
+          >
+            {slide.metric.value}
+          </Text>
           <Text style={[styles.giantLabel, { color: theme.textSecondary }]}>
             {slide.metric.label}
           </Text>
@@ -446,9 +468,9 @@ function renderSummaryCard(slide: StorySlideData, theme: ReturnType<typeof getSt
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flexGrow: 1,
+    flexShrink: 0,
     width: '100%',
-    height: '100%',
     paddingHorizontal: 22,
     paddingVertical: 20,
     justifyContent: 'space-between',
@@ -475,6 +497,8 @@ const styles = StyleSheet.create({
   },
   topHeader: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
     alignItems: 'center',
     justifyContent: 'space-between',
     marginTop: 8,
@@ -491,6 +515,8 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
   },
   eyebrowBadge: {
+    maxWidth: '100%',
+    flexShrink: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
@@ -500,6 +526,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   eyebrowText: {
+    flexShrink: 1,
     fontSize: 10,
     fontWeight: '900',
     letterSpacing: 0.8,
@@ -559,10 +586,13 @@ const styles = StyleSheet.create({
   },
   secondaryGrid: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 10,
   },
   secondaryBox: {
-    flex: 1,
+    flexGrow: 1,
+    flexBasis: 100,
+    minWidth: 0,
     borderRadius: 16,
     borderWidth: 1,
     padding: 14,
@@ -612,6 +642,7 @@ const styles = StyleSheet.create({
   },
   rankingTextCol: {
     flex: 1,
+    minWidth: 0,
     gap: 2,
   },
   rankingTitle: {
@@ -638,7 +669,8 @@ const styles = StyleSheet.create({
   },
   posterShadowWrap: {
     width: 170,
-    height: 250,
+    maxWidth: '100%',
+    aspectRatio: 2 / 3,
     borderRadius: 18,
     borderWidth: 1.5,
     overflow: 'hidden',
@@ -788,6 +820,8 @@ const styles = StyleSheet.create({
   },
   summaryMetricRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
     justifyContent: 'space-between',
     alignItems: 'center',
   },
@@ -803,6 +837,8 @@ const styles = StyleSheet.create({
   /* Footer */
   footer: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingTop: 14,
@@ -810,6 +846,8 @@ const styles = StyleSheet.create({
     zIndex: 5,
   },
   footerLeft: {
+    maxWidth: '100%',
+    flexShrink: 1,
     gap: 2,
   },
   footerHandle: {
@@ -821,6 +859,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   footerPill: {
+    maxWidth: '100%',
+    flexShrink: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
@@ -829,6 +869,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   footerPillText: {
+    flexShrink: 1,
     fontSize: 10,
     fontWeight: '800',
   },

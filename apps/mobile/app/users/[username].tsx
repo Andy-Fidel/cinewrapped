@@ -13,7 +13,7 @@ import { useDialog } from '../../src/providers/dialog-provider';
 export default function MemberProfileScreen() {
   const colors = useColors();
   const queryClient = useQueryClient();
-  const { session, user } = useAuth();
+  const { session, user, loading: authLoading } = useAuth();
   const { confirm } = useDialog();
   const { username } = useLocalSearchParams<{ username: string }>();
   const profile = useQuery({
@@ -41,6 +41,7 @@ export default function MemberProfileScreen() {
       }),
     onSuccess: refresh,
   });
+  if (authLoading) return null;
   if (session === null) return <Redirect href="/(auth)/login" />;
   if (profile.isPending)
     return (

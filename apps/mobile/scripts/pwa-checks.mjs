@@ -139,7 +139,7 @@ test('build adds install metadata once and changes worker version with the relea
     await mkdir(resolve(directory, 'icons'));
     await writeFile(
       resolve(directory, 'index.html'),
-      '<html><head></head><body>release one</body></html>',
+      '<html><head><meta name="viewport" content="width=device-width, initial-scale=1"></head><body>release one</body></html>',
     );
     for (const path of assets) await writeFile(resolve(directory, `.${path}`), path);
     const build = () =>
@@ -154,6 +154,9 @@ test('build adds install metadata once and changes worker version with the relea
     const html = await readFile(resolve(directory, 'index.html'), 'utf8');
     assert.equal(html.match(/rel="manifest"/g).length, 1);
     assert.match(html, /apple-touch-icon/);
+    assert.equal(html.match(/viewport-fit=cover/g).length, 1);
+    assert.equal(html.match(/interactive-widget=resizes-content/g).length, 1);
+    assert.doesNotMatch(html, /maximum-scale|user-scalable=no/);
     await writeFile(resolve(directory, 'index.html'), html.replace('release one', 'release two'));
     build();
     assert.notEqual(await readFile(resolve(directory, 'sw.js'), 'utf8'), first);

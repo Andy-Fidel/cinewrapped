@@ -6,14 +6,20 @@ import { resolve } from 'node:path';
 const directory = resolve(process.argv[2] ?? 'dist');
 const indexPath = resolve(directory, 'index.html');
 const index = await readFile(indexPath, 'utf8');
+const viewportIndex = index.replace(
+  /(<meta[^>]*name=["']viewport["'][^>]*content=["'])([^"']*)(["'][^>]*>)/u,
+  (_match, before, content, after) =>
+    `${before}${content.replace(/,?\s*(?:viewport-fit|interactive-widget)=[^,]*/gu, '')}, viewport-fit=cover, interactive-widget=resizes-content${after}`,
+);
+if (viewportIndex !== index) await writeFile(indexPath, viewportIndex);
 const metadata = `<link rel="manifest" href="/manifest.webmanifest" />
 <meta name="theme-color" content="#0B0F19" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="CineWrapped" />
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />`;
-if (!index.includes('rel="manifest"')) {
-  if (!index.includes('</head>')) throw new Error('Expo output is missing its HTML head.');
-  await writeFile(indexPath, index.replace('</head>', `${metadata}</head>`));
+if (!viewportIndex.includes('rel="manifest"')) {
+  if (!viewportIndex.includes('</head>')) throw new Error('Expo output is missing its HTML head.');
+  await writeFile(indexPath, viewportIndex.replace('</head>', `${metadata}</head>`));
 }
 const assets = ['/offline.html', '/icons/icon-192.png', '/icons/icon-512.png'];
 const hash = createHash('sha256').update(await readFile(indexPath));

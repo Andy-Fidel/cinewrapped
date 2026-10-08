@@ -512,7 +512,7 @@ function ActivityCard({ activity }: { activity: FeedActivitySummary }) {
 
 export default function SocialScreen() {
   const colors = useColors();
-  const { session } = useAuth();
+  const { session, loading: authLoading } = useAuth();
   const [search, setSearch] = useState('');
   const deferredSearch = useDeferredValue(search.trim());
   const [activeFilter, setActiveFilter] = useState<ActivityFilter>('ALL');
@@ -562,6 +562,7 @@ export default function SocialScreen() {
     return list.filter((a) => a.activityType.includes('FAVORITE'));
   }, [feed.data, activeFilter]);
 
+  if (authLoading) return null;
   if (session === null) return <Redirect href="/(auth)/login" />;
 
   const refreshing = feed.isRefetching || requests.isRefetching;

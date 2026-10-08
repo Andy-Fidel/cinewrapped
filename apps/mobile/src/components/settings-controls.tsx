@@ -214,7 +214,7 @@ export const settingsControlStyles = StyleSheet.create({
 
 const styles = StyleSheet.create({
   card: { borderRadius: 16, borderWidth: 1, gap: 14, padding: 18 },
-  sectionHeaderRow: { alignItems: 'center', flexDirection: 'row', gap: 8 },
+  sectionHeaderRow: { flexWrap: 'wrap', alignItems: 'center', flexDirection: 'row', gap: 8 },
   heading: { fontSize: 18, fontWeight: '800' },
   body: { fontSize: 14, lineHeight: 20 },
   grow: { flex: 1 },

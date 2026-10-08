@@ -1,7 +1,15 @@
 import type { CalendarEventSummary } from '@cinewrapped/shared-types';
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  ScrollView,
+} from 'react-native';
 
 import {
   type CalendarEventPayload,
@@ -84,117 +92,125 @@ export function CalendarSyncModal({ visible, onClose, event }: CalendarSyncModal
           onPress={(e) => e.stopPropagation()}
           style={[styles.sheet, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
-          {/* Header */}
-          <View style={styles.header}>
-            <View style={styles.headerLeft}>
-              <View style={[styles.iconCircle, { backgroundColor: 'rgba(222, 54, 65, 0.15)' }]}>
-                <Ionicons name="calendar" size={22} color={colors.brand} />
-              </View>
-              <View>
-                <Text style={[styles.title, { color: colors.textPrimary }]}>
-                  Export to Calendar
-                </Text>
-                <Text numberOfLines={1} style={[styles.subtitle, { color: colors.textSecondary }]}>
-                  {event.title}
-                </Text>
-              </View>
-            </View>
-            <Pressable
-              accessibilityLabel="Close"
-              accessibilityRole="button"
-              onPress={onClose}
-              style={styles.closeBtn}
-            >
-              <Ionicons name="close" size={20} color={colors.textSecondary} />
-            </Pressable>
-          </View>
-
-          {/* Time Chip */}
-          <View
-            style={[
-              styles.timeBox,
-              { backgroundColor: colors.surfaceRaised, borderColor: colors.border },
-            ]}
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{ padding: 20, gap: 14 }}
           >
-            <Ionicons name="time-outline" size={16} color={colors.brand} />
-            <Text style={[styles.timeText, { color: colors.textPrimary }]}>
-              {formattedTime} · {event.durationMinutes ?? 120} min
-            </Text>
-          </View>
-
-          {syncError ? (
-            <View style={[styles.errorBox, { backgroundColor: 'rgba(239, 68, 68, 0.12)' }]}>
-              <Ionicons name="alert-circle" size={16} color="#EF4444" />
-              <Text style={styles.errorText}>{syncError}</Text>
+            {/* Header */}
+            <View style={styles.header}>
+              <View style={styles.headerLeft}>
+                <View style={[styles.iconCircle, { backgroundColor: 'rgba(222, 54, 65, 0.15)' }]}>
+                  <Ionicons name="calendar" size={22} color={colors.brand} />
+                </View>
+                <View>
+                  <Text style={[styles.title, { color: colors.textPrimary }]}>
+                    Export to Calendar
+                  </Text>
+                  <Text
+                    numberOfLines={1}
+                    style={[styles.subtitle, { color: colors.textSecondary }]}
+                  >
+                    {event.title}
+                  </Text>
+                </View>
+              </View>
+              <Pressable
+                accessibilityLabel="Close"
+                accessibilityRole="button"
+                onPress={onClose}
+                style={styles.closeBtn}
+              >
+                <Ionicons name="close" size={20} color={colors.textSecondary} />
+              </Pressable>
             </View>
-          ) : null}
 
-          {/* Sync Buttons */}
-          <View style={styles.optionsList}>
-            {/* Apple / iOS Calendar */}
-            <Pressable
-              accessibilityRole="button"
-              disabled={loadingType !== null}
-              onPress={() => void handleSyncApple()}
-              style={({ pressed }) => [
-                styles.optionButton,
-                {
-                  backgroundColor: colors.surfaceRaised,
-                  borderColor: colors.border,
-                  opacity: pressed ? 0.85 : 1,
-                },
+            {/* Time Chip */}
+            <View
+              style={[
+                styles.timeBox,
+                { backgroundColor: colors.surfaceRaised, borderColor: colors.border },
               ]}
             >
-              <View style={[styles.optionIconBox, { backgroundColor: '#000000' }]}>
-                <Ionicons name="logo-apple" size={18} color="#FFFFFF" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.optionTitle, { color: colors.textPrimary }]}>
-                  Apple Calendar / iOS
-                </Text>
-                <Text style={[styles.optionDesc, { color: colors.textSecondary }]}>
-                  Download or share a calendar file with your reminders
-                </Text>
-              </View>
-              {loadingType === 'apple' ? (
-                <ActivityIndicator size="small" color={colors.brand} />
-              ) : (
-                <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
-              )}
-            </Pressable>
+              <Ionicons name="time-outline" size={16} color={colors.brand} />
+              <Text style={[styles.timeText, { color: colors.textPrimary }]}>
+                {formattedTime} · {event.durationMinutes ?? 120} min
+              </Text>
+            </View>
 
-            {/* Google Calendar */}
-            <Pressable
-              accessibilityRole="button"
-              disabled={loadingType !== null}
-              onPress={() => void handleSyncGoogle()}
-              style={({ pressed }) => [
-                styles.optionButton,
-                {
-                  backgroundColor: colors.surfaceRaised,
-                  borderColor: colors.border,
-                  opacity: pressed ? 0.85 : 1,
-                },
-              ]}
-            >
-              <View style={[styles.optionIconBox, { backgroundColor: '#4285F4' }]}>
-                <Ionicons name="logo-google" size={16} color="#FFFFFF" />
+            {syncError ? (
+              <View style={[styles.errorBox, { backgroundColor: 'rgba(239, 68, 68, 0.12)' }]}>
+                <Ionicons name="alert-circle" size={16} color="#EF4444" />
+                <Text style={styles.errorText}>{syncError}</Text>
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.optionTitle, { color: colors.textPrimary }]}>
-                  Google Calendar
-                </Text>
-                <Text style={[styles.optionDesc, { color: colors.textSecondary }]}>
-                  Open in Google Calendar web or mobile app
-                </Text>
-              </View>
-              {loadingType === 'google' ? (
-                <ActivityIndicator size="small" color={colors.brand} />
-              ) : (
-                <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
-              )}
-            </Pressable>
-          </View>
+            ) : null}
+
+            {/* Sync Buttons */}
+            <View style={styles.optionsList}>
+              {/* Apple / iOS Calendar */}
+              <Pressable
+                accessibilityRole="button"
+                disabled={loadingType !== null}
+                onPress={() => void handleSyncApple()}
+                style={({ pressed }) => [
+                  styles.optionButton,
+                  {
+                    backgroundColor: colors.surfaceRaised,
+                    borderColor: colors.border,
+                    opacity: pressed ? 0.85 : 1,
+                  },
+                ]}
+              >
+                <View style={[styles.optionIconBox, { backgroundColor: '#000000' }]}>
+                  <Ionicons name="logo-apple" size={18} color="#FFFFFF" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.optionTitle, { color: colors.textPrimary }]}>
+                    Apple Calendar / iOS
+                  </Text>
+                  <Text style={[styles.optionDesc, { color: colors.textSecondary }]}>
+                    Download or share a calendar file with your reminders
+                  </Text>
+                </View>
+                {loadingType === 'apple' ? (
+                  <ActivityIndicator size="small" color={colors.brand} />
+                ) : (
+                  <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+                )}
+              </Pressable>
+
+              {/* Google Calendar */}
+              <Pressable
+                accessibilityRole="button"
+                disabled={loadingType !== null}
+                onPress={() => void handleSyncGoogle()}
+                style={({ pressed }) => [
+                  styles.optionButton,
+                  {
+                    backgroundColor: colors.surfaceRaised,
+                    borderColor: colors.border,
+                    opacity: pressed ? 0.85 : 1,
+                  },
+                ]}
+              >
+                <View style={[styles.optionIconBox, { backgroundColor: '#4285F4' }]}>
+                  <Ionicons name="logo-google" size={16} color="#FFFFFF" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.optionTitle, { color: colors.textPrimary }]}>
+                    Google Calendar
+                  </Text>
+                  <Text style={[styles.optionDesc, { color: colors.textSecondary }]}>
+                    Open in Google Calendar web or mobile app
+                  </Text>
+                </View>
+                {loadingType === 'google' ? (
+                  <ActivityIndicator size="small" color={colors.brand} />
+                ) : (
+                  <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+                )}
+              </Pressable>
+            </View>
+          </ScrollView>
         </Pressable>
       </Pressable>
     </Modal>
@@ -210,11 +226,13 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   sheet: {
+    maxHeight: '92%',
+    alignSelf: 'center',
     borderRadius: 24,
     borderWidth: 1,
     gap: 16,
     maxWidth: 420,
-    padding: 20,
+    padding: 0,
     width: '100%',
   },
   header: {

@@ -154,7 +154,7 @@ function WrapCard({ wrap }: { wrap: WrapSummary }) {
 export default function InsightsScreen() {
   const colors = useColors();
   const queryClient = useQueryClient();
-  const { session, user } = useAuth();
+  const { session, user, loading: authLoading } = useAuth();
   const timezone = user?.timezone ?? 'UTC';
   const year = localYear(new Date(), timezone);
   const period = yearPeriod(year, timezone);
@@ -210,6 +210,7 @@ export default function InsightsScreen() {
     },
   });
 
+  if (authLoading) return null;
   if (session === null) return <Redirect href="/(auth)/login" />;
   const isRefreshing =
     summary.isRefetching ||
@@ -532,6 +533,7 @@ const styles = StyleSheet.create({
   chip: { borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6 },
   bucketList: { gap: 8 },
   bucketRow: {
+    flexWrap: 'wrap',
     alignItems: 'center',
     borderRadius: 8,
     flexDirection: 'row',
@@ -539,8 +541,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
-  generateActions: { flexDirection: 'row', gap: 8 },
+  generateActions: { flexWrap: 'wrap', flexDirection: 'row', gap: 8 },
   generateButton: {
+    minWidth: 84,
+    minHeight: 44,
     alignItems: 'center',
     borderRadius: 10,
     borderWidth: 1,
@@ -552,6 +556,7 @@ const styles = StyleSheet.create({
   },
   section: { gap: 12 },
   wrapCard: {
+    minWidth: 0,
     alignItems: 'center',
     borderRadius: 14,
     borderWidth: 1,
@@ -566,11 +571,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 42,
   },
-  wrapBadgeRow: { flexDirection: 'row' },
+  wrapBadgeRow: { flexWrap: 'wrap', flexDirection: 'row' },
   wrapTypePill: { fontSize: 11, fontWeight: '800', letterSpacing: 0.5 },
   wrapHeadline: { fontSize: 16, fontWeight: '800', marginVertical: 2 },
-  grow: { flex: 1 },
-  dnaHeader: { alignItems: 'center', flexDirection: 'row', gap: 12 },
+  grow: { flex: 1, minWidth: 0 },
+  dnaHeader: { flexWrap: 'wrap', alignItems: 'center', flexDirection: 'row', gap: 12 },
   confidenceBadge: { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
   evidenceBadge: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
   dnaTrait: {

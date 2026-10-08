@@ -5,6 +5,7 @@ import {
   Modal,
   Pressable,
   StyleSheet,
+  ScrollView,
   Text,
   TextInput,
   View,
@@ -89,135 +90,140 @@ export function ReportContentModal({
           style={[styles.sheet, { backgroundColor: colors.surface, borderColor: colors.border }]}
           onPress={(e) => e.stopPropagation()}
         >
-          {/* Header */}
-          <View style={styles.header}>
-            <View style={{ gap: 2 }}>
-              <Text style={[styles.title, { color: colors.textPrimary }]}>
-                Report{' '}
-                {target.entityType === 'REVIEW'
-                  ? 'Review'
-                  : target.entityType === 'USER'
-                    ? 'User'
-                    : 'Content'}
-              </Text>
-              <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-                {target.entityTitle
-                  ? `"${target.entityTitle}"`
-                  : `Reported by @${target.authorName ?? 'user'}`}
-              </Text>
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{ padding: 22, gap: 14 }}
+          >
+            {/* Header */}
+            <View style={styles.header}>
+              <View style={{ gap: 2 }}>
+                <Text style={[styles.title, { color: colors.textPrimary }]}>
+                  Report{' '}
+                  {target.entityType === 'REVIEW'
+                    ? 'Review'
+                    : target.entityType === 'USER'
+                      ? 'User'
+                      : 'Content'}
+                </Text>
+                <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+                  {target.entityTitle
+                    ? `"${target.entityTitle}"`
+                    : `Reported by @${target.authorName ?? 'user'}`}
+                </Text>
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                onPress={onClose}
+                style={[styles.closeBtn, { backgroundColor: colors.surfaceRaised }]}
+              >
+                <Ionicons name="close" size={18} color={colors.textPrimary} />
+              </Pressable>
             </View>
-            <Pressable
-              accessibilityRole="button"
-              onPress={onClose}
-              style={[styles.closeBtn, { backgroundColor: colors.surfaceRaised }]}
-            >
-              <Ionicons name="close" size={18} color={colors.textPrimary} />
-            </Pressable>
-          </View>
 
-          {/* Reason Selection */}
-          <Text style={[styles.sectionLabel, { color: colors.textPrimary }]}>
-            Why are you reporting this?
-          </Text>
-          <View style={styles.reasonsList}>
-            {REPORT_REASONS.map((r) => {
-              const isSelected = selectedReason === r.id;
-              return (
-                <Pressable
-                  key={r.id}
-                  accessibilityRole="button"
-                  onPress={() => {
-                    haptics.selection();
-                    setSelectedReason(r.id);
-                  }}
-                  style={[
-                    styles.reasonItem,
-                    {
-                      backgroundColor: isSelected ? colors.surfaceRaised : colors.surface,
-                      borderColor: isSelected ? colors.brand : colors.border,
-                    },
-                  ]}
-                >
-                  <Ionicons
-                    name={r.icon}
-                    size={18}
-                    color={isSelected ? colors.brand : colors.textSecondary}
-                  />
-                  <Text
+            {/* Reason Selection */}
+            <Text style={[styles.sectionLabel, { color: colors.textPrimary }]}>
+              Why are you reporting this?
+            </Text>
+            <View style={styles.reasonsList}>
+              {REPORT_REASONS.map((r) => {
+                const isSelected = selectedReason === r.id;
+                return (
+                  <Pressable
+                    key={r.id}
+                    accessibilityRole="button"
+                    onPress={() => {
+                      haptics.selection();
+                      setSelectedReason(r.id);
+                    }}
                     style={[
-                      styles.reasonText,
+                      styles.reasonItem,
                       {
-                        color: isSelected ? colors.textPrimary : colors.textSecondary,
-                        fontWeight: isSelected ? '700' : '500',
+                        backgroundColor: isSelected ? colors.surfaceRaised : colors.surface,
+                        borderColor: isSelected ? colors.brand : colors.border,
                       },
                     ]}
                   >
-                    {r.label}
-                  </Text>
-                  {isSelected ? (
-                    <Ionicons name="checkmark-circle" size={18} color={colors.brand} />
-                  ) : null}
-                </Pressable>
-              );
-            })}
-          </View>
+                    <Ionicons
+                      name={r.icon}
+                      size={18}
+                      color={isSelected ? colors.brand : colors.textSecondary}
+                    />
+                    <Text
+                      style={[
+                        styles.reasonText,
+                        {
+                          color: isSelected ? colors.textPrimary : colors.textSecondary,
+                          fontWeight: isSelected ? '700' : '500',
+                        },
+                      ]}
+                    >
+                      {r.label}
+                    </Text>
+                    {isSelected ? (
+                      <Ionicons name="checkmark-circle" size={18} color={colors.brand} />
+                    ) : null}
+                  </Pressable>
+                );
+              })}
+            </View>
 
-          {/* Optional Details */}
-          <TextInput
-            placeholder="Additional details (optional)…"
-            placeholderTextColor={colors.textDisabled}
-            value={details}
-            onChangeText={setDetails}
-            multiline
-            style={[
-              styles.input,
-              {
-                backgroundColor: colors.surfaceRaised,
-                borderColor: colors.border,
-                color: colors.textPrimary,
-              },
-            ]}
-          />
-
-          {/* Block User Checkbox */}
-          <Pressable
-            accessibilityRole="checkbox"
-            accessibilityState={{ checked: blockAuthor }}
-            onPress={() => {
-              haptics.selection();
-              setBlockAuthor((prev) => !prev);
-            }}
-            style={styles.blockRow}
-          >
-            <Ionicons
-              name={blockAuthor ? 'checkbox' : 'square-outline'}
-              size={20}
-              color={blockAuthor ? colors.brand : colors.textSecondary}
+            {/* Optional Details */}
+            <TextInput
+              placeholder="Additional details (optional)…"
+              placeholderTextColor={colors.textDisabled}
+              value={details}
+              onChangeText={setDetails}
+              multiline
+              style={[
+                styles.input,
+                {
+                  backgroundColor: colors.surfaceRaised,
+                  borderColor: colors.border,
+                  color: colors.textPrimary,
+                },
+              ]}
             />
-            <Text style={[styles.blockText, { color: colors.textSecondary }]}>
-              Block user so you will no longer see their content
-            </Text>
-          </Pressable>
 
-          {/* Submit Button */}
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => void handleSubmit()}
-            disabled={isSubmitting}
-            style={({ pressed }) => [
-              styles.submitBtn,
-              {
-                backgroundColor: colors.danger,
-                opacity: pressed || isSubmitting ? 0.8 : 1,
-              },
-            ]}
-          >
-            {isSubmitting ? (
-              <ActivityIndicator color="#FFFFFF" size="small" />
-            ) : (
-              <Text style={styles.submitBtnText}>Submit Violation Report</Text>
-            )}
-          </Pressable>
+            {/* Block User Checkbox */}
+            <Pressable
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: blockAuthor }}
+              onPress={() => {
+                haptics.selection();
+                setBlockAuthor((prev) => !prev);
+              }}
+              style={styles.blockRow}
+            >
+              <Ionicons
+                name={blockAuthor ? 'checkbox' : 'square-outline'}
+                size={20}
+                color={blockAuthor ? colors.brand : colors.textSecondary}
+              />
+              <Text style={[styles.blockText, { color: colors.textSecondary }]}>
+                Block user so you will no longer see their content
+              </Text>
+            </Pressable>
+
+            {/* Submit Button */}
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => void handleSubmit()}
+              disabled={isSubmitting}
+              style={({ pressed }) => [
+                styles.submitBtn,
+                {
+                  backgroundColor: colors.danger,
+                  opacity: pressed || isSubmitting ? 0.8 : 1,
+                },
+              ]}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator color="#FFFFFF" size="small" />
+              ) : (
+                <Text style={styles.submitBtnText}>Submit Violation Report</Text>
+              )}
+            </Pressable>
+          </ScrollView>
         </Pressable>
       </Pressable>
     </Modal>
@@ -231,10 +237,14 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   sheet: {
+    maxHeight: '92%',
+    maxWidth: 720,
+    width: '100%',
+    alignSelf: 'center',
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     borderWidth: 1,
-    padding: 22,
+    padding: 0,
     gap: 14,
   },
   header: {

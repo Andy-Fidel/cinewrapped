@@ -130,8 +130,9 @@ export function DialogProvider({ children }: { children: ReactNode }) {
             style={StyleSheet.absoluteFill}
           />
           {active === undefined ? null : (
-            <View
+            <ScrollView
               accessibilityViewIsModal
+              contentContainerStyle={styles.dialogContent}
               style={[
                 styles.dialog,
                 { backgroundColor: colors.surface, borderColor: colors.border },
@@ -154,7 +155,7 @@ export function DialogProvider({ children }: { children: ReactNode }) {
               >
                 {active.title}
               </Text>
-              <ScrollView style={styles.messageScroll}>
+              <View style={styles.messageScroll}>
                 <Text
                   accessibilityLiveRegion="assertive"
                   accessibilityRole={active.kind === 'ERROR' ? 'alert' : 'text'}
@@ -162,7 +163,7 @@ export function DialogProvider({ children }: { children: ReactNode }) {
                 >
                   {active.message}
                 </Text>
-              </ScrollView>
+              </View>
               <View style={styles.actions}>
                 {active.cancelLabel === null ? null : (
                   <Pressable
@@ -194,7 +195,7 @@ export function DialogProvider({ children }: { children: ReactNode }) {
                   </Text>
                 </Pressable>
               </View>
-            </View>
+            </ScrollView>
           )}
         </View>
       </Modal>
@@ -216,14 +217,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 24,
   },
+  dialogContent: { alignItems: 'center', gap: 13, padding: 22 },
   dialog: {
-    alignItems: 'center',
+    flexGrow: 0,
+    maxHeight: '90%',
     borderRadius: 22,
     borderWidth: 1,
     elevation: 12,
-    gap: 13,
     maxWidth: 420,
-    padding: 22,
+    padding: 0,
     shadowColor: '#000000',
     shadowOffset: { height: 8, width: 0 },
     shadowOpacity: 0.3,
@@ -238,16 +240,22 @@ const styles = StyleSheet.create({
     width: 54,
   },
   title: { fontSize: 20, fontWeight: '900', textAlign: 'center' },
-  messageScroll: { maxHeight: 220, width: '100%' },
+  messageScroll: { width: '100%' },
   message: { fontSize: 14, lineHeight: 21, textAlign: 'center' },
-  actions: { flexDirection: 'row', gap: 10, marginTop: 5, width: '100%' },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 5, width: '100%' },
   button: {
     alignItems: 'center',
     borderRadius: 11,
-    flex: 1,
+    flexGrow: 1,
+    flexBasis: 120,
     justifyContent: 'center',
     minHeight: 48,
     paddingHorizontal: 14,
   },
-  buttonText: { fontSize: 15, fontWeight: '800' },
+  buttonText: {
+    flexShrink: 1,
+    textAlign: 'center',
+    fontSize: 15,
+    fontWeight: '800',
+  },
 });

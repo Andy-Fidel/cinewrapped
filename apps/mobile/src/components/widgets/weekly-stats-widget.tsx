@@ -149,6 +149,8 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   headerRow: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',

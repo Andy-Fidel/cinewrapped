@@ -22,7 +22,7 @@ const starters = [
 
 export default function AiDiscoveryScreen() {
   const colors = useColors();
-  const { session, user } = useAuth();
+  const { session, user, loading: authLoading } = useAuth();
   const [query, setQuery] = useState('');
   const [turns, setTurns] = useState<ConversationTurn[]>([]);
   const assistant = useMutation({
@@ -45,6 +45,7 @@ export default function AiDiscoveryScreen() {
       setQuery('');
     },
   });
+  if (authLoading) return null;
   if (session === null) return <Redirect href="/(auth)/login" />;
   const submit = (message = query) => {
     const normalized = message.trim();

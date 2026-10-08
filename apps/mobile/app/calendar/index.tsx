@@ -117,7 +117,7 @@ export default function CalendarScreen() {
   const [heatmapShareVisible, setHeatmapShareVisible] = useState(false);
   const [heatmapSharePalette, setHeatmapSharePalette] = useState<HeatmapSharePalette>('EMERALD');
   const queryClient = useQueryClient();
-  const { session, user } = useAuth();
+  const { session, user, loading: authLoading } = useAuth();
   const { confirm, showError } = useDialog();
   const params = useLocalSearchParams<{
     eventType?: CalendarEventType;
@@ -266,6 +266,7 @@ export default function CalendarScreen() {
     setHeatmapShareVisible(true);
   };
 
+  if (authLoading) return null;
   if (session === null) return <Redirect href="/(auth)/login" />;
 
   const heatmapData = heatmap.data;
@@ -1224,6 +1225,8 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   goalHeaderRow: {
+    flexWrap: 'wrap',
+    gap: 8,
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1339,6 +1342,8 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   weekdayHeaderRow: {
+    flexWrap: 'wrap',
+    gap: 8,
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',

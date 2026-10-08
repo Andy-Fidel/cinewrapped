@@ -540,6 +540,8 @@ const styles = StyleSheet.create({
   },
   header: { gap: 8, marginBottom: 10, marginTop: 12 },
   headerTopRow: {
+    flexWrap: 'wrap',
+    gap: 10,
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -550,6 +552,8 @@ const styles = StyleSheet.create({
 
   // Section Header
   sectionHeader: {
+    flexWrap: 'wrap',
+    gap: 10,
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -558,7 +562,13 @@ const styles = StyleSheet.create({
   },
   sectionEyebrow: { fontSize: 10, fontWeight: '800', letterSpacing: 1, marginBottom: 2 },
   sectionTitle: { fontSize: 18, fontWeight: '800' },
-  sectionAction: { alignItems: 'center', flexDirection: 'row', gap: 3 },
+  sectionAction: {
+    minHeight: 44,
+    maxWidth: '100%',
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 3,
+  },
   sectionActionText: { fontSize: 13, fontWeight: '700' },
 
   // Poster Image (Strict 2:3 ratio)
@@ -648,6 +658,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   fieldInput: {
+    minWidth: 0,
     flex: 1,
     fontSize: 15,
     minHeight: 50,
@@ -666,6 +677,8 @@ const styles = StyleSheet.create({
   },
   error: { fontSize: 13, lineHeight: 18 },
   button: {
+    maxWidth: '100%',
+    flexShrink: 1,
     alignItems: 'center',
     borderRadius: 12,
     justifyContent: 'center',

@@ -1,10 +1,11 @@
+import { gridColumns } from '../../src/lib/responsive-layout';
 import type { LibraryItem, SavedSoundtrackSummary, WatchStatus } from '@cinewrapped/shared-types';
 import { Ionicons } from '@expo/vector-icons';
 import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
 import { Redirect, router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { MediaCard } from '../../src/components/media-card';
@@ -27,7 +28,9 @@ const filters: Array<{
 
 export default function LibraryScreen() {
   const colors = useColors();
-  const { session } = useAuth();
+  const { width, fontScale } = useWindowDimensions();
+  const columns = gridColumns(width, fontScale);
+  const { session, loading: authLoading } = useAuth();
   const { isEnabled } = useFeatureFlags();
   const [status, setStatus] = useState<WatchStatus | undefined>();
 
@@ -46,6 +49,7 @@ export default function LibraryScreen() {
     enabled: session !== null && isEnabled('SOUNDTRACKS'),
   });
 
+  if (authLoading) return null;
   if (session === null) return <Redirect href="/(auth)/login" />;
   const totalItems = library.data?.length ?? 0;
   const soundtrackCount = savedSoundtracks.data?.length ?? 0;
@@ -194,7 +198,8 @@ export default function LibraryScreen() {
       <FlashList
         data={library.data ?? []}
         keyExtractor={(item) => item.media.id}
-        numColumns={2}
+        key={`library-${columns}`}
+        numColumns={columns}
         onRefresh={() => void Promise.all([library.refetch(), savedSoundtracks.refetch()])}
         refreshing={library.isRefetching}
         renderItem={({ item }) => {
@@ -272,8 +277,14 @@ export default function LibraryScreen() {
 const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   header: { gap: 10, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 6 },
-  titleRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
-  titleTextWrap: { gap: 2 },
+  titleRow: {
+    flexWrap: 'wrap',
+    gap: 10,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  titleTextWrap: { minWidth: 0, flexShrink: 1, gap: 2 },
   eyebrow: { fontSize: 11, fontWeight: '800', letterSpacing: 1.3 },
   title: { fontSize: 28, fontWeight: '800', letterSpacing: -0.4 },
   countBadge: { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 },
@@ -325,6 +336,8 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   itemMetaRow: {
+    flexWrap: 'wrap',
+    gap: 4,
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',

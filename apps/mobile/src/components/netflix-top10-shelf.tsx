@@ -149,12 +149,16 @@ const styles = StyleSheet.create({
     marginVertical: 14,
   },
   headerRow: {
+    flexWrap: 'wrap',
+    gap: 8,
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
   },
   titleWrap: {
+    flexShrink: 1,
+    minWidth: 0,
     alignItems: 'center',
     flexDirection: 'row',
     gap: 8,

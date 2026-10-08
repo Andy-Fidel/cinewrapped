@@ -49,7 +49,7 @@ const VIBE_OPTIONS: VibeOption[] = [
 export default function FilmNightRouletteScreen() {
   const colors = useColors();
   const queryClient = useQueryClient();
-  const { session, user } = useAuth();
+  const { session, user, loading: authLoading } = useAuth();
 
   const [mode, setMode] = useState<EngineMode>('ROULETTE');
   const [selectedVibe, setSelectedVibe] = useState('all');
@@ -167,6 +167,7 @@ export default function FilmNightRouletteScreen() {
     });
   };
 
+  if (authLoading) return null;
   if (session === null) return <Redirect href="/(auth)/login" />;
 
   const activeCandidates = candidatePool.length;

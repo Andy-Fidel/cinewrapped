@@ -28,11 +28,17 @@ export function HeatmapShareModal({
             backgroundColor: colors.background,
             padding: 16,
             maxHeight: '92%',
+            maxWidth: 720,
+            width: '100%',
+            alignSelf: 'center',
             borderTopLeftRadius: 24,
             borderTopRightRadius: 24,
           }}
         >
-          <ScrollView contentContainerStyle={{ gap: 12, paddingBottom: 20 }}>
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{ gap: 12, paddingBottom: 20 }}
+          >
             <Text style={{ color: colors.textPrimary, fontSize: 20, fontWeight: '800' }}>
               Share Year in Pixels
             </Text>

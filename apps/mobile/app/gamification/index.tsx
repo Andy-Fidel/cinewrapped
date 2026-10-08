@@ -38,7 +38,7 @@ const leaderboardMetrics: Array<{
 export default function GamificationScreen() {
   const colors = useColors();
   const queryClient = useQueryClient();
-  const { session } = useAuth();
+  const { session, loading: authLoading } = useAuth();
   const [leaderboardMetric, setLeaderboardMetric] = useState<LeaderboardMetric>('POINTS');
 
   const dashboard = useQuery({
@@ -63,6 +63,7 @@ export default function GamificationScreen() {
     onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['gamification'] }),
   });
 
+  if (authLoading) return null;
   if (session === null) return <Redirect href="/(auth)/login" />;
   const refresh = () => void Promise.all([dashboard.refetch(), leaderboard.refetch()]);
   const isRefreshing = dashboard.isRefetching || leaderboard.isRefetching;

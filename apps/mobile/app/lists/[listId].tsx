@@ -11,7 +11,7 @@ import { useAuth } from '../../src/providers/auth-provider';
 
 export default function SearchListScreen() {
   const colors = useColors();
-  const { session } = useAuth();
+  const { session, loading: authLoading } = useAuth();
   const { listId } = useLocalSearchParams<{ listId: string }>();
   const list = useQuery({
     queryKey: ['search-list', listId],
@@ -19,6 +19,7 @@ export default function SearchListScreen() {
     enabled: session !== null && typeof listId === 'string',
   });
 
+  if (authLoading) return null;
   if (session === null) return <Redirect href="/(auth)/login" />;
   return (
     <Screen>

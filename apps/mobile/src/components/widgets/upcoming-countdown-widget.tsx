@@ -262,6 +262,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(9, 10, 15, 0.65)',
   },
   topRow: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',

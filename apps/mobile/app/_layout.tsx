@@ -15,6 +15,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { PushNotificationProvider } from '../src/providers/push-notification-provider';
 import { OfflineSyncProvider } from '../src/providers/offline-sync-provider';
+import { APP_MAX_WIDTH } from '../src/lib/responsive-layout';
+import { ResponsiveViewport } from '../src/components/responsive-viewport';
 import { PwaProvider } from '../src/providers/pwa-provider';
 import { AppLoadingScreen } from '../src/components/app-loading-screen';
 import { AuthProvider, useAuth } from '../src/providers/auth-provider';
@@ -88,6 +90,7 @@ function ThemedNavigation() {
   const finishLaunch = useCallback(() => setLaunchComplete(true), []);
   return (
     <View style={styles.navigationRoot}>
+      <ResponsiveViewport />
       <StatusBar style={resolvedTheme === 'light' ? 'dark' : 'light'} />
       <Stack
         screenOptions={{
@@ -106,6 +109,12 @@ function ThemedNavigation() {
 }
 
 const styles = StyleSheet.create({
-  navigationRoot: { flex: 1 },
+  navigationRoot: {
+    flex: 1,
+    minHeight: 0,
+    width: '100%',
+    maxWidth: APP_MAX_WIDTH,
+    alignSelf: 'center',
+  },
   launchOverlay: { ...StyleSheet.absoluteFill, elevation: 100, zIndex: 100 },
 });

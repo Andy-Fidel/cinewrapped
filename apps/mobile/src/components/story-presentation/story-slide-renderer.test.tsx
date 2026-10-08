@@ -5,6 +5,7 @@ vi.mock('react-native', () => ({
   View: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   Text: ({ children }: { children: ReactNode }) => <span>{children}</span>,
   Image: () => null,
+  useWindowDimensions: () => ({ width: 320, height: 568, fontScale: 1 }),
   StyleSheet: { create: (value: unknown) => value, absoluteFill: {} },
 }));
 vi.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
@@ -14,7 +15,8 @@ it('does not fabricate metrics for an intro', () => {
   const output = renderToStaticMarkup(
     <StorySlideRenderer
       slide={{
-        id: 'intro', eyebrow: 'INTRO',
+        id: 'intro',
+        eyebrow: 'INTRO',
         layout: 'HERO_STATS',
         theme: 'MIDNIGHT_GOLD',
         headline: 'Your month',
@@ -30,7 +32,8 @@ it('omits unknown release years and directors', () => {
   const output = renderToStaticMarkup(
     <StorySlideRenderer
       slide={{
-        id: 'title', eyebrow: 'MOST WATCHED',
+        id: 'title',
+        eyebrow: 'MOST WATCHED',
         layout: 'CINEMATIC_POSTER',
         theme: 'MIDNIGHT_GOLD',
         headline: 'A classic',

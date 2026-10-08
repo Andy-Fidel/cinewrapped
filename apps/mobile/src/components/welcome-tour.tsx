@@ -266,6 +266,6 @@ const styles = StyleSheet.create({
   counter: { fontSize: 9, fontWeight: '700', letterSpacing: 1.2 },
   track: { height: 3, borderRadius: 2, overflow: 'hidden' },
   fill: { height: '100%', borderRadius: 2 },
-  actions: { flexDirection: 'row', gap: 12, alignItems: 'center' },
+  actions: { flexWrap: 'wrap', flexDirection: 'row', gap: 12, alignItems: 'center' },
   hint: { fontSize: 12, textAlign: 'center', lineHeight: 18 },
 });

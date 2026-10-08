@@ -27,7 +27,8 @@ export function Carousel3D({
   reduceMotionPreference?: boolean;
 }) {
   const colors = useColors();
-  const { width } = useWindowDimensions();
+  const { width: viewportWidth } = useWindowDimensions();
+  const [width, setWidth] = useState(Math.min(viewportWidth, 1440));
   const scrollRef = useRef<ScrollView>(null);
   const resumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -89,6 +90,7 @@ export function Carousel3D({
 
   return (
     <View
+      onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
       style={[styles.container, { backgroundColor: colors.surface, borderColor: colors.border }]}
     >
       <View style={styles.headerRow}>
@@ -283,6 +285,8 @@ const styles = StyleSheet.create({
   },
   footerTextWrap: { flex: 1, gap: 2, marginRight: 10 },
   headerRow: {
+    flexWrap: 'wrap',
+    gap: 8,
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',

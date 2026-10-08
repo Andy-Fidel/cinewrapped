@@ -202,6 +202,8 @@ const styles = StyleSheet.create({
     marginVertical: 4,
   },
   sectionHeader: {
+    flexWrap: 'wrap',
+    gap: 8,
     paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
