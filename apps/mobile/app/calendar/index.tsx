@@ -1,3 +1,5 @@
+import { ViewingGoalsCard } from '../../src/components/viewing-goals-card';
+import { calendarDateParts } from '../../src/lib/viewing-goals';
 import type {
   ActivityHeatmapDay,
   ActivityHeatmapSummary,
@@ -132,11 +134,10 @@ export default function CalendarScreen() {
   );
 
   // Heatmap & Viewing History states
-  const currentYear = new Date().getFullYear();
-  const [selectedYear] = useState<number>(currentYear);
+  const userTimezone = user?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  const selectedYear = calendarDateParts(userTimezone).year;
   const [selectedDayKey, setSelectedDayKey] = useState<string | null>(null);
   const [selectedDayActivity, setSelectedDayActivity] = useState<ActivityHeatmapDay | null>(null);
-  const [annualGoal] = useState<number>(100);
 
   // Form states
   const [isPlanningOpen, setIsPlanningOpen] = useState(Boolean(params.title || params.mediaId));
@@ -174,7 +175,6 @@ export default function CalendarScreen() {
   });
 
   // Query Heatmap Data
-  const userTimezone = user?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
   const heatmap = useQuery({
     queryKey: ['statistics', 'heatmap', selectedYear, userTimezone],
     queryFn: () =>
@@ -232,33 +232,6 @@ export default function CalendarScreen() {
     }
     return list;
   }, [events.data, activeFilter]);
-
-  // Annual Pace Calculation
-  const paceStats = useMemo(() => {
-    const totalViewings = heatmap.data?.totalViewings ?? 0;
-    const now = new Date();
-    const startOfYear = new Date(now.getFullYear(), 0, 1);
-    const dayOfYear = Math.max(
-      1,
-      Math.floor((now.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24)),
-    );
-    const totalDays =
-      (now.getFullYear() % 4 === 0 && now.getFullYear() % 100 !== 0) ||
-      now.getFullYear() % 400 === 0
-        ? 366
-        : 365;
-
-    const projectedTotal = Math.round((totalViewings / dayOfYear) * totalDays);
-    const delta = projectedTotal - annualGoal;
-    const progressPercent = Math.min(100, Math.round((totalViewings / annualGoal) * 100));
-
-    return {
-      projectedTotal,
-      delta,
-      progressPercent,
-      isOnPace: delta >= 0,
-    };
-  }, [heatmap.data?.totalViewings, annualGoal]);
 
   const handleShareYearPixels = () => {
     if (!heatmap.data) return;
@@ -442,65 +415,7 @@ export default function CalendarScreen() {
                   </View>
                 </View>
 
-                {/* Annual Pace & Goal Tracker Card */}
-                <View
-                  style={[
-                    styles.goalCard,
-                    { backgroundColor: colors.surface, borderColor: colors.border },
-                  ]}
-                >
-                  <View style={styles.goalHeaderRow}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                      <Ionicons name="trophy" size={18} color="#F59E0B" />
-                      <Text style={[styles.goalTitle, { color: colors.textPrimary }]}>
-                        {selectedYear} Cinema Pace & Goal
-                      </Text>
-                    </View>
-                    <View
-                      style={[
-                        styles.goalPaceBadge,
-                        {
-                          backgroundColor: paceStats.isOnPace
-                            ? 'rgba(16, 185, 129, 0.15)'
-                            : 'rgba(245, 158, 11, 0.15)',
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={{
-                          color: paceStats.isOnPace ? '#10B981' : '#F59E0B',
-                          fontSize: 11,
-                          fontWeight: '800',
-                        }}
-                      >
-                        {paceStats.isOnPace
-                          ? `🔥 +${paceStats.delta} Ahead of Pace`
-                          : `🎯 ${Math.abs(paceStats.delta)} to Catch Pace`}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.goalProgressRow}>
-                    <View style={[styles.goalTrack, { backgroundColor: colors.surfaceRaised }]}>
-                      <View
-                        style={[
-                          styles.goalFill,
-                          { width: `${paceStats.progressPercent}%`, backgroundColor: colors.brand },
-                        ]}
-                      />
-                    </View>
-                    <Text style={[styles.goalProgressText, { color: colors.textPrimary }]}>
-                      {heatmapData.totalViewings} / {annualGoal}
-                    </Text>
-                  </View>
-                  <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
-                    On pace to finish with{' '}
-                    <Text style={{ fontWeight: '800', color: colors.textPrimary }}>
-                      {paceStats.projectedTotal} films
-                    </Text>{' '}
-                    by December 31.
-                  </Text>
-                </View>
+                <ViewingGoalsCard heatmap={heatmapData} timezone={userTimezone} />
 
                 {/* GitHub-style Annual Heatmap with Chromatic Palettes */}
                 <AnnualHeatmap
@@ -1215,49 +1130,6 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '800',
     letterSpacing: 0.5,
-  },
-
-  // Goal & Pace Card
-  goalCard: {
-    borderRadius: 18,
-    borderWidth: 1,
-    gap: 10,
-    padding: 16,
-  },
-  goalHeaderRow: {
-    flexWrap: 'wrap',
-    gap: 8,
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  goalTitle: {
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  goalPaceBadge: {
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  goalProgressRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 12,
-  },
-  goalTrack: {
-    borderRadius: 999,
-    flex: 1,
-    height: 8,
-    overflow: 'hidden',
-  },
-  goalFill: {
-    borderRadius: 999,
-    height: '100%',
-  },
-  goalProgressText: {
-    fontSize: 13,
-    fontWeight: '800',
   },
 
   // Circadian Rhythm Card

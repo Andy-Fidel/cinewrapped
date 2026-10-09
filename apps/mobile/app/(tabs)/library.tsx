@@ -2,10 +2,18 @@ import { gridColumns } from '../../src/lib/responsive-layout';
 import type { LibraryItem, SavedSoundtrackSummary, WatchStatus } from '@cinewrapped/shared-types';
 import { Ionicons } from '@expo/vector-icons';
 import { FlashList } from '@shopify/flash-list';
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { Redirect, router } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { useEffect, useState } from 'react';
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { MediaCard } from '../../src/components/media-card';
@@ -23,6 +31,8 @@ const filters: Array<{
   { label: 'Watching', value: 'WATCHING', icon: 'play-circle-outline' },
   { label: 'Planned', value: 'PLANNED', icon: 'bookmark-outline' },
   { label: 'Completed', value: 'COMPLETED', icon: 'checkmark-circle-outline' },
+  { label: 'Rewatching', value: 'REWATCHING', icon: 'repeat-outline' },
+  { label: 'Dropped', value: 'DROPPED', icon: 'close-circle-outline' },
   { label: 'Paused', value: 'PAUSED', icon: 'pause-circle-outline' },
 ];
 
@@ -34,14 +44,36 @@ export default function LibraryScreen() {
   const { isEnabled } = useFeatureFlags();
   const [status, setStatus] = useState<WatchStatus | undefined>();
 
-  const library = useQuery({
-    queryKey: ['library', status],
-    queryFn: () =>
-      api.request<LibraryItem[]>(
-        `library?limit=50${status === undefined ? '' : `&status=${status}`}`,
-      ),
+  const [search, setSearch] = useState('');
+  const [query, setQuery] = useState('');
+  const [mediaType, setMediaType] = useState<'MOVIE' | 'TV' | undefined>();
+  const [sort, setSort] = useState('RECENT');
+  useEffect(() => {
+    const timer = setTimeout(() => setQuery(search.trim()), 350);
+    return () => clearTimeout(timer);
+  }, [search]);
+  const library = useInfiniteQuery({
+    queryKey: ['library', status, mediaType, query, sort],
+    initialPageParam: null as string | null,
+    queryFn: ({ pageParam, signal }) => {
+      const params = new URLSearchParams({ limit: '50', sort });
+      if (status) params.set('status', status);
+      if (mediaType) params.set('mediaType', mediaType);
+      if (query) params.set('q', query);
+      if (pageParam) params.set('cursor', pageParam);
+      return api.requestCollection<LibraryItem>(`library?${params}`, { signal });
+    },
+    getNextPageParam: (page) => page.meta.page.nextCursor ?? undefined,
     enabled: session !== null,
   });
+  const items = [
+    ...new Map(
+      (library.data?.pages.flatMap((page) => page.data) ?? []).map((item) => [item.media.id, item]),
+    ).values(),
+  ];
+  const loadMore = () => {
+    if (library.hasNextPage && !library.isFetching) void library.fetchNextPage();
+  };
 
   const savedSoundtracks = useQuery({
     queryKey: ['saved-soundtracks'],
@@ -51,152 +83,244 @@ export default function LibraryScreen() {
 
   if (authLoading) return null;
   if (session === null) return <Redirect href="/(auth)/login" />;
-  const totalItems = library.data?.length ?? 0;
+  const totalItems = items.length;
   const soundtrackCount = savedSoundtracks.data?.length ?? 0;
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
-      <View style={styles.header}>
-        <View style={styles.titleRow}>
-          <View style={styles.titleTextWrap}>
-            <Text style={[styles.eyebrow, { color: colors.brand }]}>MY LIBRARY</Text>
-            <Text accessibilityRole="header" style={[styles.title, { color: colors.textPrimary }]}>
-              My Library
-            </Text>
-          </View>
-          <View style={[styles.countBadge, { backgroundColor: colors.surfaceRaised }]}>
-            <Text style={[styles.countText, { color: colors.brand }]}>📚 {totalItems} Titles</Text>
-          </View>
-        </View>
-
-        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-          Your watch history, progress, ratings, and media archives.
-        </Text>
-
-        {/* Quick Vault Navigation Bar (Soundtracks, Journal, Calendar) */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.vaultShortcutsRow}
-        >
-          {isEnabled('SOUNDTRACKS') && (
-            <Pressable
-              accessibilityLabel="Saved Soundtracks"
-              accessibilityRole="button"
-              onPress={() => router.push('/soundtracks')}
-              style={({ pressed }) => [
-                styles.vaultShortcutPill,
-                {
-                  backgroundColor: colors.surface,
-                  borderColor: colors.border,
-                  opacity: pressed ? 0.8 : 1,
-                },
-              ]}
-            >
-              <View style={[styles.vaultIconBox, { backgroundColor: 'rgba(245, 158, 11, 0.15)' }]}>
-                <Ionicons name="musical-notes" size={13} color="#F59E0B" />
-              </View>
-              <Text style={[styles.vaultShortcutText, { color: colors.textPrimary }]}>
-                Soundtracks {soundtrackCount > 0 ? `(${soundtrackCount})` : ''}
-              </Text>
-              <Ionicons name="chevron-forward" size={12} color={colors.textDisabled} />
-            </Pressable>
-          )}
-
-          {isEnabled('MOVIE_JOURNAL') && (
-            <Pressable
-              accessibilityLabel="Movie Journal"
-              accessibilityRole="button"
-              onPress={() => router.push('/journal')}
-              style={({ pressed }) => [
-                styles.vaultShortcutPill,
-                {
-                  backgroundColor: colors.surface,
-                  borderColor: colors.border,
-                  opacity: pressed ? 0.8 : 1,
-                },
-              ]}
-            >
-              <View style={[styles.vaultIconBox, { backgroundColor: 'rgba(139, 92, 246, 0.15)' }]}>
-                <Ionicons name="book" size={13} color="#8B5CF6" />
-              </View>
-              <Text style={[styles.vaultShortcutText, { color: colors.textPrimary }]}>
-                Film Journal
-              </Text>
-              <Ionicons name="chevron-forward" size={12} color={colors.textDisabled} />
-            </Pressable>
-          )}
-
-          {isEnabled('CALENDAR_INTEGRATION') && (
-            <Pressable
-              accessibilityLabel="Viewing Calendar"
-              accessibilityRole="button"
-              onPress={() => router.push('/calendar')}
-              style={({ pressed }) => [
-                styles.vaultShortcutPill,
-                {
-                  backgroundColor: colors.surface,
-                  borderColor: colors.border,
-                  opacity: pressed ? 0.8 : 1,
-                },
-              ]}
-            >
-              <View style={[styles.vaultIconBox, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
-                <Ionicons name="calendar" size={13} color="#10B981" />
-              </View>
-              <Text style={[styles.vaultShortcutText, { color: colors.textPrimary }]}>
-                Schedule
-              </Text>
-              <Ionicons name="chevron-forward" size={12} color={colors.textDisabled} />
-            </Pressable>
-          )}
-        </ScrollView>
-
-        {/* Horizontal Scrollable Status Filters */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filtersScrollContent}
-        >
-          {filters.map((filter) => {
-            const selected = status === filter.value;
-            return (
-              <Pressable
-                accessibilityRole="radio"
-                accessibilityState={{ checked: selected }}
-                key={filter.label}
-                onPress={() => setStatus(filter.value)}
-                style={({ pressed }) => [
-                  styles.filter,
-                  {
-                    backgroundColor: selected ? colors.brand : colors.surface,
-                    borderColor: selected ? colors.brand : colors.border,
-                    opacity: pressed ? 0.8 : 1,
-                  },
-                ]}
-              >
-                <Ionicons
-                  name={filter.icon}
-                  size={14}
-                  color={selected ? colors.onBrand : colors.textPrimary}
-                />
-                <Text
-                  style={{
-                    color: selected ? colors.onBrand : colors.textPrimary,
-                    fontWeight: '700',
-                    fontSize: 12,
-                  }}
-                >
-                  {filter.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-      </View>
-
       <FlashList
-        data={library.data ?? []}
+        ListHeaderComponent={
+          <View style={styles.header}>
+            <View style={styles.titleRow}>
+              <View style={styles.titleTextWrap}>
+                <Text style={[styles.eyebrow, { color: colors.brand }]}>MY LIBRARY</Text>
+                <Text
+                  accessibilityRole="header"
+                  style={[styles.title, { color: colors.textPrimary }]}
+                >
+                  My Library
+                </Text>
+              </View>
+              <View style={[styles.countBadge, { backgroundColor: colors.surfaceRaised }]}>
+                <Text style={[styles.countText, { color: colors.brand }]}>
+                  📚 {totalItems}
+                  {library.hasNextPage ? '+' : ''} shown
+                </Text>
+              </View>
+            </View>
+
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+              Your watch history, progress, ratings, and media archives.
+            </Text>
+
+            {/* Quick Vault Navigation Bar (Soundtracks, Journal, Calendar) */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.vaultShortcutsRow}
+            >
+              {isEnabled('SOUNDTRACKS') && (
+                <Pressable
+                  accessibilityLabel="Saved Soundtracks"
+                  accessibilityRole="button"
+                  onPress={() => router.push('/soundtracks')}
+                  style={({ pressed }) => [
+                    styles.vaultShortcutPill,
+                    {
+                      backgroundColor: colors.surface,
+                      borderColor: colors.border,
+                      opacity: pressed ? 0.8 : 1,
+                    },
+                  ]}
+                >
+                  <View
+                    style={[styles.vaultIconBox, { backgroundColor: 'rgba(245, 158, 11, 0.15)' }]}
+                  >
+                    <Ionicons name="musical-notes" size={13} color="#F59E0B" />
+                  </View>
+                  <Text style={[styles.vaultShortcutText, { color: colors.textPrimary }]}>
+                    Soundtracks {soundtrackCount > 0 ? `(${soundtrackCount})` : ''}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={12} color={colors.textDisabled} />
+                </Pressable>
+              )}
+
+              {isEnabled('MOVIE_JOURNAL') && (
+                <Pressable
+                  accessibilityLabel="Movie Journal"
+                  accessibilityRole="button"
+                  onPress={() => router.push('/journal')}
+                  style={({ pressed }) => [
+                    styles.vaultShortcutPill,
+                    {
+                      backgroundColor: colors.surface,
+                      borderColor: colors.border,
+                      opacity: pressed ? 0.8 : 1,
+                    },
+                  ]}
+                >
+                  <View
+                    style={[styles.vaultIconBox, { backgroundColor: 'rgba(139, 92, 246, 0.15)' }]}
+                  >
+                    <Ionicons name="book" size={13} color="#8B5CF6" />
+                  </View>
+                  <Text style={[styles.vaultShortcutText, { color: colors.textPrimary }]}>
+                    Film Journal
+                  </Text>
+                  <Ionicons name="chevron-forward" size={12} color={colors.textDisabled} />
+                </Pressable>
+              )}
+
+              {isEnabled('CALENDAR_INTEGRATION') && (
+                <Pressable
+                  accessibilityLabel="Viewing Calendar"
+                  accessibilityRole="button"
+                  onPress={() => router.push('/calendar')}
+                  style={({ pressed }) => [
+                    styles.vaultShortcutPill,
+                    {
+                      backgroundColor: colors.surface,
+                      borderColor: colors.border,
+                      opacity: pressed ? 0.8 : 1,
+                    },
+                  ]}
+                >
+                  <View
+                    style={[styles.vaultIconBox, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}
+                  >
+                    <Ionicons name="calendar" size={13} color="#10B981" />
+                  </View>
+                  <Text style={[styles.vaultShortcutText, { color: colors.textPrimary }]}>
+                    Schedule
+                  </Text>
+                  <Ionicons name="chevron-forward" size={12} color={colors.textDisabled} />
+                </Pressable>
+              )}
+            </ScrollView>
+
+            <TextInput
+              accessibilityLabel="Search your library"
+              placeholder="Search your library"
+              placeholderTextColor={colors.textSecondary}
+              value={search}
+              onChangeText={setSearch}
+              maxLength={100}
+              style={{
+                color: colors.textPrimary,
+                borderColor: colors.border,
+                borderWidth: 1,
+                borderRadius: 12,
+                padding: 12,
+                minHeight: 48,
+              }}
+            />
+            <ScrollView
+              horizontal
+              contentContainerStyle={{ gap: 8 }}
+              keyboardShouldPersistTaps="handled"
+            >
+              {(
+                [
+                  { label: 'All types', value: undefined },
+                  { label: 'Movies', value: 'MOVIE' },
+                  { label: 'TV shows', value: 'TV' },
+                ] as const
+              ).map((option) => (
+                <Button
+                  key={option.label}
+                  label={option.label}
+                  variant={mediaType === option.value ? 'primary' : 'secondary'}
+                  onPress={() => setMediaType(option.value)}
+                />
+              ))}
+            </ScrollView>
+            <ScrollView
+              horizontal
+              contentContainerStyle={{ gap: 8 }}
+              keyboardShouldPersistTaps="handled"
+            >
+              {[
+                ['RECENT', 'Recently updated'],
+                ['OLDEST', 'Oldest updated'],
+                ['TITLE_ASC', 'Title A–Z'],
+                ['TITLE_DESC', 'Title Z–A'],
+              ].map(([value, label]) => (
+                <Button
+                  key={value}
+                  label={label!}
+                  variant={sort === value ? 'primary' : 'secondary'}
+                  onPress={() => setSort(value!)}
+                />
+              ))}
+            </ScrollView>
+            {/* Horizontal Scrollable Status Filters */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.filtersScrollContent}
+            >
+              {filters.map((filter) => {
+                const selected = status === filter.value;
+                return (
+                  <Pressable
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: selected }}
+                    key={filter.label}
+                    onPress={() => setStatus(filter.value)}
+                    style={({ pressed }) => [
+                      styles.filter,
+                      {
+                        backgroundColor: selected ? colors.brand : colors.surface,
+                        borderColor: selected ? colors.brand : colors.border,
+                        opacity: pressed ? 0.8 : 1,
+                      },
+                    ]}
+                  >
+                    <Ionicons
+                      name={filter.icon}
+                      size={14}
+                      color={selected ? colors.onBrand : colors.textPrimary}
+                    />
+                    <Text
+                      style={{
+                        color: selected ? colors.onBrand : colors.textPrimary,
+                        fontWeight: '700',
+                        fontSize: 12,
+                      }}
+                    >
+                      {filter.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+        }
+        keyboardShouldPersistTaps="handled"
+        onEndReached={() => {
+          if (!library.isFetchNextPageError) loadMore();
+        }}
+        onEndReachedThreshold={0.4}
+        ListFooterComponent={
+          <View style={{ padding: 16, gap: 8 }}>
+            {library.isError ? (
+              <Text accessibilityRole="alert" style={{ color: colors.danger }}>
+                Could not load {items.length ? 'more titles' : 'your library'}. Your loaded titles
+                are still available.
+              </Text>
+            ) : null}
+            {library.hasNextPage ? (
+              <Button
+                label={library.isFetchNextPageError ? 'Retry loading more' : 'Load more titles'}
+                loading={library.isFetchingNextPage}
+                onPress={loadMore}
+              />
+            ) : library.isError ? (
+              <Button label="Retry library" onPress={() => void library.refetch()} />
+            ) : null}
+          </View>
+        }
+        data={items}
         keyExtractor={(item) => item.media.id}
         key={`library-${columns}`}
         numColumns={columns}
@@ -256,7 +380,9 @@ export default function LibraryScreen() {
             >
               {library.isError
                 ? 'Your library could not be loaded.'
-                : 'Track a title from Discover to start building your history.'}
+                : query || status || mediaType
+                  ? 'Try a different search or filter.'
+                  : 'Track a title from Discover to start building your history.'}
             </Text>
             {!library.isPending && !library.isError ? (
               <View style={styles.emptyCtaWrap}>

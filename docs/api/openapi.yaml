@@ -468,6 +468,33 @@ paths:
           '404': { $ref: '#/components/responses/NotFound' },
         }
 
+  /library:
+    get:
+      tags: [Tracking]
+      operationId: listLibrary
+      description: Owner-scoped library. Cursors are bound to the active filters and sort.
+      parameters:
+        - { name: status, in: query, schema: { $ref: '#/components/schemas/WatchStatus' } }
+        - { name: mediaType, in: query, schema: { type: string, enum: [MOVIE, TV] } }
+        - {
+            name: q,
+            in: query,
+            schema: { type: string, maxLength: 100 },
+            description: Case-insensitive literal title substring.,
+          }
+        - {
+            name: sort,
+            in: query,
+            schema:
+              { type: string, enum: [RECENT, OLDEST, TITLE_ASC, TITLE_DESC], default: RECENT },
+          }
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+      x-response-dto: LibraryItem
+      responses:
+        '200': { $ref: '#/components/responses/Collection' }
+        '400': { description: Invalid cursor; restart pagination with the current filters. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
   /watch-history:
     get:
       tags: [Tracking]
@@ -2050,6 +2077,20 @@ components:
             uniqueItems: true,
             maxItems: 20,
             items: { type: integer, multipleOf: 10, minimum: 1880, maximum: 2200 },
+          }
+        annualViewingGoal:
+          {
+            type: [integer, 'null'],
+            minimum: 1,
+            maximum: 10000,
+            description: Recurring annual viewing target; null disables it.,
+          }
+        monthlyViewingGoal:
+          {
+            type: [integer, 'null'],
+            minimum: 1,
+            maximum: 10000,
+            description: Recurring monthly viewing target; null disables it.,
           }
         preferredRuntimeMin: { type: [integer, 'null'], minimum: 1, maximum: 1440 }
         preferredRuntimeMax: { type: [integer, 'null'], minimum: 1, maximum: 1440 }

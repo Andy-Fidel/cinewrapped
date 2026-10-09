@@ -40,12 +40,7 @@ export type CreateWatchlistInput = z.output<typeof createWatchlistSchema>;
 export type UpdateWatchlistInput = z.output<typeof updateWatchlistSchema>;
 export type AddWatchlistItemInput = z.output<typeof addWatchlistItemSchema>;
 
-export interface LibraryQuery {
-  status?: UpdateWatchStatusInput['status'];
-  mediaType?: 'MOVIE' | 'TV';
-  limit: number;
-  cursor?: string;
-}
+import { libraryPageQuery, type LibraryQuery } from './library-query.js';
 
 type MediaRecord = Prisma.MediaGetPayload<{ include: { genres: true } }>;
 type LibraryRecord = Prisma.WatchHistoryGetPayload<{
@@ -136,31 +131,6 @@ function viewingSummary(viewing: {
   };
 }
 
-function cursorValue(cursor: string | undefined): { updatedAt: Date; id: string } | null {
-  if (cursor === undefined) return null;
-  try {
-    const parsed = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8')) as unknown;
-    if (typeof parsed !== 'object' || parsed === null) throw new Error('invalid');
-    const value = parsed as { updatedAt?: unknown; id?: unknown };
-    if (typeof value.updatedAt !== 'string' || typeof value.id !== 'string')
-      throw new Error('invalid');
-    const updatedAt = new Date(value.updatedAt);
-    if (Number.isNaN(updatedAt.getTime())) throw new Error('invalid');
-    return { updatedAt, id: value.id };
-  } catch {
-    throw new AppException(400, 'CURSOR_INVALID', 'The library cursor is invalid.');
-  }
-}
-
-function nextCursor(item: { updatedAt: Date; id: string } | undefined): string | null {
-  return item === undefined
-    ? null
-    : Buffer.from(
-        JSON.stringify({ updatedAt: item.updatedAt.toISOString(), id: item.id }),
-        'utf8',
-      ).toString('base64url');
-}
-
 @Injectable()
 export class LibraryService {
   public constructor(
@@ -170,21 +140,9 @@ export class LibraryService {
 
   public async library(principal: AuthPrincipal, query: LibraryQuery) {
     const user = await this.requireUser(principal.subject);
-    const cursor = cursorValue(query.cursor);
+    const paging = libraryPageQuery(user.id, query);
     const records = await this.prisma.watchHistory.findMany({
-      where: {
-        userId: user.id,
-        ...(query.status === undefined ? {} : { status: query.status }),
-        ...(query.mediaType === undefined ? {} : { media: { mediaType: query.mediaType } }),
-        ...(cursor === null
-          ? {}
-          : {
-              OR: [
-                { updatedAt: { lt: cursor.updatedAt } },
-                { updatedAt: cursor.updatedAt, id: { lt: cursor.id } },
-              ],
-            }),
-      },
+      where: paging.where,
       include: {
         media: {
           include: {
@@ -202,14 +160,14 @@ export class LibraryService {
           },
         },
       },
-      orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
+      orderBy: paging.orderBy,
       take: query.limit + 1,
     });
     const hasMore = records.length > query.limit;
     const page = records.slice(0, query.limit);
     return {
       items: page.map((record) => this.toLibraryItem(record)),
-      nextCursor: hasMore ? nextCursor(page.at(-1)) : null,
+      nextCursor: hasMore ? paging.nextCursor(page.at(-1)!) : null,
     };
   }
 

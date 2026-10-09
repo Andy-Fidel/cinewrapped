@@ -87,6 +87,8 @@ export interface UserPreferences {
   contentTypes: ContentType[];
   spoilerPreference: SpoilerPreference;
   adultContentEnabled: boolean;
+  annualViewingGoal: number | null;
+  monthlyViewingGoal: number | null;
   notificationPreferences: Record<string, boolean>;
   theme: ThemePreference;
   defaultCountryForStreaming: string;

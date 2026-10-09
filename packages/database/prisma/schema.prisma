@@ -536,6 +536,8 @@ model UserPreferences {
   contentTypes                ContentType[]     @default([MOVIE, TV])
   spoilerPreference           SpoilerPreference @default(HIDE_UNTIL_REVEALED)
   adultContentEnabled         Boolean           @default(false)
+  annualViewingGoal           Int?
+  monthlyViewingGoal          Int?
   notificationPreferences     Json              @default("{}") @db.JsonB
   theme                       ThemePreference   @default(SYSTEM)
   defaultCountryForStreaming  String            @db.Char(2)

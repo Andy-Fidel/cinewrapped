@@ -1,3 +1,4 @@
+import { libraryQuerySchema } from './library-query.js';
 import {
   addWatchlistItemSchema,
   createReviewSchema,
@@ -10,7 +11,6 @@ import {
   updateWatchStatusSchema,
   upsertRatingSchema,
   uuidSchema,
-  watchStatusSchema,
 } from '@cinewrapped/validation';
 import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
@@ -33,12 +33,6 @@ import {
   type UpsertRatingInput,
 } from './library.service.js';
 
-const libraryQuerySchema = z.object({
-  status: watchStatusSchema.optional(),
-  mediaType: z.enum(['MOVIE', 'TV']).optional(),
-  limit: z.coerce.number().int().min(1).max(50).default(20),
-  cursor: z.string().max(300).optional(),
-});
 const episodeQuerySchema = z.object({ language: languageTagSchema.default('en-US') });
 const seasonNumberSchema = z.coerce.number().int().min(0).max(999);
 
@@ -56,6 +50,8 @@ export class LibraryController {
   ) {
     const result = await this.libraryService.library(principal, {
       limit: query.limit,
+      sort: query.sort,
+      ...(query.q === undefined ? {} : { q: query.q }),
       ...(query.status === undefined ? {} : { status: query.status }),
       ...(query.mediaType === undefined ? {} : { mediaType: query.mediaType }),
       ...(query.cursor === undefined ? {} : { cursor: query.cursor }),

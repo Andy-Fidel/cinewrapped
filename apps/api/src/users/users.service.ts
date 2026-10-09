@@ -61,6 +61,8 @@ function toPreferences(preferences: PreferencesWithRelations): UserPreferences {
     contentTypes: preferences.contentTypes,
     spoilerPreference: preferences.spoilerPreference,
     adultContentEnabled: preferences.adultContentEnabled,
+    annualViewingGoal: preferences.annualViewingGoal,
+    monthlyViewingGoal: preferences.monthlyViewingGoal,
     notificationPreferences: notificationRecord(preferences.notificationPreferences),
     theme: preferences.theme,
     defaultCountryForStreaming: preferences.defaultCountryForStreaming,

@@ -9,6 +9,7 @@ const root = path.resolve(__dirname, '../../..'),
     process.env.RESPONSIVE_OUTPUT_DIR ||
     require('node:os').tmpdir() + '/cinewrapped-responsive-results';
 fs.mkdirSync(out, { recursive: true });
+const featureChecks = process.env.LIBRARY_GOALS_CHECKS === '1';
 const userId = '10000000-0000-4000-8000-000000000001',
   mediaId = '20000000-0000-4000-8000-000000000001',
   wrapId = '30000000-0000-4000-8000-000000000001',
@@ -51,7 +52,7 @@ const media = {
   genreIds: ['18', '28'],
   averageProviderRating: 8.4,
 };
-const library = Array.from({ length: 12 }, (_, i) => ({
+const library = Array.from({ length: featureChecks ? 63 : 12 }, (_, i) => ({
   media: {
     ...media,
     id: mediaId.slice(0, -2) + String(i + 1).padStart(2, '0'),
@@ -79,7 +80,15 @@ const library = Array.from({ length: 12 }, (_, i) => ({
   latestReview: null,
   updatedAt: now,
 }));
+if (featureChecks)
+  library.forEach((item, i) => {
+    item.media.title = `Fixture title ${String(i).padStart(3, '0')}`;
+    item.media.mediaType = i % 2 ? 'TV' : 'MOVIE';
+    item.status = i % 3 ? 'WATCHING' : 'COMPLETED';
+  });
 const preferences = {
+  annualViewingGoal: null,
+  monthlyViewingGoal: null,
   preferredGenreIds: ['18'],
   dislikedGenreIds: [],
   preferredLanguages: ['en'],
@@ -235,6 +244,28 @@ const featureKeys = [
   'SCENE_IDENTIFICATION',
   'PREDICTION_LEAGUE',
 ];
+function libraryPage(params) {
+  let rows = library.filter(
+    (item) =>
+      (!params.get('q') ||
+        item.media.title.toLowerCase().includes(params.get('q').toLowerCase())) &&
+      (!params.get('status') || item.status === params.get('status')) &&
+      (!params.get('mediaType') || item.media.mediaType === params.get('mediaType')),
+  );
+  const sort = params.get('sort');
+  if (sort?.startsWith('TITLE'))
+    rows.sort((a, b) =>
+      sort === 'TITLE_ASC'
+        ? a.media.title.localeCompare(b.media.title)
+        : b.media.title.localeCompare(a.media.title),
+    );
+  const offset = Number(params.get('cursor') || 0),
+    limit = Number(params.get('limit') || 50);
+  return {
+    data: rows.slice(offset, offset + limit),
+    nextCursor: offset + limit < rows.length ? String(offset + limit) : null,
+  };
+}
 function dataFor(p, q) {
   if (p === 'auth/bootstrap' || p === 'users/me') return user;
   if (p === 'users/me/preferences') return preferences;
@@ -522,11 +553,29 @@ const server = http.createServer((req, res) => {
     { key: storageKey, session },
   );
   const requested = [];
+  const requestedUrls = [];
   await context.route('**/*', async (route) => {
     const url = new URL(route.request().url());
     if (url.pathname.startsWith('/api/v1/')) {
       const p = url.pathname.slice(8);
       requested.push(p);
+      requestedUrls.push(url.href);
+      if (featureChecks && p === 'users/me/preferences' && route.request().method() === 'PATCH')
+        Object.assign(preferences, route.request().postDataJSON());
+      if (featureChecks && p === 'library') {
+        const page = libraryPage(url.searchParams);
+        return route.fulfill({
+          contentType: 'application/json',
+          body: JSON.stringify({
+            success: true,
+            data: page.data,
+            meta: {
+              requestId: 'fixture',
+              page: { nextCursor: page.nextCursor, hasMore: page.nextCursor !== null, limit: 50 },
+            },
+          }),
+        });
+      }
       return route.fulfill({
         contentType: 'application/json',
         body: JSON.stringify({
@@ -622,6 +671,86 @@ const server = http.createServer((req, res) => {
           path:
             out + '/issue-' + width + 'x' + height + '-' + pathname.replace(/\W/g, '_') + '.png',
         });
+      if (featureChecks && pathname === '/library') {
+        for (let attempt = 0; attempt < 4; attempt++) {
+          await page.evaluate(() => {
+            for (const element of document.querySelectorAll('*'))
+              if (
+                ['auto', 'scroll'].includes(getComputedStyle(element).overflowY) &&
+                element.scrollHeight > element.clientHeight
+              )
+                element.scrollTop = element.scrollHeight;
+          });
+          await page.waitForTimeout(250);
+        }
+        if (!requestedUrls.some((url) => new URL(url).searchParams.has('cursor')))
+          throw Error('Library did not request another page');
+        await page.getByText(/63 shown/).waitFor({ state: 'attached' });
+        await page.getByLabel('Search your library').fill('Fixture title 062');
+        await page.getByText(/1 shown/).waitFor({ state: 'attached' });
+        await page.getByLabel('Search your library').fill('');
+        await page.getByRole('button', { name: 'Movies', exact: true }).click();
+        await page.getByRole('radio', { name: /Completed/ }).click();
+        await page.getByRole('button', { name: 'Title Z–A', exact: true }).click();
+        await page.waitForTimeout(500);
+        if (
+          !requestedUrls.some((value) => {
+            const q = new URL(value).searchParams;
+            return (
+              q.get('status') === 'COMPLETED' &&
+              q.get('mediaType') === 'MOVIE' &&
+              q.get('sort') === 'TITLE_DESC'
+            );
+          })
+        )
+          throw Error('Combined filters were not requested');
+        console.log(
+          JSON.stringify({
+            feature: 'library',
+            width,
+            pagination: true,
+            search: true,
+            combinedFilters: true,
+          }),
+        );
+      }
+      if (featureChecks && pathname === '/calendar') {
+        await page.getByRole('button', { name: 'Edit viewing goals', exact: true }).click();
+        await page.getByLabel('Annual viewing goal', { exact: true }).fill('0');
+        await page.getByRole('button', { name: 'Save viewing goals', exact: true }).click();
+        await page
+          .getByText('Enter a whole number from 1 to 10,000, or leave blank to disable.')
+          .waitFor();
+        await page.getByLabel('Annual viewing goal', { exact: true }).fill('150');
+        await page.getByLabel('Monthly viewing goal', { exact: true }).fill('12');
+        await page.getByRole('button', { name: 'Save viewing goals', exact: true }).click();
+        await page.getByText('Viewing goals saved.').waitFor();
+        await page.reload();
+        await page
+          .getByRole('progressbar', { name: 'CineWrapped is loading' })
+          .waitFor({ state: 'hidden' });
+        await page.getByRole('button', { name: 'Edit viewing goals', exact: true }).click();
+        if (
+          (await page.getByLabel('Annual viewing goal', { exact: true }).inputValue()) !== '150' ||
+          (await page.getByLabel('Monthly viewing goal', { exact: true }).inputValue()) !== '12'
+        )
+          throw Error('Goals did not reload');
+        await page.getByLabel('Annual viewing goal', { exact: true }).fill('');
+        await page.getByRole('button', { name: 'Save viewing goals', exact: true }).click();
+        await page.getByText('Viewing goals saved.').waitFor();
+        if (preferences.annualViewingGoal !== null || preferences.monthlyViewingGoal !== 12)
+          throw Error('Goal clear failed');
+        console.log(
+          JSON.stringify({
+            feature: 'goals',
+            width,
+            validation: true,
+            saved: true,
+            reloaded: true,
+            cleared: true,
+          }),
+        );
+      }
       if (pathname === '/settings/security') {
         await page.getByRole('button', { name: 'Sign Out Other Devices', exact: true }).click();
         await page.getByRole('button', { name: 'Cancel', exact: true }).click();

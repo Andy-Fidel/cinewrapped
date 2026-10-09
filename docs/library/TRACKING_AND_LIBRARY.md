@@ -46,4 +46,4 @@ Series progress uses the provider-reported season episode counts as its denomina
 - Season rows open a virtualized episode list with accessible completion checkboxes.
 - TanStack Query invalidates tracking, library, and watchlist projections after successful mutations.
 
-The mobile client currently loads the first 50 library entries. The API exposes opaque keyset cursors for later infinite scrolling and returns version conflicts safely; a dedicated offline SQLite mutation outbox remains a later implementation item from the architecture plan.
+The client loads library entries in pages of 50, automatically loads subsequent pages on scroll, and offers an explicit retry/load-more action. Server-side title search, media type and status filters combine with recent/oldest/title sorting. Opaque keyset cursors are scoped to the owner, filters and sort; changing these starts a new query. Refresh after concurrent library edits to see a current ordering; pagination is not a transactionally consistent snapshot. The API continues to return version conflicts safely.

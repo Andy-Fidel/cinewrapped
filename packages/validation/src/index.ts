@@ -126,6 +126,8 @@ export const updatePreferencesSchema = z
       .optional(),
     spoilerPreference: z.enum(['ALWAYS_HIDE', 'HIDE_UNTIL_REVEALED', 'SHOW']).optional(),
     adultContentEnabled: z.boolean().optional(),
+    annualViewingGoal: z.number().int().min(1).max(10000).nullable().optional(),
+    monthlyViewingGoal: z.number().int().min(1).max(10000).nullable().optional(),
     notificationPreferences: z.record(z.string(), z.boolean()).optional(),
     theme: z
       .enum(['SYSTEM', 'LIGHT', 'DARK', 'OCEAN', 'FOREST', 'AMETHYST', 'ROSE', 'SUNSET'])
