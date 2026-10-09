@@ -231,7 +231,7 @@ export default function MediaDetailScreen() {
   const { mediaId } = useLocalSearchParams<{ mediaId: string }>();
   const [showTrailer, setShowTrailer] = useState(false);
   const [trailerFailed, setTrailerFailed] = useState(false);
-  const [whereToWatchExpanded, setWhereToWatchExpanded] = useState(true);
+  const [whereToWatchExpanded, setWhereToWatchExpanded] = useState(false);
   const [selectedPersonForTracker, setSelectedPersonForTracker] = useState<CreditSummary | null>(
     null,
   );
